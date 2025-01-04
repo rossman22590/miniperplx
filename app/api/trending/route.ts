@@ -39,7 +39,7 @@ async function fetchGoogleTrends(): Promise<TrendingQuery[]> {
 
       const itemsWithCategoryAndIcon = await Promise.all(items.map(async item => {
         const { object } = await generateObject({
-          model: groq("llama-3.2-3b-preview"),
+          model: groq("llama-3.3-70b-versatile"),
           prompt: `Give the category for the topic from the existing values only in lowercase only: ${item.replace(/<\/?title>/g, '')}
           
           - if the topic category isn't present in the list, please select 'trending' only!`,

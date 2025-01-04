@@ -9,14 +9,14 @@ import { Providers } from './providers'
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://mplx.run"),
-  title: "MiniPerplx",
-  description: "MiniPerplx is a minimalistic AI-powered search engine that helps you find information on the internet.",
+  title: "Datavibes Ultra",
+  description: "Datavibes Ultra is a minimalistic AI-powered search engine that helps you find information on the internet.",
   openGraph: {
-    url: "https://mplx.run",
-    siteName: "MiniPerplx",
+    url: "https://myapps.ai",
+    siteName: "Datavibes Ultra",
   },
   keywords: [
-    "MiniPerplx",
+    "Datavibes Ultra",
     "mplx",
     "mplx.run",
     "search engine",

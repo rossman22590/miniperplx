@@ -93,12 +93,12 @@ function BentoCard({
 
 const TestimonialSection: React.FC = () => {
   const tweetIds = [
-    "1825543755748782500",
-    "1825876424755941787",
-    "1827580223606669661",
-    "1825574082345136506",
-    "1825973306924872143",
-    "1825821083817103852"
+    "1798956728983470182",
+    "1799072374454923384",
+    "1865586034878112126",
+    "1872385445121884354",
+    "1873259721312116876",
+    "1875109189850403241"
   ];
 
   return (
@@ -123,13 +123,13 @@ function GetStarted() {
     <BentoCard
       title="Get Started"
       icon={BarChart}
-      description={"Experience the power of minimalistic AI search with MiniPerplx."}
+      description={"Experience the power of minimalistic AI search with Datavibes Ultra."}
       className="col-span-full sm:col-span-1 sm:row-span-2 dark:text-neutral-950"
       gradient="from-blue-700 via-60% via-blue-600 to-cyan-600"
     >
       <div className="group relative flex cursor-pointer flex-col justify-end rounded-md bg-zinc-900 p-2 text-xl sm:text-2xl md:text-4xl tracking-tight text-gray-100">
         <div className="font-light italic">Try</div>
-        <div className="-mt-1 sm:-mt-2 font-bold font-serif">MiniPerplx</div>
+        <div className="-mt-1 sm:-mt-2 font-bold font-serif">Datavibes Ultra</div>
         <NextLink href="/search" className="absolute bottom-2 right-2">
           <div className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-full border bg-primary transition-all duration-700 group-hover:rotate-[360deg]">
             <ArrowRight size={14} className="text-background sm:w-4 sm:h-4" />
@@ -206,7 +206,7 @@ function LightningFast() {
     <BentoCard
       title="Lightning Fast"
       icon={Zap}
-      description="Designed for speed, MiniPerplx provides instant answers to keep up with your pace of work."
+      description="Designed for speed, Datavibes Ultra provides instant answers to keep up with your pace of work."
       gradient="from-purple-700 via-60% via-purple-600 to-fuchsia-600"
       className="col-span-full sm:col-span-2 dark:text-neutral-950"
     />
@@ -218,7 +218,7 @@ const AboutUsSection: React.FC = () => {
     <section id="about-us" className="w-full py-8 sm:py-12 md:py-24 lg:py-32 bg-gradient-to-b from-background to-muted">
       <div className="container px-4 md:px-6">
         <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-center mb-8 sm:mb-12">
-          About MiniPerplx
+          About Datavibes Ultra
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-foreground max-w-5xl mx-auto">
           <GetStarted />
@@ -234,11 +234,11 @@ const AboutUsSection: React.FC = () => {
 
 const MarqueeTestimonials: React.FC = () => {
   const testimonials = [
-    "Absolutely love MiniPerplx! 🚀",
+    "Absolutely love Datavibes Ultra! 🚀",
     "Game-changer for my workflow. 💼",
     "Simplicity at its finest. ✨",
     "Can't imagine working without it now. 🙌",
-    "MiniPerplx is a must-have tool! 🛠️",
+    "Datavibes Ultra is a must-have tool! 🛠️",
   ];
 
   return (
@@ -475,7 +475,7 @@ const TryButton: React.FC = () => {
         "homeBtn"
       )}
     >
-      Try MiniPerplx
+      Try Datavibes Ultra
       <ArrowRight width={20} height={20} />
     </NextLink>
   )
@@ -638,7 +638,7 @@ const LandingPage: React.FC = () => {
       <ScrollProgress />
       <header className="px-4 lg:px-6 h-16 flex items-center justify-between sm:justify-center sm:gap-5 sticky top-0 bg-background/80 backdrop-blur-sm z-40">
         <NextLink className="flex items-center justify-center group" href="#start">
-          <span className="font-serif font-bold text-xl group-hover:text-primary transition-colors tracking-tight">MiniPerplx</span>
+          <span className="font-serif font-bold text-xl group-hover:text-primary transition-colors tracking-tight">Datavibes Ultra</span>
         </NextLink>
         <NavigationMenu className="hidden md:block">
           <NavigationMenuList>
@@ -648,19 +648,19 @@ const LandingPage: React.FC = () => {
                 <ul className="p-4 space-y-2 grid grid-cols-2 max-w-sm w-[400px]">
                   <NavItem href="#about-us">
                     <div className="text-sm font-medium">About Us</div>
-                    <p className="text-sm text-muted-foreground">Learn more about MiniPerplx and our mission.</p>
+                    <p className="text-sm text-muted-foreground">Learn more about Datavibes Ultra and our mission.</p>
                   </NavItem>
                   <NavItem href="#features">
                     <div className="text-sm font-medium">Features</div>
-                    <p className="text-sm text-muted-foreground">Discover the powerful capabilities of MiniPerplx.</p>
+                    <p className="text-sm text-muted-foreground">Discover the powerful capabilities of Datavibes Ultra.</p>
                   </NavItem>
                   <NavItem href="#tech-stack">
                     <div className="text-sm font-medium">Tech Stack</div>
-                    <p className="text-sm text-muted-foreground">Explore the technologies powering MiniPerplx.</p>
+                    <p className="text-sm text-muted-foreground">Explore the technologies powering Datavibes Ultra.</p>
                   </NavItem>
                   <NavItem href="#testimonials">
                     <div className="text-sm font-medium">Testimonials</div>
-                    <p className="text-sm text-muted-foreground">See what others are saying about MiniPerplx.</p>
+                    <p className="text-sm text-muted-foreground">See what others are saying about Datavibes Ultra.</p>
                   </NavItem>
                 </ul>
               </NavigationMenuContent>
@@ -712,7 +712,7 @@ const LandingPage: React.FC = () => {
                 initial="hidden"
                 animate="visible"
               >
-                Introducing MiniPerplx
+                Introducing Datavibes Ultra
               </motion.h1>
               <motion.p
                 className="mx-auto max-w-[700px] text-muted-foreground dark:text-neutral-200 text-xl md:text-2xl text-balance font-serif tracking-normal"
@@ -735,50 +735,7 @@ const LandingPage: React.FC = () => {
                   className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6"
                   variants={itemVariants}
                 >
-                  <NextLink href="https://www.producthunt.com/posts/miniperplx?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-miniperplx" target="_blank" rel="noopener noreferrer" passHref>
-                    <Image
-                      src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=481378&theme=light"
-                      alt="MiniPerplx - A minimalistic AI-powered search engine. | Product Hunt"
-                      width={250}
-                      height={54}
-                      className="h-12 w-auto"
-                    />
-                  </NextLink>
-                  <NextLink href="https://peerlist.io/zaidmukaddam/project/miniperplx" target="_blank" rel="noopener noreferrer" passHref>
-                    <Image
-                      src="/Launch_SVG_Light.svg"
-                      alt="Peerlist"
-                      width={32}
-                      height={32}
-                      className="h-12 w-auto block dark:hidden"
-                    />
-                    <Image
-                      src="/Launch_SVG_Dark.svg"
-                      alt="Peerlist"
-                      width={32}
-                      height={32}
-                      className="h-12 w-auto hidden dark:block"
-                    />
-                  </NextLink>
-                  {/* <a href="https://theresanaiforthat.com/ai/miniperplx/?ref=featured&v=2143659" target="_blank" rel="nofollow"><img width="300" src="https://media.theresanaiforthat.com/featured-on-taaft.png?width=600" /></a> */}
-                  <NextLink href="https://theresanaiforthat.com/ai/miniperplx/?ref=featured&v=2143659" target="_blank" rel="nofollow" passHref>
-                    <Image
-                      src="https://media.theresanaiforthat.com/featured-on-taaft.png?width=600"
-                      alt="There's an AI for that"
-                      width={300}
-                      height={150}
-                      className="h-12 w-auto"
-                    />
-                  </NextLink>
-                  <NextLink href="https://www.uneed.best/tool/miniperplx" passHref>
-                    <Image
-                      src="https://www.uneed.best/EMBED2B.png"
-                      alt="Uneed Embed Badge"
-                      width={300}
-                      height={150}
-                      className="h-12 w-auto"
-                    />
-                  </NextLink>
+                
                 </motion.div>
               </motion.div>
             </div>
@@ -798,13 +755,13 @@ const LandingPage: React.FC = () => {
           </div>
         </section>
 
-        <section id="tech-stack" className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-muted to-background overflow-hidden">
+        {/* <section id="tech-stack" className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-muted to-background overflow-hidden">
           <div className="container px-4 md:px-6">
             <h2 className="font-serif text-4xl font-bold sm:text-5xl md:text-6xl lg:text-7xl tracking-tight text-center mb-12 text-balance">
               Our Tech Constellation
             </h2>
             <p className="text-center text-lg sm:text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto font-serif tracking-normal">
-              Explore the universe of technologies powering MiniPerplx. Hover over the stars to discover the constellations of our tech stack.
+              Explore the universe of technologies powering Datavibes Ultra. Hover over the stars to discover the constellations of our tech stack.
             </p>
             <motion.div
               initial={{ opacity: 0, y: 50 }}
@@ -815,7 +772,7 @@ const LandingPage: React.FC = () => {
               <TechConstellation />
             </motion.div>
           </div>
-        </section>
+        </section> */}
 
         <TestimonialSection />
         <MarqueeTestimonials />
@@ -826,7 +783,7 @@ const LandingPage: React.FC = () => {
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <AnimatedSection>
                 <h2 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-                  Ready to Experience MiniPerplx?
+                  Ready to Experience Datavibes Ultra?
                 </h2>
               </AnimatedSection>
               <AnimatedSection delay={0.2}>
@@ -837,16 +794,16 @@ const LandingPage: React.FC = () => {
               <AnimatedSection delay={0.4} className="flex flex-col sm:flex-row gap-4">
                 <Button size="lg" asChild className="group transition-all duration-300 hover:shadow-lg hover:shadow-primary/20">
                   <NextLink href="/search">
-                    Try MiniPerplx
+                    Try Datavibes Ultra
                     <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </NextLink>
                 </Button>
-                <Button variant="outline" size="lg" asChild className="group transition-all duration-300 hover:shadow-lg hover:shadow-primary/20">
+                {/* <Button variant="outline" size="lg" asChild className="group transition-all duration-300 hover:shadow-lg hover:shadow-primary/20">
                   <NextLink href="https://git.new/mplx" target="_blank" rel="noopener noreferrer">
                     <Github className="mr-2 h-4 w-4 group-hover:rotate-12 transition-transform" />
                     View on GitHub
                   </NextLink>
-                </Button>
+                </Button> */}
               </AnimatedSection>
             </div>
           </div>
@@ -872,7 +829,7 @@ const LandingPage: React.FC = () => {
               className="text-center"
             >
               <h2 className="font-serif text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-bold text-neutral-500">
-                MiniPerplx
+              Datavibes Ultra
               </h2>
             </motion.div>
             <motion.div
@@ -881,7 +838,7 @@ const LandingPage: React.FC = () => {
               transition={{ delay: 0.5, duration: 0.8 }}
               className="mt-8 text-center"
             >
-              <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} MiniPerplx. All rights reserved.</p>
+              <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Datavibes Ultra. All rights reserved.</p>
             </motion.div>
           </div>
           <div className="absolute inset-0 z-0">

@@ -636,10 +636,10 @@ const HomeContent = () => {
         onError: (error) => {
             console.error("Chat error:", error.cause, error.message);
             toast.error("An error occurred.", {
-                description: "We must have ran out of credits. Sponsor us on GitHub to keep this service running.",
+                description: "We must have ran into an error reach out to us.",
                 action: {
-                    label: "Sponsor",
-                    onClick: () => window.open("https://git.new/mplx", "_blank"),
+                    label: "Error",
+                    onClick: () => window.open("https://support.myapps.ai", "_blank"),
                 },
             });
         },
@@ -761,7 +761,7 @@ xAI's Grok 2.0 Vision model is now available on the platform.
 
 ## **Default Search Engine**
 
-You can now set MiniPerplx as the default search engine for the platform. Follow the instructions in the [Readme](https://github.com/zaidmukaddam/miniperplx/blob/main/README.md) to set it as default.
+You can now set Datavibes Ultra as the default search engine for the platform. Follow the instructions in the [Readme](https://github.com/zaidmukaddam/miniperplx/blob/main/README.md) to set it as default.
 
 ## **Track Flights**
 
@@ -2419,7 +2419,7 @@ You can now view the trending queries on the platform.
                     </Button>
                 </Link>
                 <div className='flex items-center space-x-4'>
-                    <Button
+                    {/* <Button
                         variant="secondary"
                         size="sm"
                         onClick={() => window.open("https://git.new/mplx", "_blank")}
@@ -2427,21 +2427,21 @@ You can now view the trending queries on the platform.
                     >
                         <GitHubLogoIcon className="h-4 w-4 text-neutral-700 dark:text-neutral-300" />
                         <span className="text-neutral-800 dark:text-neutral-200">GitHub</span>
-                    </Button>
+                    </Button> */}
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
                                     size="sm"
-                                    onClick={() => window.open("https://github.com/sponsors/zaidmukaddam", "_blank")}
+                                    onClick={() => window.open("https://myapps.ai", "_blank")}
                                     className="flex items-center space-x-2 bg-red-100 dark:bg-red-900 shadow-none hover:bg-red-200 dark:hover:bg-red-800"
                                 >
                                     <Heart className="h-4 w-4 text-red-500 dark:text-red-400" />
-                                    <span className="text-red-800 dark:text-red-200">Sponsor</span>
+                                    <span className="text-red-800 dark:text-red-200">Get AI Tutor</span>
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent className="bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200">
-                                <p>Sponsor this project on GitHub</p>
+                                <p>Get this with AI Tutor</p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -2618,7 +2618,7 @@ You can now view the trending queries on the platform.
                         >
                             <Flame size={14} /> What&apos;s new
                         </Badge>
-                        <h1 className="text-4xl sm:text-6xl mb-1 text-neutral-800 dark:text-neutral-100 font-serif">MiniPerplx</h1>
+                        <h1 className="text-4xl sm:text-6xl mb-1 text-neutral-800 dark:text-neutral-100 font-serif">Datavibes Ultra</h1>
                         <h2 className='text-xl sm:text-2xl font-serif text-balance text-center mb-6 text-neutral-600 dark:text-neutral-400'>
                             In search for minimalism and simplicity
                         </h2>
@@ -2828,7 +2828,7 @@ const LoadingFallback = () => (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">
         <div className="text-center space-y-4">
             <h1 className="text-4xl sm:text-6xl mb-1 text-neutral-800 dark:text-neutral-100 font-serif animate-pulse">
-                MiniPerplx
+            Datavibes Ultra
             </h1>
             <p className="text-xl sm:text-2xl font-serif text-neutral-600 dark:text-neutral-400 animate-pulse">
                 Loading your minimalist AI experience...
