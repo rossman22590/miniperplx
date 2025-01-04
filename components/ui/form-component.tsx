@@ -860,7 +860,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {hasVisionSupport(selectedModel) && (
+                        {/* {hasVisionSupport(selectedModel) && (
                             <Button
                                 className="rounded-full p-1.5 h-8 w-8 bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600"
                                 onClick={(event) => {
@@ -872,7 +872,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                             >
                                 <PaperclipIcon size={14} />
                             </Button>
-                        )}
+                        )} */}
 
                         {isLoading ? (
                             <Button
