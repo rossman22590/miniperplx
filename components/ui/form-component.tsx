@@ -27,7 +27,7 @@ interface ModelSwitcherProps {
 }
 
 const models = [
-    { value: "azure:gpt4o-mini", label: "GPT-4o Mini", icon: Zap, description: "God speed, good quality", color: "emerald", vision: true },
+    { value: "azure:gpt4o", label: "GPT-4o Mini", icon: Zap, description: "God speed, good quality", color: "emerald", vision: true },
     { value: "anthropic:claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku", icon: Sparkles, description: "Good quality, high speed", color: "orange", vision: false },
     { value: "xai:grok-2-vision-1212", label: "Grok 2.0 Vision", icon: XLogo, description: "Good quality, normal speed", color: "glossyblack", vision: true },
     { value: "anthropic:claude-3-5-sonnet-latest", label: "Claude 3.5 Sonnet (New)", icon: Sparkles, description: "High quality, good speed", color: "indigo", vision: true },

@@ -571,7 +571,7 @@ const HomeContent = () => {
     // Memoize initial values to prevent re-calculation
     const initialState = useMemo(() => ({
         query: searchParams.get('query') || '',
-        model: searchParams.get('model') || 'azure:gpt4o-mini'
+        model: searchParams.get('model') || 'azure:gpt4o'
     }), []); // Empty dependency array as we only want this on mount
 
     const lastSubmittedQueryRef = useRef(initialState.query);
