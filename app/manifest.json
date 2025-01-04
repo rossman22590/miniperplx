@@ -1,6 +1,6 @@
 {
-  "name": "MiniPerplx - AI-powered Search Engine",
-  "short_name": "MiniPerplx",
+  "name": "Datavibes Ultra - AI-powered Search Engine",
+  "short_name": "Datavibes Ultra",
   "description": "A minimalistic AI-powered search engine that helps you find information on the internet using advanced AI models like GPT-4, Claude, and Grok",
   "start_url": "/search",
   "display": "standalone",
