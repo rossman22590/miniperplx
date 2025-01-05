@@ -8,7 +8,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { Providers } from './providers'
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://mplx.run"),
+  metadataBase: new URL("https://datavibes-ultra.vercel.app"),
   title: "Datavibes Ultra",
   description: "Datavibes Ultra is a minimalistic AI-powered search engine that helps you find information on the internet.",
   openGraph: {
