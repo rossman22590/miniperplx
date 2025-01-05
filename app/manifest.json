@@ -16,7 +16,7 @@
   ],
   "screenshots": [
     {
-      "src": "/app/opengraph-image.png",
+      "src": "https://datavibes-ultra.vercel.app/app/opengraph-image.png",
       "type": "image/png",
       "sizes": "1200x630",
       "form_factor": "wide"
