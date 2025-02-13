@@ -108,7 +108,7 @@ const groupTools = {
   web: [
     'web_search', 'get_weather_data',
     'retrieve',
-    'nearby_search', 'track_flight',
+     'track_flight',
     'movie_or_tv_search', 'trending_movies', 
     'trending_tv',
     'reason_search'
