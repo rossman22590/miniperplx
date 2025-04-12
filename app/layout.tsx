@@ -27,13 +27,22 @@ export const metadata: Metadata = {
         height: 630,
         alt: "Datavibes AI Search Engine",
       }
-    ]
+    ],
+    determiner: "auto",
+    profile: {
+      firstName: "Datavibes",
+      lastName: "",
+      username: "datavibes",
+      gender: "",
+    },
   },
   twitter: {
     card: "summary_large_image",
     title: "Datavibes",
     description: "Datavibes AI is a minimalistic AI-powered search engine that helps you find information on the internet.",
     images: ["https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1744495018676-opengraph-image.png"],
+    site: "@datavibes",
+    creator: "@datavibes",
   },
   other: {
     "og:logo": "https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1744495018676-opengraph-image.png"
@@ -80,6 +89,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://myapps.ai" />
+        <meta property="og:title" content="Datavibes" />
+        <meta property="og:description" content="Datavibes AI is a minimalistic AI-powered search engine that helps you find information on the internet." />
+        <meta property="og:image" content="https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1744495018676-opengraph-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:logo" content="https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1744495018676-opengraph-image.png" />
+        
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://myapps.ai" />
+        <meta name="twitter:title" content="Datavibes" />
+        <meta name="twitter:description" content="Datavibes AI is a minimalistic AI-powered search engine that helps you find information on the internet." />
+        <meta name="twitter:image" content="https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1744495018676-opengraph-image.png" />
+      </head>
       <body className={`${GeistSans.variable} ${syne.variable} font-sans antialiased`} suppressHydrationWarning>
         <NuqsAdapter>
           <Providers>
