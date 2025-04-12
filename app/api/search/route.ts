@@ -469,13 +469,7 @@ export async function POST(req: Request) {
                         }) => {
                             const apiKey = serverEnv.TAVILY_API_KEY;
                             const tvly = tavily({ apiKey });
-                            const includeImageDescriptions = true;
-
-                            console.log('Queries:', queries);
-                            console.log('Max Results:', maxResults);
-                            console.log('Topics:', topics);
-                            console.log('Search Depths:', searchDepth);
-                            console.log('Exclude Domains:', exclude_domains);
+                            const exa = new Exa(serverEnv.EXA_API_KEY as string);
 
                             // Execute searches in parallel
                             const searchPromises = queries.map(async (query, index) => {
@@ -486,7 +480,7 @@ export async function POST(req: Request) {
                                     searchDepth: searchDepth[index] || searchDepth[0] || 'basic',
                                     includeAnswer: true,
                                     includeImages: true,
-                                    includeImageDescriptions: includeImageDescriptions,
+                                    includeImageDescriptions: true,
                                     excludeDomains: exclude_domains,
                                 });
 
@@ -512,36 +506,28 @@ export async function POST(req: Request) {
                                         raw_content: obj.raw_content,
                                         published_date: topics[index] === 'news' ? obj.published_date : undefined,
                                     })),
-                                    images: includeImageDescriptions
-                                        ? await Promise.all(
-                                            deduplicateByDomainAndUrl(data.images).map(
-                                                async ({ url, description }: { url: string; description?: string }) => {
-                                                    const sanitizedUrl = sanitizeUrl(url);
-                                                    const imageValidation = await isValidImageUrl(sanitizedUrl);
-                                                    return imageValidation.valid
-                                                        ? {
-                                                            url: imageValidation.redirectedUrl || sanitizedUrl,
-                                                            description: description ?? '',
-                                                        }
-                                                        : null;
-                                                },
-                                            ),
-                                        ).then((results) =>
-                                            results.filter(
-                                                (image): image is { url: string; description: string } =>
-                                                    image !== null &&
-                                                    typeof image === 'object' &&
-                                                    typeof image.description === 'string' &&
-                                                    image.description !== '',
-                                            ),
-                                        )
-                                        : await Promise.all(
-                                            deduplicateByDomainAndUrl(data.images).map(async ({ url }: { url: string }) => {
+                                    images: await Promise.all(
+                                        deduplicateByDomainAndUrl(data.images).map(
+                                            async ({ url, description }: { url: string; description?: string }) => {
                                                 const sanitizedUrl = sanitizeUrl(url);
                                                 const imageValidation = await isValidImageUrl(sanitizedUrl);
-                                                return imageValidation.valid ? (imageValidation.redirectedUrl || sanitizedUrl) : null;
-                                            }),
-                                        ).then((results) => results.filter((url) => url !== null) as string[]),
+                                                return imageValidation.valid
+                                                    ? {
+                                                        url: imageValidation.redirectedUrl || sanitizedUrl,
+                                                        description: description ?? '',
+                                                    }
+                                                    : null;
+                                            },
+                                        ),
+                                    ).then((results) =>
+                                        results.filter(
+                                            (image): image is { url: string; description: string } =>
+                                                image !== null &&
+                                                typeof image === 'object' &&
+                                                typeof image.description === 'string' &&
+                                                image.description !== '',
+                                        ),
+                                    ),
                                 };
                             });
 
@@ -2282,6 +2268,55 @@ export async function POST(req: Request) {
                                 }
                             } catch (error) {
                                 console.error('Memory operation error:', error);
+                                throw error;
+                            }
+                        },
+                    }),
+                    memory_search: tool({
+                        description: 'Search personal memories.',
+                        parameters: z.object({
+                            query: z.string().describe('The search query for searching memories'),
+                        }),
+                        execute: async ({ query }: { query: string }) => {
+                            const client = new MemoryClient({ apiKey: serverEnv.MEM0_API_KEY });
+
+                            console.log("memory_search query", query);
+
+                            try {
+                                if (!query) {
+                                    return {
+                                        success: false,
+                                        action: 'search',
+                                        message: 'Query is required for search operation'
+                                    };
+                                }
+                                
+                                const searchFilters = {
+                                    AND: [
+                                        { user_id },
+                                    ]
+                                };
+                                
+                                const result = await client.search(query, {
+                                    filters: searchFilters,
+                                    api_version: 'v2'
+                                });
+                                
+                                if (!result || !result[0]) {
+                                    return {
+                                        success: false,
+                                        action: 'search',
+                                        message: 'No results found for the search query'
+                                    };
+                                }
+                                
+                                return {
+                                    success: true,
+                                    action: 'search',
+                                    results: result[0]
+                                };
+                            } catch (error) {
+                                console.error('Memory search error:', error);
                                 throw error;
                             }
                         },
