@@ -273,7 +273,7 @@ export async function POST(req: Request) {
                 messages: convertToCoreMessages(messages),
                 temperature: 0,
                 maxSteps: 5,
-                experimental_activeTools: [...activeTools],
+                experimental_activeTools: [...activeTools] as any,
                 system: instructions,
                 toolChoice: 'auto',
                 experimental_transform: smoothStream({
