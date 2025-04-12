@@ -10,11 +10,11 @@ import "./globals.css";
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://scira.ai"),
+  metadataBase: new URL("https://myapps.ai"),
   title: "Datavibes",
   description: "Datavibes AI is a minimalistic AI-powered search engine that helps you find information on the internet.",
   openGraph: {
-    url: "https://scira.ai",
+    url: "https://myapps.ai",
     siteName: "Datavibes",
   },
   keywords: [
