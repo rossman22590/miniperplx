@@ -47,13 +47,13 @@ export const searchGroups = [
     icon: XLogo,
     show: true,
   },
-  {
-    id: 'analysis' as const,
-    name: 'Analysis',
-    description: 'Code, stock and currency stuff',
-    icon: Code,
-    show: true,
-  },
+  // {
+  //   id: 'analysis' as const,
+  //   name: 'Analysis',
+  //   description: 'Code, stock and currency stuff',
+  //   icon: Code,
+  //   show: true,
+  // },
   {
     id: 'chat' as const,
     name: 'Chat',
