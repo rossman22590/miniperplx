@@ -35,6 +35,9 @@ export const metadata: Metadata = {
     description: "Datavibes AI is a minimalistic AI-powered search engine that helps you find information on the internet.",
     images: ["https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1744495018676-opengraph-image.png"],
   },
+  other: {
+    "og:logo": "https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1744495018676-opengraph-image.png"
+  },
   keywords: [
     "open source ai search engine",
     "minimalistic ai search engine",
