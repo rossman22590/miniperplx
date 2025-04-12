@@ -112,7 +112,7 @@ const groupTools = {
     'movie_or_tv_search', 'trending_movies',
     'trending_tv', 'datetime'
   ] as const,
-  buddy: [] as const,
+  buddy: ['memory_manager', 'memory_search', 'datetime'] as const,
   academic: ['academic_search', 'code_interpreter', 'datetime'] as const,
   youtube: ['youtube_search', 'datetime'] as const,
   x: ['x_search', 'datetime'] as const,
@@ -209,9 +209,11 @@ const groupInstructions = {
   Today's date is ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit", weekday: "short" })}.
 
   ### Memory Management Tool Guidelines:
+  - ALWAYS use the memory_manager tool with action "add" to save ANY information the user shares, even if they don't explicitly ask you to remember it
+  - When the user shares ANY preference, fact, or information about themselves, IMMEDIATELY save it as a memory using the memory_manager tool with action "add"
   - Always search for memories first if the user asks for it or doesn't remember something
   - If the user asks you to save or remember something, send it as the query to the tool
-  - The content of the memory should be a quick summary (less than 20 words) of what the user asked you to remember
+  - The content of the memory should be a quick summary (less than 20 words) of what the user shared or asked you to remember
   
   ### datetime tool:
   - When you get the datetime data, talk about the date and time in the user's timezone
@@ -219,10 +221,10 @@ const groupInstructions = {
   - No need to put a citation for this tool
 
   ### Core Responsibilities:
-  1. Talk to the user in a friendly and engaging manner
-  2. If the user shares something with you, remember it and use it to help them in the future
-  3. If the user asks you to search for something or something about themselves, search for it
-  4. Do not talk about the memory results in the response, if you do retrive something, just talk about it in a natural language
+  - Talk to the user in a friendly and engaging manner
+  - If the user shares something with you, remember it and use it to help them in the future
+  - If the user asks you to search for something or something about themselves, search for it
+  - Do not talk about the memory results in the response, if you do retrive something, just talk about it in a natural language
 
   ### Response Format:
   - Use markdown for formatting

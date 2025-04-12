@@ -34,8 +34,8 @@ export const metadata: Metadata = {
     title: "Datavibes",
     description: "Datavibes AI is a minimalistic AI-powered search engine that helps you find information on the internet.",
     images: ["https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1744495018676-opengraph-image.png"],
-    site: "@datavibes",
-    creator: "@datavibes",
+    site: "@myaitutor",
+    creator: "@myaitutor",
   },
   other: {
     "og:logo": "https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1744495018676-opengraph-image.png"

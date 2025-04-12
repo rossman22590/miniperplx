@@ -348,7 +348,7 @@ function CollapsibleSection({
     return (
         <div className="group rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden transition-all duration-200 hover:shadow-sm">
             <div
-                className="flex items-center justify-between px-4 py-3 cursor-pointer bg-white dark:bg-neutral-900 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+                className="flex items-center justify-between px-4 py-3 cursor-pointer bg-white dark:bg-neutral-900 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800"
                 onClick={() => setIsExpanded(!isExpanded)}
             >
                 <div className="flex items-center gap-3">
@@ -1039,7 +1039,7 @@ const HomeContent = () => {
             paragraph(children) {
                 if (typeof children === 'string' && children.includes('$')) {
                     return (
-                        <p className="my-5 leading-relaxed text-neutral-700 dark:text-neutral-300">
+                        <p className="my-5 leading-relaxed text-neutral-700 dark:text-neutral-300" key={generateKey()}>
                             <Latex
                                 delimiters={[
                                     { left: '$$', right: '$$', display: true },
@@ -1052,7 +1052,7 @@ const HomeContent = () => {
                         </p>
                     );
                 }
-                return <p className="my-5 leading-relaxed text-neutral-700 dark:text-neutral-300">{children}</p>;
+                return <p className="my-5 leading-relaxed text-neutral-700 dark:text-neutral-300" key={generateKey()}>{children}</p>;
             },
             code(children, language) {
                 return <CodeBlock language={language} key={generateKey()}>{String(children)}</CodeBlock>;
@@ -1075,12 +1075,12 @@ const HomeContent = () => {
             heading(children, level) {
                 const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
                 const sizeClasses = {
-                    1: "text-2xl md:text-3xl font-extrabold mt-8 mb-4",
-                    2: "text-xl md:text-2xl font-bold mt-7 mb-3",
-                    3: "text-lg md:text-xl font-semibold mt-6 mb-3",
-                    4: "text-base md:text-lg font-medium mt-5 mb-2",
-                    5: "text-sm md:text-base font-medium mt-4 mb-2",
-                    6: "text-xs md:text-sm font-medium mt-4 mb-2",
+                    1: "text-2xl sm:text-3xl font-extrabold mt-8 mb-4",
+                    2: "text-xl sm:text-2xl font-bold mt-7 mb-3",
+                    3: "text-lg sm:text-xl font-semibold mt-6 mb-3",
+                    4: "text-base sm:text-lg font-medium mt-5 mb-2",
+                    5: "text-sm sm:text-base font-medium mt-4 mb-2",
+                    6: "text-xs sm:text-sm font-medium mt-4 mb-2",
                 }[level] || "";
 
                 return (
@@ -1098,7 +1098,7 @@ const HomeContent = () => {
                 );
             },
             listItem(children) {
-                return <li className="pl-1 leading-relaxed">{children}</li>;
+                return <li className="pl-1 leading-relaxed" key={generateKey()}>{children}</li>;
             },
             blockquote(children) {
                 return (
@@ -1303,7 +1303,7 @@ const HomeContent = () => {
                 <Button
                     variant="outline"
                     size="icon"
-                    className="rounded-full w-8 h-8 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
+                    className="rounded-full w-8 h-8 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:shadow-sm transition-all h-auto"
                 >
                     <Info className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
                 </Button>
@@ -1968,11 +1968,11 @@ const HomeContent = () => {
                                                                         className="h-4 w-4"
                                                                     >
                                                                         <path
-                                                                            d="M12.1464 1.14645C12.3417 0.951184 12.6583 0.951184 12.8535 1.14645L14.8535 3.14645C15.0488 3.34171 15.0488 3.65829 14.8535 3.85355L10.9109 7.79618C10.8349 7.87218 10.7471 7.93543 10.651 7.9835L6.72359 9.94721C6.53109 10.0435 6.29861 10.0057 6.14643 9.85355C5.99425 9.70137 5.95652 9.46889 6.05277 9.27639L8.01648 5.34897C8.06455 5.25283 8.1278 5.16507 8.2038 5.08907L12.1464 1.14645ZM12.5 2.20711L8.91091 5.79618L7.87266 7.87267L9.94915 6.83442L13.5382 3.24535L12.5 2.20711ZM8.99997 1.49997C9.27611 1.49997 9.49997 1.72383 9.49997 1.99997C9.49997 2.27611 9.27611 2.49997 8.99997 2.49997H4.49997C3.67154 2.49997 2.99997 3.17154 2.99997 3.99997V11C2.99997 11.8284 3.67154 12.5 4.49997 12.5H11.5C12.3284 12.5 13 11.8284 13 11V6.49997C13 6.22383 13.2238 5.99997 13.5 5.99997C13.7761 5.99997 14 6.22383 14 6.49997V11C14 12.3807 12.8807 13.5 11.5 13.5H4.49997C3.11926 13.5 1.99997 12.3807 1.99997 11V3.99997C1.99997 2.61926 3.11926 1.49997 4.49997 1.49997H8.99997Z"
-                                                                            fill="currentColor"
                                                                             fillRule="evenodd"
                                                                             clipRule="evenodd"
-                                                                        />
+                                                                            d="M7.50005 1.04999C7.74858 1.04999 7.95005 1.25146 7.95005 1.49999V8.41359L10.1819 6.18179C10.3576 6.00605 10.6425 6.00605 10.8182 6.18179C10.994 6.35753 10.994 6.64245 10.8182 6.81819L7.81825 9.81819C7.64251 9.99392 7.35759 9.99392 7.18185 9.81819L4.18185 6.81819C4.00611 6.64245 4.00611 6.35753 4.18185 6.18179C4.35759 6.00605 4.64251 6.00605 4.81825 6.18179L7.05005 8.41359V1.49999C7.05005 1.25146 7.25152 1.04999 7.50005 1.04999ZM2.5 10C2.77614 10 3 10.2239 3 10.5V12C3 12.5539 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5539 12 12V10.5C12 10.2239 12.2239 10 12.5 10C12.7761 10 13 10.2239 13 10.5V12C13 13.1046 12.1059 14 11.0012 14H3.99635C2.89019 14 2 13.1046 2 12V10.5C2 10.2239 2.22386 10 2.5 10Z"
+                                                                            fill="currentColor"
+                                                                        ></path>
                                                                     </svg>
                                                                 </Button>
                                                                 <Separator orientation="vertical" className="h-7" />
@@ -2119,7 +2119,7 @@ const ToolInvocationListView = memo(
                     if (!features || features.length === 0) return null;
 
                     return (
-                        <Card className="w-full my-4 overflow-hidden bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
+                        <Card className="w-full my-4 overflow-hidden shadow-none">
                             <div className="relative w-full h-[60vh]">
                                 <div className="absolute top-4 left-4 z-10 flex gap-2">
                                     <Badge
@@ -2390,90 +2390,6 @@ const ToolInvocationListView = memo(
                     );
                 }
 
-                if (toolInvocation.toolName === 'youtube_search') {
-                    if (!result) {
-                        return <SearchLoadingState
-                            icon={YoutubeIcon}
-                            text="Searching YouTube videos..."
-                            color="red"
-                        />;
-                    }
-
-                    const youtubeResult = result as YouTubeSearchResponse;
-
-                    // Filter out videos with no meaningful content
-                    const filteredVideos = youtubeResult.results.filter(video =>
-                        (video.timestamps && video.timestamps.length > 0) ||
-                        video.captions ||
-                        video.summary
-                    );
-
-                    // If no videos with content, show a message instead
-                    if (filteredVideos.length === 0) {
-                        return (
-                            <div className="rounded-xl overflow-hidden border dark:border-neutral-800 border-neutral-200 bg-white dark:bg-neutral-900 shadow-sm p-4 text-center">
-                                <div className="flex flex-col items-center gap-3 py-6">
-                                    <div className="flex items-center justify-center h-12 w-12 rounded-full bg-red-50 dark:bg-red-950/30">
-                                        <YoutubeIcon className="h-6 w-6 text-red-600" />
-                                    </div>
-                                    <div className="text-center">
-                                        <h2 className="text-base font-medium text-neutral-900 dark:text-neutral-100 mb-1">
-                                            No Content Available
-                                        </h2>
-                                        <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                                            The videos found don&apos;t contain any timestamps or transcripts.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    }
-
-                    return (
-                        <div className="w-full my-4">
-                            <Accordion type="single" collapsible defaultValue="videos">
-                                <AccordionItem value="videos" className="border dark:border-neutral-800 rounded-xl bg-white dark:bg-neutral-900 shadow-sm">
-                                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex items-center justify-center h-9 w-9 rounded-full bg-red-50 dark:bg-red-950/30">
-                                                <YoutubeIcon className="h-5 w-5 text-red-600" />
-                                            </div>
-                                            <div>
-                                                <h2 className="text-base font-medium text-neutral-900 dark:text-neutral-100 text-left">
-                                                    YouTube Results
-                                                </h2>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    <Badge variant="secondary" className="px-2 py-0 h-5 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
-                                                        {filteredVideos.length} videos with content
-                                                    </Badge>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </AccordionTrigger>
-                                    <AccordionContent>
-                                        <div className="relative">
-                                            <div className="w-full overflow-x-scroll">
-                                                <div className="flex gap-3 p-4">
-                                                    {filteredVideos.map((video, index) => (
-                                                        <MemoizedYouTubeCard
-                                                            key={video.videoId}
-                                                            video={video}
-                                                            index={index}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            {filteredVideos.length > 3 && (
-                                                <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white dark:from-neutral-900 to-transparent pointer-events-none" />
-                                            )}
-                                        </div>
-                                    </AccordionContent>
-                                </AccordionItem>
-                            </Accordion>
-                        </div>
-                    );
-                }
-
                 if (toolInvocation.toolName === 'academic_search') {
                     if (!result) {
                         return <SearchLoadingState
@@ -2492,9 +2408,7 @@ const ToolInvocationListView = memo(
                             <div className="flex items-center justify-between w-full">
                                 <div className="flex items-center gap-2">
                                     <MapPin className="h-5 w-5 text-neutral-700 dark:text-neutral-300 animate-pulse" />
-                                    <span className="text-neutral-700 dark:text-neutral-300 text-lg">
-                                        Finding nearby {args.type}...
-                                    </span>
+                                    <span className="text-neutral-700 dark:text-neutral-300 text-lg">Finding nearby {args.type}...</span>
                                 </div>
                                 <motion.div className="flex space-x-1">
                                     {[0, 1, 2].map((index) => (
@@ -2691,8 +2605,8 @@ const ToolInvocationListView = memo(
                             <div className="border border-neutral-200 rounded-xl my-4 p-4 dark:border-neutral-800 bg-gradient-to-b from-white to-neutral-50 dark:from-neutral-900 dark:to-neutral-900/90">
                                 <div className="flex items-center gap-4">
                                     <div className="relative w-10 h-10">
-                                        <div className="absolute inset-0 rounded-full bg-primary/10 animate-pulse" />
-                                        <Globe className="h-5 w-5 text-primary/70 absolute inset-0 m-auto" />
+                                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent rounded-lg" />
+                                        <Globe className="h-5 w-5 absolute inset-0 m-auto" />
                                     </div>
                                     <div className="space-y-2 flex-1">
                                         <div className="h-4 w-36 bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded-md" />
@@ -3209,7 +3123,12 @@ const AttachmentsBadge = ({ attachments }: { attachments: any[] }) => {
                                     title="Download"
                                 >
                                     <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4">
-                                        <path d="M7.50005 1.04999C7.74858 1.04999 7.95005 1.25146 7.95005 1.49999V8.41359L10.1819 6.18179C10.3576 6.00605 10.6425 6.00605 10.8182 6.18179C10.994 6.35753 10.994 6.64245 10.8182 6.81819L7.81825 9.81819C7.64251 9.99392 7.35759 9.99392 7.18185 9.81819L4.18185 6.81819C4.00611 6.64245 4.00611 6.35753 4.18185 6.18179C4.35759 6.00605 4.64251 6.00605 4.81825 6.18179L7.05005 8.41359V1.49999C7.05005 1.25146 7.25152 1.04999 7.50005 1.04999ZM2.5 10C2.77614 10 3 10.2239 3 10.5V12C3 12.5539 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5539 12 12V10.5C12 10.2239 12.2239 10 12.5 10C12.7761 10 13 10.2239 13 10.5V12C13 13.1046 12.1059 14 11.0012 14H3.99635C2.89019 14 2 13.1046 2 12V10.5C2 10.2239 2.22386 10 2.5 10Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                                        <path
+                                            fillRule="evenodd"
+                                            clipRule="evenodd"
+                                            d="M7.50005 1.04999C7.74858 1.04999 7.95005 1.25146 7.95005 1.49999V8.41359L10.1819 6.18179C10.3576 6.00605 10.6425 6.00605 10.8182 6.18179C10.994 6.35753 10.994 6.64245 10.8182 6.81819L7.81825 9.81819C7.64251 9.99392 7.35759 9.99392 7.18185 9.81819L4.18185 6.81819C4.00611 6.64245 4.00611 6.35753 4.18185 6.18179C4.35759 6.00605 4.64251 6.00605 4.81825 6.18179L7.05005 8.41359V1.49999C7.05005 1.25146 7.25152 1.04999 7.50005 1.04999ZM2.5 10C2.77614 10 3 10.2239 3 10.5V12C3 12.5539 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5539 12 12V10.5C12 10.2239 12.2239 10 12.5 10C12.7761 10 13 10.2239 13 10.5V12C13 13.1046 12.1059 14 11.0012 14H3.99635C2.89019 14 2 13.1046 2 12V10.5C2 10.2239 2.22386 10 2.5 10Z"
+                                            fill="currentColor"
+                                        ></path>
                                     </svg>
                                 </a>
                                 
