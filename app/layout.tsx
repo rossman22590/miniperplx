@@ -27,14 +27,7 @@ export const metadata: Metadata = {
         height: 630,
         alt: "Datavibes AI Search Engine",
       }
-    ],
-    determiner: "auto",
-    profile: {
-      firstName: "Datavibes",
-      lastName: "",
-      username: "datavibes",
-      gender: "",
-    },
+    ]
   },
   twitter: {
     card: "summary_large_image",
