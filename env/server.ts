@@ -7,7 +7,7 @@ export const serverEnv = createEnv({
     XAI_API_KEY: z.string().min(1),
     MISTRAL_API_KEY: z.string().min(1),
     COHERE_API_KEY: z.string().min(1), 
-    CEREBRAS_API_KEY: z.string().min(1),
+    // CEREBRAS_API_KEY: z.string().min(1),
     GROQ_API_KEY: z.string().min(1),
     E2B_API_KEY: z.string().min(1),
     ELEVENLABS_API_KEY: z.string().min(1),
