@@ -11,7 +11,7 @@ A minimalistic AI-powered search engine that helps you find information on the i
     <a href="https://sdk.vercel.ai/docs">
       <img src="/public/one.svg" alt="Vercel AI SDK" height="40" />
     </a>
-    <a href="https://tavily.com">
+    <a href="https://tavily.com"> 
       <img src="/public/four.svg" alt="Tavily AI" height="40" />
     </a>
   </div>
