@@ -14,7 +14,11 @@ export const metadata: Metadata = {
   title: "Datavibes AI",
   description: "Datavibes AI is a minimalistic AI-powered search engine that helps you find information on the internet.",
   openGraph: {
+    type: "website",
+    locale: "en_US",
     url: "https://myapps.ai",
+    title: "Datavibes AI",
+    description: "Datavibes AI is a minimalistic AI-powered search engine that helps you find information on the internet.",
     siteName: "Datavibes AI",
     images: [
       {
