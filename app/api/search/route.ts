@@ -531,12 +531,12 @@ export async function POST(req: Request) {
                                             return true;
                                         })
                                         .map(item => ({
+                                            ...item,
                                             title: item.title || "",
-                                            url: item.url,
-                                            content: item.summary || "",
-                                            published_date: item.publishedDate,
-                                            category: "financial",
-                                            query: stockSymbol
+                                            summary: item.summary || "",
+                                            content: item.summary || "", // Add required property for NewsResult type
+                                            category: "financial", // Add required property for NewsResult type
+                                            query: stockSymbol // Add required property for NewsResult type
                                         }));
 
                                     if (processedResults.length > 0) {
@@ -599,52 +599,71 @@ plt.show()`
 
                             console.log('Code:', code);
 
-                            const sandbox = await CodeInterpreter.create(serverEnv.SANDBOX_TEMPLATE_ID!);
-                            const execution = await sandbox.runCode(code);
-                            let message = '';
+                            // Create standard sandbox instead of using template ID
+                            const sandbox = await CodeInterpreter.create();
+                            
+                            try {
+                                // Install necessary packages at runtime
+                                await sandbox.commands.run('pip install yfinance numpy pandas matplotlib seaborn');
+                                await sandbox.commands.run('npm install --global lodash axios');
+                                
+                                const execution = await sandbox.runCode(code);
+                                let message = '';
 
-                            if (execution.results.length > 0) {
-                                for (const result of execution.results) {
-                                    if (result.isMainResult) {
-                                        message += `${result.text}\n`;
-                                    } else {
-                                        message += `${result.text}\n`;
+                                if (execution.results.length > 0) {
+                                    for (const result of execution.results) {
+                                        if (result.isMainResult) {
+                                            message += `${result.text}\n`;
+                                        } else {
+                                            message += `${result.text}\n`;
+                                        }
                                     }
                                 }
-                            }
 
-                            if (execution.logs.stdout.length > 0 || execution.logs.stderr.length > 0) {
-                                if (execution.logs.stdout.length > 0) {
-                                    message += `${execution.logs.stdout.join('\n')}\n`;
+                                if (execution.logs.stdout.length > 0 || execution.logs.stderr.length > 0) {
+                                    if (execution.logs.stdout.length > 0) {
+                                        message += `${execution.logs.stdout.join('\n')}\n`;
+                                    }
+                                    if (execution.logs.stderr.length > 0) {
+                                        message += `${execution.logs.stderr.join('\n')}\n`;
+                                        console.log("Error: ", execution.logs.stderr);
+                                    }
                                 }
-                                if (execution.logs.stderr.length > 0) {
-                                    message += `${execution.logs.stderr.join('\n')}\n`;
-                                    console.log("Error: ", execution.logs.stderr);
+
+                                if (execution.error) {
+                                    message += `Error: ${execution.error}\n`;
+                                    console.log('Error: ', execution.error);
+                                }
+
+                                console.log("Chart details: ", execution.results[0].chart)
+                                if (execution.results[0].chart) {
+                                    execution.results[0].chart.elements.map((element: any) => {
+                                        console.log(element.points);
+                                    });
+                                }
+
+                                if (execution.results[0].chart === null) {
+                                    console.log("No chart found");
+                                }
+
+                                return {
+                                    message: message.trim(),
+                                    chart: execution.results[0].chart ?? '',
+                                    currency_symbols: formattedCurrencySymbols,
+                                    news_results: news_results
+                                };
+                            } catch (error) {
+                                console.error('Error executing code:', error);
+                                throw error;
+                            } finally {
+                                // Always cleanup sandbox resources when done
+                                try {
+                                    // @ts-ignore
+                                    await sandbox.close?.();
+                                } catch (err) {
+                                    console.error('Failed to close sandbox:', err);
                                 }
                             }
-
-                            if (execution.error) {
-                                message += `Error: ${execution.error}\n`;
-                                console.log('Error: ', execution.error);
-                            }
-
-                            console.log("Chart details: ", execution.results[0].chart)
-                            if (execution.results[0].chart) {
-                                execution.results[0].chart.elements.map((element: any) => {
-                                    console.log(element.points);
-                                });
-                            }
-
-                            if (execution.results[0].chart === null) {
-                                console.log("No chart found");
-                            }
-
-                            return {
-                                message: message.trim(),
-                                chart: execution.results[0].chart ?? '',
-                                currency_symbols: formattedCurrencySymbols,
-                                news_results: news_results
-                            };
                         },
                     }),
                     currency_converter: tool({
@@ -666,35 +685,57 @@ plt.show()`
   `;
                             console.log('Currency pair:', from, to);
 
-                            const sandbox = await CodeInterpreter.create(serverEnv.SANDBOX_TEMPLATE_ID!);
-                            const execution = await sandbox.runCode(code);
-                            let message = '';
+                            // Create standard sandbox instead of using template ID
+                            const sandbox = await CodeInterpreter.create();
+                            
+                            try {
+                                // Install necessary packages at runtime
+                                await sandbox.commands.run('pip install yfinance numpy pandas matplotlib seaborn');
+                                await sandbox.commands.run('npm install --global lodash axios');
+                                
+                                const execution = await sandbox.runCode(code);
+                                let message = '';
 
-                            if (execution.results.length > 0) {
-                                for (const result of execution.results) {
-                                    if (result.isMainResult) {
-                                        message += `${result.text}\n`;
-                                    } else {
-                                        message += `${result.text}\n`;
+                                if (execution.results.length > 0) {
+                                    for (const result of execution.results) {
+                                        if (result.isMainResult) {
+                                            message += `${result.text}\n`;
+                                        } else {
+                                            message += `${result.text}\n`;
+                                        }
                                     }
                                 }
-                            }
 
-                            if (execution.logs.stdout.length > 0 || execution.logs.stderr.length > 0) {
-                                if (execution.logs.stdout.length > 0) {
-                                    message += `${execution.logs.stdout.join('\n')}\n`;
+                                if (execution.logs.stdout.length > 0 || execution.logs.stderr.length > 0) {
+                                    if (execution.logs.stdout.length > 0) {
+                                        message += `${execution.logs.stdout.join('\n')}\n`;
+                                    }
+                                    if (execution.logs.stderr.length > 0) {
+                                        message += `${execution.logs.stderr.join('\n')}\n`;
+                                    }
                                 }
-                                if (execution.logs.stderr.length > 0) {
-                                    message += `${execution.logs.stderr.join('\n')}\n`;
+
+                                if (execution.error) {
+                                    message += `Error: ${execution.error}\n`;
+                                    console.log('Error: ', execution.error);
+                                }
+
+                                return { rate: message.trim() };
+                            } catch (error: any) {
+                                console.error('Error executing code:', error);
+                                return {
+                                    rate: 'Error executing code',
+                                    error: error.message || String(error)
+                                };
+                            } finally {
+                                // Always cleanup sandbox resources when done
+                                try {
+                                    // @ts-ignore
+                                    await sandbox.close?.();
+                                } catch (err) {
+                                    console.error('Failed to close sandbox:', err);
                                 }
                             }
-
-                            if (execution.error) {
-                                message += `Error: ${execution.error}\n`;
-                                console.log('Error: ', execution.error);
-                            }
-
-                            return { rate: message.trim() };
                         },
                     }),
                     text_translate: tool({
@@ -894,7 +935,7 @@ plt.show()`
                         parameters: z.object({
                             query: z.string().describe('The search query for movies/TV shows'),
                         }),
-                        execute: async ({ query }: { query: string }) => {
+                        execute: async ({ query }: { query: string; }) => {
                             const TMDB_API_KEY = serverEnv.TMDB_API_KEY;
                             const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
@@ -1289,38 +1330,60 @@ plt.show()`
                             console.log('Title:', title);
                             console.log('Icon:', icon);
 
-                            const sandbox = await CodeInterpreter.create(serverEnv.SANDBOX_TEMPLATE_ID!);
-                            const execution = await sandbox.runCode(code);
-                            let message = '';
+                            // Create standard sandbox instead of using template ID
+                            const sandbox = await CodeInterpreter.create();
+                            
+                            try {
+                                // Install necessary packages at runtime
+                                await sandbox.commands.run('pip install yfinance numpy pandas matplotlib seaborn');
+                                await sandbox.commands.run('npm install --global lodash axios');
+                                
+                                const execution = await sandbox.runCode(code);
+                                let message = '';
 
-                            if (execution.results.length > 0) {
-                                for (const result of execution.results) {
-                                    if (result.isMainResult) {
-                                        message += `${result.text}\n`;
-                                    } else {
-                                        message += `${result.text}\n`;
+                                if (execution.results.length > 0) {
+                                    for (const result of execution.results) {
+                                        if (result.isMainResult) {
+                                            message += `${result.text}\n`;
+                                        } else {
+                                            message += `${result.text}\n`;
+                                        }
                                     }
                                 }
-                            }
 
-                            if (execution.logs.stdout.length > 0 || execution.logs.stderr.length > 0) {
-                                if (execution.logs.stdout.length > 0) {
-                                    message += `${execution.logs.stdout.join('\n')}\n`;
+                                if (execution.logs.stdout.length > 0 || execution.logs.stderr.length > 0) {
+                                    if (execution.logs.stdout.length > 0) {
+                                        message += `${execution.logs.stdout.join('\n')}\n`;
+                                    }
+                                    if (execution.logs.stderr.length > 0) {
+                                        message += `${execution.logs.stderr.join('\n')}\n`;
+                                    }
                                 }
-                                if (execution.logs.stderr.length > 0) {
-                                    message += `${execution.logs.stderr.join('\n')}\n`;
+
+                                if (execution.error) {
+                                    message += `Error: ${execution.error}\n`;
+                                    console.log('Error: ', execution.error);
+                                }
+
+                                return {
+                                    message: message.trim(),
+                                    chart: execution.results[0].chart ?? '',
+                                };
+                            } catch (error: any) {
+                                console.error('Error executing code:', error);
+                                return {
+                                    message: 'Error executing code',
+                                    error: error.message || String(error)
+                                };
+                            } finally {
+                                // Always cleanup sandbox resources when done
+                                try {
+                                    // @ts-ignore
+                                    await sandbox.close?.();
+                                } catch (err) {
+                                    console.error('Failed to close sandbox:', err);
                                 }
                             }
-
-                            if (execution.error) {
-                                message += `Error: ${execution.error}\n`;
-                                console.log('Error: ', execution.error);
-                            }
-
-                            return {
-                                message: message.trim(),
-                                chart: execution.results[0].chart ?? '',
-                            };
                         },
                     }),
                     find_place: tool({
@@ -2028,7 +2091,7 @@ plt.show()`
                                             source: 'academic',
                                             title: r.title || '',
                                             url: r.url || '',
-                                            content: r.summary || ''
+                                            summary: r.summary || ''
                                         }))
                                     });
                                     completedSteps++;
@@ -2040,8 +2103,7 @@ plt.show()`
                                     };
 
                                     const xResults = await exa.searchAndContents(step.query.query, {
-                                        type: 'neural',
-                                        useAutoprompt: true,
+                                        type: 'keyword',
                                         numResults: step.query.priority,
                                         text: true,
                                         highlights: true,
@@ -2049,16 +2111,23 @@ plt.show()`
                                     });
 
                                     // Process tweets to include tweet IDs
-                                    const processedTweets = xResults.results.map(result => {
-                                        const tweetId = extractTweetId(result.url);
-                                        return {
-                                            source: 'x' as const,
-                                            title: result.title || result.author || 'Tweet',
-                                            url: result.url,
-                                            content: result.text || '',
-                                            tweetId: tweetId || undefined
-                                        };
-                                    }).filter(tweet => tweet.tweetId); // Only include tweets with valid IDs
+                                    const processedTweets = xResults.results
+                                        .map(result => {
+                                            const tweetId = extractTweetId(result.url);
+                                            return {
+                                                source: 'x' as const,
+                                                title: result.title || result.author || 'Tweet',
+                                                url: result.url,
+                                                text: result.text || '',
+                                                tweetId: tweetId || undefined
+                                            };
+                                        })
+                                        .filter((tweet): tweet is { source: 'x', title: string, url: string, text: string, tweetId: string } =>
+                                            tweet !== null &&
+                                            typeof tweet === 'object' &&
+                                            typeof tweet.tweetId === 'string' &&
+                                            tweet.tweetId !== ''
+                                        );
 
                                     searchResults.push({
                                         type: 'x',
@@ -2353,7 +2422,7 @@ plt.show()`
                                                 source: 'academic',
                                                 title: r.title || '',
                                                 url: r.url || '',
-                                                content: r.summary || ''
+                                                summary: r.summary || ''
                                             }))
                                         });
 
@@ -2370,7 +2439,7 @@ plt.show()`
                                                     source: 'academic',
                                                     title: r.title || '',
                                                     url: r.url || '',
-                                                    content: r.summary || ''
+                                                    summary: r.summary || ''
                                                 })),
                                                 message: `Found ${academicResults.results.length} results`,
                                                 timestamp: Date.now(),
@@ -2423,12 +2492,15 @@ plt.show()`
                                                     source: 'x' as const,
                                                     title: result.title || result.author || 'Tweet',
                                                     url: result.url,
-                                                    content: result.text || '',
+                                                    text: result.text || '',
                                                     tweetId // Now it's definitely string, not undefined
                                                 };
                                             })
-                                            .filter((tweet): tweet is { source: 'x', title: string, url: string, content: string, tweetId: string } =>
-                                                tweet !== null
+                                            .filter((tweet): tweet is { source: 'x', title: string, url: string, text: string, tweetId: string } =>
+                                                tweet !== null &&
+                                                typeof tweet === 'object' &&
+                                                typeof tweet.tweetId === 'string' &&
+                                                tweet.tweetId !== ''
                                             );
 
                                         // Add to search results
@@ -2654,6 +2726,7 @@ plt.show()`
 
                     const { object: repairedArgs } = await generateObject({
                         model: scira.languageModel("scira-default"),
+                        temperature: 0,
                         schema: tool.parameters,
                         prompt: [
                             `The model tried to call the tool "${toolCall.toolName}"` +
