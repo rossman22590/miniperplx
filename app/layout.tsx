@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     siteName: "Datavibes AI",
     images: [
       {
-        url: "https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1744495018676-opengraph-image.png",
+        url: "https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1745010111962-@Screenshot%202025-04-18%20170127.png",
         width: 1200,
         height: 630,
         alt: "Datavibes AI"
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Datavibes AI",
     description: "Datavibes AI is a minimalistic AI-powered search engine that helps you find information on the internet.",
-    images: ["https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1744495018676-opengraph-image.png"]
+    images: ["https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1745010111962-@Screenshot%202025-04-18%20170127.png"]
   },
   keywords: [
     "myapps.ai",
