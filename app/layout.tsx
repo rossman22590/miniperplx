@@ -10,7 +10,7 @@ import "./globals.css";
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://myapps.ai"),
+  metadataBase: new URL(process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://myapps.ai"),
   title: "Datavibes AI",
   description: "Datavibes AI is a minimalistic AI-powered search engine that helps you find information on the internet.",
   openGraph: {
@@ -20,20 +20,23 @@ export const metadata: Metadata = {
     title: "Datavibes AI",
     description: "Datavibes AI is a minimalistic AI-powered search engine that helps you find information on the internet.",
     siteName: "Datavibes AI",
-    images: [
-      {
-        url: "https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1745010111962-@Screenshot%202025-04-18%20170127.png",
-        width: 1200,
-        height: 630,
-        alt: "Datavibes AI"
-      }
-    ]
+    images: [{
+      url: "https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1745011789302-4.png",
+      width: 1200,
+      height: 630,
+      alt: "Datavibes AI"
+    }]
   },
   twitter: {
     card: "summary_large_image",
     title: "Datavibes AI",
     description: "Datavibes AI is a minimalistic AI-powered search engine that helps you find information on the internet.",
-    images: ["https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1745010111962-@Screenshot%202025-04-18%20170127.png"]
+    images: [{
+      url: "https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1745011789302-4.png",
+      width: 1200,
+      height: 630,
+      alt: "Datavibes AI"
+    }]
   },
   keywords: [
     "myapps.ai",
@@ -78,6 +81,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              const meta = document.createElement('meta');
+              meta.setAttribute('property', 'og:logo');
+              meta.setAttribute('content', 'https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1745011789302-4.png');
+              document.head.appendChild(meta);
+            `,
+          }}
+        />
+      </head>
       <body className={`${GeistSans.variable} ${syne.variable} font-sans antialiased`} suppressHydrationWarning>
         <NuqsAdapter>
           <Providers>
