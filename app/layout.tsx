@@ -82,16 +82,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              const meta = document.createElement('meta');
-              meta.setAttribute('property', 'og:logo');
-              meta.setAttribute('content', 'https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1745011789302-4.png');
-              document.head.appendChild(meta);
-            `,
-          }}
-        />
+        <meta property="og:logo" content="https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1745011789302-4.png" />
       </head>
       <body className={`${GeistSans.variable} ${syne.variable} font-sans antialiased`} suppressHydrationWarning>
         <NuqsAdapter>
