@@ -16,6 +16,20 @@ export const metadata: Metadata = {
   openGraph: {
     url: "https://myapps.ai",
     siteName: "Datavibes AI",
+    images: [
+      {
+        url: "https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1744495018676-opengraph-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Datavibes AI"
+      }
+    ]
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Datavibes AI",
+    description: "Datavibes AI is a minimalistic AI-powered search engine that helps you find information on the internet.",
+    images: ["https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1744495018676-opengraph-image.png"]
   },
   keywords: [
     "myapps.ai",
