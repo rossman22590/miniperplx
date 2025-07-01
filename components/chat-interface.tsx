@@ -39,6 +39,9 @@ import { SEARCH_LIMITS } from '@/lib/constants';
 import { ChatSDKError } from '@/lib/errors';
 import { cn, SearchGroupId, invalidateChatsCache } from '@/lib/utils';
 
+// Constants
+const SIGN_IN_PROMPT_DELAY = 60000; // 1 minute
+
 interface Attachment {
   name: string;
   contentType: string;
@@ -131,82 +134,7 @@ const LaunchBadge = ({ open, onOpenChange }: { open: boolean; onOpenChange: (ope
   );
 };
 
-// Add new component for post-message upgrade dialog
-const PostMessageUpgradeDialog = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[420px] p-0 gap-0 border border-neutral-200/60 dark:border-neutral-800/60 shadow-xl">
-        <div className="p-6 space-y-5">
-          {/* Header */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-black dark:bg-white flex items-center justify-center">
-                <Crown className="w-4 h-4 text-white dark:text-black" weight="fill" />
-              </div>
-              <div>
-                <h2 className="text-lg font-medium text-neutral-900 dark:text-neutral-100">Upgrade to Scira Pro</h2>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">Get unlimited access to all features</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Features */}
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-neutral-400 dark:bg-neutral-500 mt-2 flex-shrink-0"></div>
-              <div>
-                <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Unlimited searches</p>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">No daily limits or restrictions</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-neutral-400 dark:bg-neutral-500 mt-2 flex-shrink-0"></div>
-              <div>
-                <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Premium AI models</p>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">Claude 4 Opus, Grok 3, GPT-4o and more</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-neutral-400 dark:bg-neutral-500 mt-2 flex-shrink-0"></div>
-              <div>
-                <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">PDF analysis</p>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">Upload and analyze documents</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Pricing */}
-          <div className="bg-neutral-50 dark:bg-neutral-900/50 rounded-lg p-4 space-y-2">
-            <div className="flex items-baseline gap-1">
-              <span className="text-xl font-medium text-neutral-900 dark:text-neutral-100">$15</span>
-              <span className="text-sm text-neutral-500 dark:text-neutral-400">/month</span>
-            </div>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">Cancel anytime</p>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="flex-1 h-9 text-sm font-normal border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
-            >
-              Maybe later
-            </Button>
-            <Button
-              onClick={() => {
-                window.location.href = '/pricing';
-              }}
-              className="flex-1 h-9 text-sm font-normal bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black"
-            >
-              Upgrade now
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
+// Removed upgrade dialog - all features are now free with daily limits
 
 interface ChatInterfaceProps {
   initialChatId?: string;
@@ -228,14 +156,7 @@ const ChatInterface = memo(
 
     // Use localStorage hook directly for model selection with a default
     const [selectedModel, setSelectedModel] = useLocalStorage('scira-selected-model', 'scira-default');
-    const {
-      user,
-      subscriptionData,
-      isProUser: isUserPro,
-      isLoading: proStatusLoading,
-      shouldCheckLimits: shouldCheckUserLimits,
-      shouldBypassLimitsForModel,
-    } = useProUserStatus();
+    const { user } = useProUserStatus();
 
     const initialState = useMemo(
       () => ({
@@ -279,16 +200,8 @@ const ChatInterface = memo(
     // Generate a consistent ID for new chats
     const chatId = useMemo(() => initialChatId ?? uuidv4(), [initialChatId]);
 
-    // Pro users bypass all limit checks - much cleaner!
-    // Only check limits when we're not loading Pro status (prevents flash of limit UI)
-    // Also bypass limits for registered users using free unlimited models
-    const shouldBypassLimits = shouldBypassLimitsForModel(selectedModel);
-    const hasExceededLimit =
-      shouldCheckUserLimits &&
-      !proStatusLoading &&
-      !shouldBypassLimits &&
-      usageData &&
-      usageData.count >= SEARCH_LIMITS.DAILY_SEARCH_LIMIT;
+    // Check daily search limits for all users
+    const hasExceededLimit = usageData && usageData.count >= SEARCH_LIMITS.DAILY_SEARCH_LIMIT;
     const isLimitBlocked = Boolean(hasExceededLimit);
 
     // Timer for sign-in prompt for unauthenticated users
@@ -297,10 +210,7 @@ const ChatInterface = memo(
       if (user) {
         if (signInTimerRef.current) {
           clearTimeout(signInTimerRef.current);
-          signInTimerRef.current = null;
         }
-        // Reset the flag so it can show again in future sessions if they log out
-        setHasShownSignInPrompt(false);
         return;
       }
 
@@ -311,32 +221,30 @@ const ChatInterface = memo(
           clearTimeout(signInTimerRef.current);
         }
 
-        // Set timer for 1 minute (60000 ms)
-        // For testing, you can reduce this to a shorter time like 5000 ms (5 seconds)
+        // Set new timer
         signInTimerRef.current = setTimeout(() => {
           setShowSignInPrompt(true);
-          setHasShownSignInPrompt(true);
-        }, 60000);
-      }
+        }, SIGN_IN_PROMPT_DELAY);
 
-      // Cleanup timer on unmount
-      return () => {
-        if (signInTimerRef.current) {
-          clearTimeout(signInTimerRef.current);
-        }
-      };
+        // Cleanup function
+        return () => {
+          if (signInTimerRef.current) {
+            clearTimeout(signInTimerRef.current);
+          }
+        };
+      }
     }, [user, hasShownSignInPrompt, setHasShownSignInPrompt]);
 
-    // Show changelog dialog to registered free users
+    // Show changelog dialog to all users who haven't seen it yet
     useEffect(() => {
-      // Show changelog to registered free users who haven't seen it yet
-      if (user && !isUserPro && !hasShownChangelogDialog && !proStatusLoading) {
+      // Show changelog to users who haven't seen it yet
+      if (!hasShownChangelogDialog) {
         // Small delay to ensure UI is ready
         setTimeout(() => {
           setShowChangelogDialog(true);
         }, 500);
       }
-    }, [user, isUserPro, hasShownChangelogDialog, proStatusLoading]);
+    }, [hasShownChangelogDialog]);
 
     // Show launch badge to all users who haven't seen it yet
     useEffect(() => {
@@ -371,7 +279,7 @@ const ChatInterface = memo(
           console.log('[finish reason]:', finishReason);
 
           // Refresh usage data after message completion for authenticated users
-          if (user) {
+          if (usageData) {
             refetchUsage();
           }
 
@@ -381,14 +289,14 @@ const ChatInterface = memo(
 
           console.log('Upgrade dialog check:', {
             isFirstMessage,
-            isProUser: isUserPro,
+            isProUser: false,
             hasShownUpgradeDialog,
-            user: !!user,
+            user: !!usageData,
             messagesLength: messages.length,
           });
 
           // Show upgrade dialog after first message if user is not Pro and hasn't seen it before
-          if (isFirstMessage && !isUserPro && !hasShownUpgradeDialog && user) {
+          if (isFirstMessage && !usageData && !hasShownUpgradeDialog) {
             console.log('Showing upgrade dialog...');
             setTimeout(() => {
               setShowUpgradeDialog(true);
@@ -400,7 +308,7 @@ const ChatInterface = memo(
           if (
             message.content &&
             (finishReason === 'stop' || finishReason === 'length') &&
-            (user || selectedVisibilityType === 'private')
+            (usageData || selectedVisibilityType === 'private')
           ) {
             const newHistory = [
               { role: 'user', content: lastSubmittedQueryRef.current },
@@ -465,12 +373,12 @@ const ChatInterface = memo(
     });
 
     useEffect(() => {
-      if (user && status === 'streaming' && messages.length > 0) {
+      if (usageData && status === 'streaming' && messages.length > 0) {
         console.log('[chatId]:', chatId);
         // Invalidate chats cache to refresh the list
         invalidateChatsCache();
       }
-    }, [user, status, router, chatId, initialChatId, messages.length]);
+    }, [usageData, status, router, chatId, initialChatId, messages.length]);
 
     useEffect(() => {
       if (!initializedRef.current && initialState.query && !messages.length && !initialChatId) {
@@ -492,7 +400,7 @@ const ChatInterface = memo(
           initialMessages &&
           initialMessages.length >= 2 &&
           !suggestedQuestions.length &&
-          (user || selectedVisibilityType === 'private') &&
+          (usageData || selectedVisibilityType === 'private') &&
           status === 'ready'
         ) {
           const lastUserMessage = initialMessages.filter((m) => m.role === 'user').pop();
@@ -514,7 +422,7 @@ const ChatInterface = memo(
       };
 
       generateSuggestionsForInitialMessages();
-    }, [initialMessages, suggestedQuestions.length, status, user, selectedVisibilityType]);
+    }, [initialMessages, suggestedQuestions.length, status, usageData, selectedVisibilityType]);
 
     // Reset suggested questions when status changes to streaming
     useEffect(() => {
@@ -649,9 +557,6 @@ const ChatInterface = memo(
           user={user}
           onHistoryClick={() => setCommandDialogOpen(true)}
           isOwner={isOwner}
-          subscriptionData={subscriptionData}
-          isProUser={isUserPro}
-          isProStatusLoading={proStatusLoading}
         />
 
         {/* Chat History Dialog */}
@@ -675,16 +580,7 @@ const ChatInterface = memo(
           }}
         />
 
-        {/* Post-Message Upgrade Dialog */}
-        <PostMessageUpgradeDialog
-          open={showUpgradeDialog}
-          onOpenChange={(open) => {
-            setShowUpgradeDialog(open);
-            if (!open) {
-              setHasShownUpgradeDialog(true);
-            }
-          }}
-        />
+        {/* Removed Post-Message Upgrade Dialog - no longer needed */}
 
         {/* Changelog Dialog */}
         <ChangelogDialog
@@ -719,7 +615,7 @@ const ChatInterface = memo(
             {status === 'ready' && messages.length === 0 && (
               <div className="text-center m-0 mb-2">
                 <h1 className="text-3xl sm:text-5xl !mb-0 text-neutral-800 dark:text-neutral-100 font-be-vietnam-pro! font-light tracking-tighter">
-                  scira
+                  Datavibes
                 </h1>
               </div>
             )}
@@ -737,29 +633,18 @@ const ChatInterface = memo(
                       You&apos;ve used all {SEARCH_LIMITS.DAILY_SEARCH_LIMIT} searches for today.
                     </p>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                      Upgrade to continue with unlimited searches and premium features.
+                      Your daily limit will reset tomorrow. Come back then to continue searching!
                     </p>
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 justify-center">
                     <Button
                       variant="outline"
                       onClick={() => {
                         refetchUsage();
                       }}
-                      size="sm"
-                      className="flex-1"
+                      className="h-9 text-sm font-normal border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
                     >
-                      Refresh
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        window.location.href = '/pricing';
-                      }}
-                      size="sm"
-                      className="flex-1 bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black"
-                    >
-                      <Crown className="h-3 w-3 mr-1.5" />
-                      Upgrade
+                      Refresh Usage
                     </Button>
                   </div>
                 </div>
@@ -805,8 +690,7 @@ const ChatInterface = memo(
               >
                 <FormComponent
                   chatId={chatId}
-                  user={user!}
-                  subscriptionData={subscriptionData}
+                  user={user}
                   input={input}
                   setInput={setInput}
                   attachments={attachments}
@@ -831,42 +715,33 @@ const ChatInterface = memo(
               </div>
             )}
 
-          {/* Show limit exceeded message */}
-          {isLimitBlocked && messages.length > 0 && (
-            <div className="fixed bottom-8 sm:bottom-4 left-0 right-0 w-full max-w-[95%] sm:max-w-2xl mx-auto z-20">
-              <div className="p-3 bg-neutral-50 dark:bg-neutral-900/95 border border-neutral-200/60 dark:border-neutral-800/60 rounded-lg shadow-sm backdrop-blur-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Crown className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
-                    <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                      Daily limit reached ({SEARCH_LIMITS.DAILY_SEARCH_LIMIT} searches used)
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        refetchUsage();
-                      }}
-                      className="h-7 px-2 text-xs"
-                    >
-                      Refresh
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        window.location.href = '/pricing';
-                      }}
-                      className="h-7 px-3 text-xs bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black"
-                    >
-                      Upgrade
-                    </Button>
+            {/* Show limit exceeded message */}
+            {isLimitBlocked && messages.length > 0 && (
+              <div className="fixed bottom-8 sm:bottom-4 left-0 right-0 w-full max-w-[95%] sm:max-w-2xl mx-auto z-20">
+                <div className="p-3 bg-neutral-50 dark:bg-neutral-900/95 border border-neutral-200/60 dark:border-neutral-800/60 rounded-lg shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
+                      <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                        Daily limit reached ({SEARCH_LIMITS.DAILY_SEARCH_LIMIT} searches used) - Resets tomorrow
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          refetchUsage();
+                        }}
+                        className="h-7 px-2 text-xs"
+                      >
+                        Refresh
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       </div>
     );

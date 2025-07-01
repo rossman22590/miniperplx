@@ -185,7 +185,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
                     lineHeight: 1,
                   }}
                 >
-                  Scira AI
+                  Datavibes AI
                 </div>
                 <div
                   style={{

@@ -218,7 +218,7 @@ const UserProfile = memo(
                           <Crown size={14} className="text-foreground" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-medium text-foreground text-sm">Scira Pro</span>
+                          <span className="font-medium text-foreground text-sm">Datavibes Pro</span>
                           <span className="text-[10px] text-muted-foreground">Unlimited access to all features</span>
                         </div>
                       </div>
@@ -226,14 +226,14 @@ const UserProfile = memo(
                   ) : (
                     <DropdownMenuItem
                       className="cursor-pointer flex items-center gap-2.5 py-1.5"
-                      onClick={() => router.push('/pricing')}
+                      onClick={() => router.push('/')}
                     >
                       <div className="size-6 rounded-md bg-muted/50 border border-border flex items-center justify-center">
                         <Lightning size={14} />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium">Upgrade to Pro</span>
-                        <span className="text-[10px] text-muted-foreground">Unlimited searches & premium models</span>
+                        <span className="text-sm font-medium"></span>
+                        <span className="text-[10px] text-muted-foreground">AI Tutor Ultra</span>
                       </div>
                     </DropdownMenuItem>
                   )
@@ -265,7 +265,7 @@ const UserProfile = memo(
             <DropdownMenuSeparator />
 
             {/* About and Information */}
-            <DropdownMenuItem className="cursor-pointer" asChild>
+            {/* <DropdownMenuItem className="cursor-pointer" asChild>
               <Link href="/about" className="w-full flex items-center gap-2">
                 <Info size={16} />
                 <span>About</span>
@@ -282,11 +282,11 @@ const UserProfile = memo(
                 <Shield size={16} />
                 <span>Privacy</span>
               </Link>
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
             <DropdownMenuSeparator />
 
             {/* Social and External Links */}
-            <DropdownMenuItem className="cursor-pointer" asChild>
+            {/* <DropdownMenuItem className="cursor-pointer" asChild>
               <a
                 href={'https://git.new/scira'}
                 target="_blank"
@@ -318,8 +318,8 @@ const UserProfile = memo(
                 <InstagramLogoIcon size={16} />
                 <span>Instagram</span>
               </a>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer" asChild>
+            </DropdownMenuItem> */}
+            {/* <DropdownMenuItem className="cursor-pointer" asChild>
               <a
                 href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fzaidmukaddam%2Fscira&env=XAI_API_KEY,OPENAI_API_KEY,ANTHROPIC_API_KEY,GROQ_API_KEY,GOOGLE_GENERATIVE_AI_API_KEY,DAYTONA_API_KEY,E2B_API_KEY,DATABASE_URL,BETTER_AUTH_SECRET,GITHUB_CLIENT_ID,GITHUB_CLIENT_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,TWITTER_CLIENT_ID,TWITTER_CLIENT_SECRET,REDIS_URL,ELEVENLABS_API_KEY,TAVILY_API_KEY,EXA_API_KEY,TMDB_API_KEY,YT_ENDPOINT,FIRECRAWL_API_KEY,OPENWEATHER_API_KEY,SANDBOX_TEMPLATE_ID,GOOGLE_MAPS_API_KEY,MAPBOX_ACCESS_TOKEN,AVIATION_STACK_API_KEY,CRON_SECRET,BLOB_READ_WRITE_TOKEN,MEM0_API_KEY,MEM0_ORG_ID,MEM0_PROJECT_ID,SMITHERY_API_KEY,NEXT_PUBLIC_MAPBOX_TOKEN,NEXT_PUBLIC_POSTHOG_KEY,NEXT_PUBLIC_POSTHOG_HOST,NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,SCIRA_PUBLIC_API_KEY,NEXT_PUBLIC_SCIRA_PUBLIC_API_KEY&envDescription=API%20keys%20and%20configuration%20required%20for%20Scira%20to%20function"
                 target="_blank"
@@ -329,8 +329,8 @@ const UserProfile = memo(
                 <VercelIcon size={14} />
                 <span>Deploy with Vercel</span>
               </a>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer" asChild>
+            </DropdownMenuItem> */}
+            {/* <DropdownMenuItem className="cursor-pointer" asChild>
               <a
                 href={'https://scira.userjot.com'}
                 target="_blank"
@@ -340,7 +340,7 @@ const UserProfile = memo(
                 <Bug className="size-4" />
                 <span>Feature/Bug Request</span>
               </a>
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
             <DropdownMenuSeparator />
 
             {/* Auth */}

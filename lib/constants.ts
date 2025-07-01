@@ -1,7 +1,7 @@
-// Search limits for free users
+// Search limits for all users
 export const SEARCH_LIMITS = {
-  DAILY_SEARCH_LIMIT: 20, // Daily searches for free users
-  EXTREME_SEARCH_LIMIT: 5, // Monthly extreme searches for free users
+  DAILY_SEARCH_LIMIT: 300, // Daily searches for all users
+  EXTREME_SEARCH_LIMIT: 75, // Monthly extreme searches for all users
 } as const;
 
 export const PRICING = {

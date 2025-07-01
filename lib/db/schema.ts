@@ -149,6 +149,21 @@ export const messageUsage = pgTable('message_usage', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// Daily search usage tracking table
+export const dailySearchUsage = pgTable('daily_search_usage', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => generateId()),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  searchCount: integer('search_count').notNull().default(0),
+  date: timestamp('date').notNull().defaultNow(),
+  resetAt: timestamp('reset_at').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 export type User = InferSelectModel<typeof user>;
 export type Session = InferSelectModel<typeof session>;
 export type Account = InferSelectModel<typeof account>;
@@ -159,3 +174,4 @@ export type Stream = InferSelectModel<typeof stream>;
 export type Subscription = InferSelectModel<typeof subscription>;
 export type ExtremeSearchUsage = InferSelectModel<typeof extremeSearchUsage>;
 export type MessageUsage = InferSelectModel<typeof messageUsage>;
+export type DailySearchUsage = InferSelectModel<typeof dailySearchUsage>;

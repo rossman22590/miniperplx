@@ -219,7 +219,7 @@ export default function AboutPage() {
                   alt="Scira"
                   width={100}
                   height={100}
-                  className="size-14 invert dark:invert-0"
+                  className="size-14 "
                   quality={100}
                 />
                 <span className="text-4xl font-medium tracking-tight font-be-vietnam-pro">Scira</span>
@@ -914,7 +914,7 @@ export default function AboutPage() {
 
                 <div className="mb-8">
                   <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-3 tracking-[-0.01em]">
-                    Scira Pro
+                    Datavibes Pro
                   </h3>
                   <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-6 leading-relaxed">
                     Everything you need for unlimited usage

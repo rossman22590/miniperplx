@@ -412,36 +412,16 @@ const Navbar = memo(
                   </TooltipContent>
                 </Tooltip>
               ) : subscriptionData ? (
-                hasActiveSubscription ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="rounded-md pointer-events-auto flex items-center gap-1.5 p-1.5 bg-muted/50 border border-border">
-                        <Crown size={14} className="text-foreground" />
-                        <span className="text-xs font-medium text-foreground hidden sm:inline">Pro</span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={4}>
-                      Pro Subscribed - Unlimited access
-                    </TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="pointer-events-auto p-0 px-1"
-                        onClick={() => router.push('/pricing')}
-                      >
-                        <Lightning size={16} />
-                        <span className="text-sm font-medium hidden sm:inline ml-1">Upgrade</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={4}>
-                      Upgrade to Pro for unlimited searches
-                    </TooltipContent>
-                  </Tooltip>
-                )
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="rounded-md pointer-events-auto flex items-center gap-1.5 p-1.5 bg-muted/50 border border-border">
+                      <span className="text-xs font-medium text-foreground">AI Tutor Ultra</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={4}>
+                    Free access with daily limits
+                  </TooltipContent>
+                </Tooltip>
               ) : null}
             </>
           )}

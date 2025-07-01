@@ -37,6 +37,7 @@ import {
   incrementExtremeSearchUsage,
   incrementMessageUsage,
 } from '@/lib/db/queries';
+import { incrementDailySearchUsage } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
 import { SEARCH_LIMITS } from '@/lib/constants';
 import { createResumableStreamContext, type ResumableStreamContext } from 'resumable-stream';
@@ -327,10 +328,10 @@ export async function POST(req: Request) {
   }
 
   // Check if model requires authentication
-  const authRequiredModels = ['scira-anthropic', 'scira-google'];
-  if (authRequiredModels.includes(model) && !user) {
-    return new ChatSDKError('unauthorized:model', `Authentication required to access ${model}`).toResponse();
-  }
+  // const authRequiredModels = ['scira-anthropic', 'scira-google'];
+  // if (authRequiredModels.includes(model) && !user) {
+  //   return new ChatSDKError('unauthorized:model', `Authentication required to access ${model}`).toResponse();
+  // }
 
   // Check message count limit for non-pro users
   if (user) {
@@ -340,48 +341,44 @@ export async function POST(req: Request) {
       getExtremeSearchUsageCount(),
     ]);
 
-    if (messageCountResult.error) {
-      console.error('Error getting message count:', messageCountResult.error);
-      return new ChatSDKError('bad_request:api', 'Failed to verify usage limits').toResponse();
-    }
+    // Remove all pro checks and limits
+    // const isProUser = subscriptionResult.hasSubscription && subscriptionResult.subscription?.status === 'active';
 
-    const isProUser = subscriptionResult.hasSubscription && subscriptionResult.subscription?.status === 'active';
+    // // Check if model requires Pro subscription
+    // const proRequiredModels = [
+    //   'scira-grok-3',
+    //   'scira-anthropic',
+    //   'scira-anthropic-thinking',
+    //   'scira-opus',
+    //   'scira-opus-pro',
+    //   'scira-google',
+    //   'scira-google-pro',
+    // ];
 
-    // Check if model requires Pro subscription
-    const proRequiredModels = [
-      'scira-grok-3',
-      'scira-anthropic',
-      'scira-anthropic-thinking',
-      'scira-opus',
-      'scira-opus-pro',
-      'scira-google',
-      'scira-google-pro',
-    ];
+    // if (proRequiredModels.includes(model) && !isProUser) {
+    //   return new ChatSDKError('upgrade_required:model', `${model} requires a Pro subscription`).toResponse();
+    // }
 
-    if (proRequiredModels.includes(model) && !isProUser) {
-      return new ChatSDKError('upgrade_required:model', `${model} requires a Pro subscription`).toResponse();
-    }
+    // // Check if user should bypass limits for free unlimited models
+    // const freeUnlimitedModels = ['scira-default', 'scira-vision'];
+    // const shouldBypassLimits = freeUnlimitedModels.includes(model);
 
-    // Check if user should bypass limits for free unlimited models
-    const freeUnlimitedModels = ['scira-default', 'scira-vision'];
-    const shouldBypassLimits = freeUnlimitedModels.includes(model);
+    // if (!isProUser && !shouldBypassLimits && messageCountResult.count >= SEARCH_LIMITS.DAILY_SEARCH_LIMIT) {
+    //   return new ChatSDKError(
+    //     'upgrade_required:chat',
+    //     `Daily search limit of ${SEARCH_LIMITS.DAILY_SEARCH_LIMIT} exceeded`,
+    //   ).toResponse();
+    // }
 
-    if (!isProUser && !shouldBypassLimits && messageCountResult.count >= SEARCH_LIMITS.DAILY_SEARCH_LIMIT) {
-      return new ChatSDKError(
-        'upgrade_required:chat',
-        `Daily search limit of ${SEARCH_LIMITS.DAILY_SEARCH_LIMIT} exceeded`,
-      ).toResponse();
-    }
-
-    // Check extreme search usage limit for non-pro users
-    if (!isProUser && group === 'extreme') {
-      if (extremeSearchUsage.count >= SEARCH_LIMITS.EXTREME_SEARCH_LIMIT) {
-        return new ChatSDKError(
-          'upgrade_required:api',
-          `Daily extreme search limit of ${SEARCH_LIMITS.EXTREME_SEARCH_LIMIT} exceeded`,
-        ).toResponse();
-      }
-    }
+    // // Check extreme search usage limit for non-pro users
+    // if (!isProUser && group === 'extreme') {
+    //   if (extremeSearchUsage.count >= SEARCH_LIMITS.EXTREME_SEARCH_LIMIT) {
+    //     return new ChatSDKError(
+    //       'upgrade_required:api',
+    //       `Daily extreme search limit of ${SEARCH_LIMITS.EXTREME_SEARCH_LIMIT} exceeded`,
+    //     ).toResponse();
+    //   }
+    // }
   }
 
   const { tools: activeTools, instructions } = await getGroupConfig(group);
@@ -2762,7 +2759,10 @@ print(f"Converted amount: {converted_amount}")
             try {
               const freeUnlimitedModels = ['scira-default', 'scira-vision'];
               if (!freeUnlimitedModels.includes(model)) {
-                await incrementMessageUsage({ userId: user.id });
+                await Promise.all([
+                  incrementMessageUsage({ userId: user.id }),
+                  incrementDailySearchUsage({ userId: user.id }),
+                ]);
               }
             } catch (error) {
               console.error('Failed to track message usage:', error);

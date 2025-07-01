@@ -155,7 +155,7 @@ export default function TermsPage() {
               Grok 3 Mini and Grok 2 Vision models for registered users
             </li>
             <li>
-              <strong>Scira Pro:</strong> $15/month subscription with unlimited searches and access to all AI models
+              <strong>Datavibes Pro:</strong> $15/month subscription with unlimited searches and access to all AI models
             </li>
           </ul>
           <p>For paid subscriptions:</p>
@@ -250,7 +250,7 @@ export default function TermsPage() {
                 <NextImage
                   src="/scira.png"
                   alt="Scira Logo"
-                  className="h-4 w-4 opacity-80 invert dark:invert-0"
+                  className="h-4 w-4 opacity-80"
                   width={16}
                   height={16}
                   unoptimized

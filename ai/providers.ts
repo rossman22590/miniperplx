@@ -72,7 +72,7 @@ export const models = [
     experimental: false,
     category: 'Pro',
     pdf: false,
-    pro: true,
+    pro: false,
   },
   {
     value: 'scira-vision',
@@ -105,7 +105,7 @@ export const models = [
     experimental: false,
     category: 'Pro',
     pdf: true,
-    pro: true,
+    pro: false,
   },
   {
     value: 'scira-anthropic-thinking',
@@ -116,7 +116,7 @@ export const models = [
     experimental: false,
     category: 'Pro',
     pdf: true,
-    pro: true,
+    pro: false,
   },
   {
     value: 'scira-opus',
@@ -127,7 +127,7 @@ export const models = [
     experimental: false,
     category: 'Pro',
     pdf: true,
-    pro: true,
+    pro: false,
   },
   {
     value: 'scira-opus-pro',
@@ -138,7 +138,7 @@ export const models = [
     experimental: false,
     category: 'Pro',
     pdf: true,
-    pro: true,
+    pro: false,
   },
   {
     value: 'scira-google-lite',
@@ -160,7 +160,7 @@ export const models = [
     experimental: false,
     category: 'Pro',
     pdf: true,
-    pro: true,
+    pro: false,
   },
   {
     value: 'scira-google-pro',
@@ -171,7 +171,7 @@ export const models = [
     experimental: false,
     category: 'Pro',
     pdf: true,
-    pro: true,
+    pro: false,
   },
   {
     value: 'scira-4o-mini',
@@ -193,7 +193,7 @@ export const models = [
     experimental: false,
     category: 'Pro',
     pdf: true,
-    pro: true,
+    pro: false,
   },
   {
     value: 'scira-o3',
@@ -204,7 +204,7 @@ export const models = [
     experimental: false,
     category: 'Pro',
     pdf: true,
-    pro: true,
+    pro: false,
   },
   {
     value: 'scira-llama-4',

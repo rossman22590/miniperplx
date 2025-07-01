@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, asc, desc, eq, gt, gte, inArray, lt, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, lt, type SQL, notInArray, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
@@ -14,6 +14,7 @@ import {
   stream,
   extremeSearchUsage,
   messageUsage,
+  dailySearchUsage,
 } from './schema';
 import { ChatSDKError } from '../errors';
 import { serverEnv } from '@/env/server';
@@ -45,7 +46,6 @@ export async function saveChat({
   try {
     return await db.insert(chat).values({
       id,
-      createdAt: new Date(),
       userId,
       title,
       visibility,
@@ -251,9 +251,19 @@ export async function updateChatTitleById({ chatId, title }: { chatId: string; t
 
 export async function getMessageCountByUserId({ id, differenceInHours }: { id: string; differenceInHours: number }) {
   try {
-    // Use the new message usage tracking system instead
-    // This is more reliable as it won't be affected by message deletions
-    return await getMessageCount({ userId: id });
+    const now = new Date();
+    const startTime = new Date(now.getTime() - differenceInHours * 60 * 60 * 1000);
+
+    return await db
+      .select()
+      .from(message)
+      .where(
+        and(
+          eq(message.chatId, id),
+          gte(message.createdAt, startTime),
+          lt(message.createdAt, now)
+        )
+      );
   } catch (error) {
     throw new ChatSDKError('bad_request:database', 'Failed to get message count by user id');
   }
@@ -434,5 +444,206 @@ export async function getMessageCount({ userId }: { userId: string }): Promise<n
   } catch (error) {
     console.error('Error getting message count:', error);
     return 0;
+  }
+}
+
+export async function getDailySearchUsageByUserId({ userId }: { userId: string }) {
+  try {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+    // First try to get existing record
+    const [usage] = await db
+      .select()
+      .from(dailySearchUsage)
+      .where(
+        and(
+          eq(dailySearchUsage.userId, userId),
+          gte(dailySearchUsage.date, startOfDay),
+          lt(dailySearchUsage.date, endOfDay)
+        )
+      );
+
+    if (!usage) {
+      // Create new usage record for today
+      const resetAt = new Date(endOfDay);
+      const [newUsage] = await db
+        .insert(dailySearchUsage)
+        .values({
+          userId,
+          searchCount: 0,
+          date: startOfDay,
+          resetAt,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      return newUsage;
+    }
+
+    // Check if we need to reset the count
+    if (now >= usage.resetAt) {
+      const resetAt = new Date(endOfDay);
+      const [updatedUsage] = await db
+        .update(dailySearchUsage)
+        .set({
+          searchCount: 0,
+          date: startOfDay,
+          resetAt,
+          updatedAt: now,
+        })
+        .where(eq(dailySearchUsage.id, usage.id))
+        .returning();
+      return updatedUsage;
+    }
+
+    return usage;
+  } catch (error) {
+    console.error('Error getting daily search usage:', error);
+    throw new ChatSDKError('bad_request:database', 'Failed to get daily search usage');
+  }
+}
+
+export async function incrementDailySearchUsage({ userId }: { userId: string }) {
+  try {
+    // First ensure we have a usage record and it's current
+    const usage = await getDailySearchUsageByUserId({ userId });
+    if (!usage) {
+      throw new Error('Failed to get or create daily search usage record');
+    }
+
+    // Now increment the count
+    const [updatedUsage] = await db
+      .update(dailySearchUsage)
+      .set({
+        searchCount: usage.searchCount + 1,
+        updatedAt: new Date(),
+      })
+      .where(eq(dailySearchUsage.id, usage.id))
+      .returning();
+
+    if (!updatedUsage) {
+      throw new Error('Failed to update daily search usage record');
+    }
+
+    return updatedUsage;
+  } catch (error) {
+    console.error('Error incrementing daily search usage:', error);
+    throw new ChatSDKError('bad_request:database', 'Failed to increment daily search usage');
+  }
+}
+
+export async function getDailySearchCount({ userId }: { userId: string }): Promise<number> {
+  try {
+    const usage = await getDailySearchUsageByUserId({ userId });
+    return usage?.searchCount || 0;
+  } catch (error) {
+    console.error('Error getting daily search count:', error);
+    return 0;
+  }
+}
+
+export async function populateDailySearchUsageFromChats() {
+  try {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setDate(endOfDay.getDate() + 1);
+
+    // First, get all users with their chat counts for today
+    const userChatCounts = await db
+      .select({
+        userId: chat.userId,
+        chatCount: sql<number>`count(${chat.id})::int`,
+      })
+      .from(chat)
+      .where(
+        and(
+          gte(chat.createdAt, startOfDay),
+          lt(chat.createdAt, endOfDay)
+        )
+      )
+      .groupBy(chat.userId);
+
+    // For each user with chats, update or create their daily search usage
+    for (const { userId, chatCount } of userChatCounts) {
+      const [existingUsage] = await db
+        .select()
+        .from(dailySearchUsage)
+        .where(
+          and(
+            eq(dailySearchUsage.userId, userId),
+            gte(dailySearchUsage.date, startOfDay),
+            lt(dailySearchUsage.date, endOfDay)
+          )
+        );
+
+      if (existingUsage) {
+        await db
+          .update(dailySearchUsage)
+          .set({
+            searchCount: chatCount,
+            updatedAt: now,
+          })
+          .where(eq(dailySearchUsage.id, existingUsage.id));
+      } else {
+        await db
+          .insert(dailySearchUsage)
+          .values({
+            userId,
+            searchCount: chatCount,
+            date: startOfDay,
+            resetAt: endOfDay,
+            createdAt: now,
+            updatedAt: now,
+          });
+      }
+    }
+
+    // For users who haven't created any chats today, ensure they have a record with count 0
+    await db.transaction(async (tx) => {
+      const usersWithoutChats = await tx
+        .select({
+          id: user.id,
+        })
+        .from(user)
+        .where(
+          notInArray(
+            user.id,
+            userChatCounts.map((u) => u.userId)
+          )
+        );
+
+      for (const { id: userId } of usersWithoutChats) {
+        const [existingUsage] = await tx
+          .select()
+          .from(dailySearchUsage)
+          .where(
+            and(
+              eq(dailySearchUsage.userId, userId),
+              gte(dailySearchUsage.date, startOfDay),
+              lt(dailySearchUsage.date, endOfDay)
+            )
+          );
+
+        if (!existingUsage) {
+          await tx.insert(dailySearchUsage).values({
+            userId,
+            searchCount: 0,
+            date: startOfDay,
+            resetAt: endOfDay,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      }
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error populating daily search usage:', error);
+    throw new ChatSDKError('bad_request:database', 'Failed to populate daily search usage');
   }
 }

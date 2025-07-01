@@ -9,23 +9,23 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getUserMessageCount, getSubDetails, getCurrentUser, getExtremeSearchUsageCount } from '@/app/actions';
+import { getUserMessageCount, getCurrentUser, getExtremeSearchUsageCount } from '@/app/actions';
 import { SEARCH_LIMITS } from '@/lib/constants';
 import { authClient } from '@/lib/auth-client';
+import { useSession } from '@/lib/auth-client';
+import { useUsageData } from '@/hooks/use-usage-data';
+import { User } from '@/lib/db/schema';
 
 import {
   Gear,
-  Crown,
   MagnifyingGlass,
   Lightning,
-  ArrowSquareOut,
   TrendUp,
   Shield,
   Sparkle,
-  User,
+  User as PhosphorUser,
   ChartLineUp,
   Memory,
-  Calendar,
   ArrowLeft,
   House,
 } from '@phosphor-icons/react';
@@ -55,12 +55,6 @@ function ProfileSection() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  const { data: subscriptionDetails, isLoading: subscriptionLoading } = useQuery({
-    queryKey: ['subscription'],
-    queryFn: getSubDetails,
-    staleTime: 1000 * 60 * 2, // 2 minutes
-  });
-
   useEffect(() => {
     if (user) {
       setName(user.name || '');
@@ -74,8 +68,6 @@ function ProfileSection() {
       toast.error('Failed to load profile data');
     }
   }, [userError]);
-
-  const isProUser = subscriptionDetails?.hasSubscription && subscriptionDetails?.subscription?.status === 'active';
 
   if (userLoading) {
     return (
@@ -105,7 +97,7 @@ function ProfileSection() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <User className="h-5 w-5" />
+          <PhosphorUser className="h-5 w-5" />
           Profile Information
         </CardTitle>
         <CardDescription>Update your personal information and profile settings</CardDescription>
@@ -125,16 +117,6 @@ function ProfileSection() {
           <div className="space-y-2">
             <h3 className="text-lg font-medium">{user?.name}</h3>
             <p className="text-sm text-muted-foreground">{user?.email}</p>
-            {subscriptionLoading ? (
-              <Skeleton className="h-6 w-20" />
-            ) : (
-              isProUser && (
-                <Badge className="bg-black text-white border-0 text-xs font-medium">
-                  <Crown className="h-3 w-3 mr-1" />
-                  PRO
-                </Badge>
-              )
-            )}
           </div>
         </div>
 
@@ -185,38 +167,20 @@ function ProfileSection() {
 
 // Component for Usage Information with its own loading state
 function UsageSection() {
-  // Combine all usage-related queries into a single optimized query
+  const { data: session } = useSession();
+  const user = session?.user ? {
+    id: session.user.id,
+    name: session.user.name,
+    email: session.user.email,
+    image: session.user.image,
+  } : null;
+  
   const {
     data: usageData,
     isLoading: usageLoading,
     error: usageError,
     refetch: refetchUsageData,
-  } = useQuery({
-    queryKey: ['usageData'],
-    queryFn: async () => {
-      // Fetch all data in parallel for better performance
-      const [searchCount, extremeSearchCount, subscriptionDetails] = await Promise.all([
-        getUserMessageCount(),
-        getExtremeSearchUsageCount(),
-        getSubDetails(),
-      ]);
-
-      return {
-        searchCount,
-        extremeSearchCount,
-        subscriptionDetails,
-      };
-    },
-    staleTime: 1000 * 60 * 3, // 3 minutes - longer cache time
-    gcTime: 1000 * 60 * 5, // 5 minutes cache retention
-    refetchOnWindowFocus: false, // Disable automatic refetch on focus
-    retry: 2, // Reduce retry attempts
-  });
-
-  // Destructure data with fallbacks
-  const searchCount = usageData?.searchCount;
-  const extremeSearchCount = usageData?.extremeSearchCount;
-  const subscriptionDetails = usageData?.subscriptionDetails;
+  } = useUsageData(user);
 
   useEffect(() => {
     if (usageError) {
@@ -234,11 +198,10 @@ function UsageSection() {
     }
   };
 
-  const isProUser = subscriptionDetails?.hasSubscription && subscriptionDetails?.subscription?.status === 'active';
-  const searchLimit = isProUser ? Infinity : SEARCH_LIMITS.DAILY_SEARCH_LIMIT;
-  const usagePercentage = isProUser
-    ? 0
-    : Math.min(((searchCount?.count || 0) / SEARCH_LIMITS.DAILY_SEARCH_LIMIT) * 100, 100);
+  const searchLimit = SEARCH_LIMITS.DAILY_SEARCH_LIMIT;
+  const dailySearchCount = usageData?.count || 0;
+  const extremeCount = usageData?.extremeSearchCount || 0;
+  const usagePercentage = Math.min((dailySearchCount / SEARCH_LIMITS.DAILY_SEARCH_LIMIT) * 100, 100);
 
   return (
     <Card>
@@ -264,7 +227,7 @@ function UsageSection() {
           <div className="p-4 border rounded-lg bg-card h-32 flex flex-col justify-between">
             <div className="flex items-start justify-between">
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs text-muted-foreground leading-tight">Today&apos;s Searches</span>
+                <span className="text-xs text-muted-foreground leading-tight">Today's Searches</span>
                 <span className="text-[10px] text-muted-foreground/70">(Other models)</span>
               </div>
               <MagnifyingGlass className="h-6 w-6 text-muted-foreground flex-shrink-0" />
@@ -273,7 +236,7 @@ function UsageSection() {
               {usageLoading ? (
                 <Skeleton className="h-7 w-10" />
               ) : (
-                <span className="text-xl font-bold leading-tight">{searchCount?.count || 0}</span>
+                <span className="text-xl font-bold leading-tight">{dailySearchCount}</span>
               )}
             </div>
           </div>
@@ -292,13 +255,12 @@ function UsageSection() {
             </div>
           </div>
 
-          {/* Extreme Searches (Monthly) */}
+          {/* Extreme Searches */}
           <div className="p-4 border rounded-lg bg-card h-32 flex flex-col justify-between">
             <div className="flex items-start justify-between">
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs text-muted-foreground leading-tight">
-                  Extreme Searches <span className="text-[10px] text-muted-foreground/70 align-middle">(Monthly)</span>
-                </span>
+                <span className="text-xs text-muted-foreground leading-tight">Extreme Searches</span>
+                <span className="text-[10px] text-muted-foreground/70">(Monthly)</span>
               </div>
               <Lightning className="h-6 w-6 text-muted-foreground flex-shrink-0" />
             </div>
@@ -306,7 +268,7 @@ function UsageSection() {
               {usageLoading ? (
                 <Skeleton className="h-7 w-10" />
               ) : (
-                <span className="text-xl font-bold leading-tight">{extremeSearchCount?.count || 0}</span>
+                <span className="text-xl font-bold leading-tight">{extremeCount}</span>
               )}
             </div>
           </div>
@@ -321,508 +283,38 @@ function UsageSection() {
               <Shield className="h-6 w-6 text-muted-foreground flex-shrink-0" />
             </div>
             <div className="mt-auto">
-              {usageLoading ? (
-                <Skeleton className="h-7 w-10" />
-              ) : (
-                <span className="text-xl font-bold leading-tight">
-                  {isProUser ? '∞' : SEARCH_LIMITS.DAILY_SEARCH_LIMIT}
-                </span>
-              )}
+              <span className="text-xl font-bold leading-tight">{searchLimit}</span>
             </div>
           </div>
         </div>
 
-        {/* Usage Progress Bars for Free Users */}
-        {!usageLoading && !isProUser && (
-          <div className="space-y-4">
-            {/* Free Unlimited Models Notice */}
-            <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
-              <div className="flex items-center gap-2 text-green-800 dark:text-green-200 mb-2">
-                <Sparkle className="h-4 w-4" />
-                <span className="text-sm font-medium">Unlimited Access Available</span>
-              </div>
-              <p className="text-xs text-green-700 dark:text-green-300">
-                You have unlimited access to Grok 3 Mini and Grok 2 Vision models. Daily limits only apply to other AI
-                models.
-              </p>
+        {/* Usage Progress */}
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Search Usage (Other Models Only)</span>
+              <span className="text-muted-foreground">{usagePercentage.toFixed(1)}% used</span>
             </div>
-
-            {/* Regular Search Usage */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Search Usage (Other Models Only)</span>
-                {usageLoading ? <Skeleton className="h-4 w-16" /> : <span>{usagePercentage.toFixed(1)}% used</span>}
-              </div>
-              {usageLoading ? (
-                <Skeleton className="h-3 w-full" />
-              ) : (
-                <Progress value={usagePercentage} className="h-3" />
-              )}
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>
-                  {searchCount?.count || 0} of {SEARCH_LIMITS.DAILY_SEARCH_LIMIT} searches used today
-                </span>
-                <span>{Math.max(0, SEARCH_LIMITS.DAILY_SEARCH_LIMIT - (searchCount?.count || 0))} remaining</span>
-              </div>
-              {!usageLoading && usagePercentage > 80 && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
-                    <MagnifyingGlass className="h-4 w-4" />
-                    <span className="text-sm font-medium">
-                      {usagePercentage >= 100
-                        ? 'Daily limit reached for other models!'
-                        : 'Approaching daily limit for other models'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                    {usagePercentage >= 100
-                      ? 'You can still use Grok 3 Mini & Vision unlimited. Upgrade to Pro for unlimited access to all models.'
-                      : 'Remember: Grok 3 Mini & Vision are always unlimited. Upgrade to Pro for unlimited access to all models.'}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Extreme Search Usage */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Extreme Search Usage (Monthly)</span>
-                {usageLoading ? (
-                  <Skeleton className="h-4 w-16" />
-                ) : (
-                  <span>
-                    {(((extremeSearchCount?.count || 0) / SEARCH_LIMITS.EXTREME_SEARCH_LIMIT) * 100).toFixed(1)}% used
-                  </span>
-                )}
-              </div>
-              {usageLoading ? (
-                <Skeleton className="h-3 w-full" />
-              ) : (
-                <Progress
-                  value={((extremeSearchCount?.count || 0) / SEARCH_LIMITS.EXTREME_SEARCH_LIMIT) * 100}
-                  className="h-3"
-                />
-              )}
-              {!usageLoading && (
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>
-                    {extremeSearchCount?.count || 0} of {SEARCH_LIMITS.EXTREME_SEARCH_LIMIT} extreme searches used this
-                    month
-                  </span>
-                  <span>
-                    {Math.max(0, SEARCH_LIMITS.EXTREME_SEARCH_LIMIT - (extremeSearchCount?.count || 0))} remaining
-                  </span>
-                </div>
-              )}
-              {!usageLoading && (extremeSearchCount?.count || 0) >= SEARCH_LIMITS.EXTREME_SEARCH_LIMIT * 0.8 && (
-                <div className="p-3 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-                  <div className="flex items-center gap-2 text-purple-800 dark:text-purple-200">
-                    <Lightning className="h-4 w-4" />
-                    <span className="text-sm font-medium">
-                      {(extremeSearchCount?.count || 0) >= SEARCH_LIMITS.EXTREME_SEARCH_LIMIT
-                        ? 'Monthly extreme search limit reached!'
-                        : 'Almost at monthly extreme search limit'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
-                    {(extremeSearchCount?.count || 0) >= SEARCH_LIMITS.EXTREME_SEARCH_LIMIT
-                      ? 'Upgrade to Pro for unlimited extreme searches with advanced AI analysis.'
-                      : 'Upgrade to Pro for unlimited extreme searches and premium features.'}
-                  </p>
-                </div>
-              )}
+            <Progress value={usagePercentage} />
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">{dailySearchCount} of {searchLimit} searches used today</span>
+              <span className="text-muted-foreground">{searchLimit - dailySearchCount} remaining</span>
             </div>
           </div>
-        )}
 
-        {!usageLoading && !isProUser && (
-          <div className="border-t pt-6">
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Upgrade to Pro</h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Get unlimited searches and access to premium features
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MagnifyingGlass className="h-4 w-4 text-blue-500" />
-                    <span className="font-medium text-sm">Unlimited All Models</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">No limits on any AI model, including premium ones</p>
-                </div>
-
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkle className="h-4 w-4 text-purple-600" />
-                    <span className="font-medium text-sm">Premium AI Models</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Access to Claude, GPT-4, and advanced analysis tools</p>
-                </div>
-
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Shield className="h-4 w-4 text-green-500" />
-                    <span className="font-medium text-sm">Priority Support</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Faster response times and dedicated help</p>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button asChild className="flex-1">
-                  <Link href="/pricing">
-                    <Crown className="h-4 w-4 mr-2" />
-                    Upgrade to Pro
-                  </Link>
-                </Button>
-                <Button variant="outline" asChild>
-                  <Link href="/pricing">
-                    View Plans
-                    <ArrowSquareOut className="h-4 w-4 ml-2" />
-                  </Link>
-                </Button>
-              </div>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Extreme Search Usage (Monthly)</span>
+              <span className="text-muted-foreground">
+                {Math.min((extremeCount / SEARCH_LIMITS.EXTREME_SEARCH_LIMIT) * 100, 100).toFixed(1)}% used
+              </span>
+            </div>
+            <Progress value={Math.min((extremeCount / SEARCH_LIMITS.EXTREME_SEARCH_LIMIT) * 100, 100)} />
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">{extremeCount} of {SEARCH_LIMITS.EXTREME_SEARCH_LIMIT} extreme searches used this month</span>
+              <span className="text-muted-foreground">{SEARCH_LIMITS.EXTREME_SEARCH_LIMIT - extremeCount} remaining</span>
             </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// Types for billing history
-interface OrderItem {
-  label: string;
-  amount: number;
-}
-
-interface Order {
-  id: string;
-  product?: {
-    name: string;
-  };
-  createdAt: string;
-  totalAmount: number;
-  currency: string;
-  status: string;
-  subscription?: {
-    status: string;
-    endedAt?: string;
-  };
-  items: OrderItem[];
-}
-
-interface OrdersResponse {
-  result: {
-    items: Order[];
-  };
-}
-
-// Component for Subscription Information with its own loading state
-function SubscriptionSection() {
-  const [orders, setOrders] = useState<OrdersResponse | null>(null);
-  const [ordersLoading, setOrdersLoading] = useState(true);
-
-  const {
-    data: subscriptionDetails,
-    isLoading: subscriptionLoading,
-    error: subscriptionError,
-  } = useQuery({
-    queryKey: ['subscription'],
-    queryFn: getSubDetails,
-    staleTime: 1000 * 60 * 2, // 2 minutes
-  });
-
-  // Fetch billing history
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const ordersResponse = await authClient.customer.orders.list({});
-        if (ordersResponse.data) {
-          setOrders(ordersResponse.data as unknown as OrdersResponse);
-        } else {
-          setOrders(null);
-        }
-      } catch (orderError) {
-        console.log('Orders fetch failed - customer may not exist yet:', orderError);
-        setOrders(null);
-      } finally {
-        setOrdersLoading(false);
-      }
-    };
-
-    fetchOrders();
-  }, []);
-
-  useEffect(() => {
-    if (subscriptionError) {
-      console.error('Error fetching subscription data:', subscriptionError);
-      toast.error('Failed to load subscription data');
-    }
-  }, [subscriptionError]);
-
-  const handleManageSubscription = async () => {
-    try {
-      await authClient.customer.portal();
-    } catch (error) {
-      console.error('Failed to open customer portal:', error);
-      toast.error('Failed to open subscription management');
-    }
-  };
-
-  const isProUser = subscriptionDetails?.hasSubscription && subscriptionDetails?.subscription?.status === 'active';
-
-  if (subscriptionLoading || ordersLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-40" />
-          <Skeleton className="h-4 w-72" />
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Skeleton className="h-20 w-full" />
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-16" />
-            <Skeleton className="h-16" />
-          </div>
-          <div className="space-y-4">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Crown className="h-5 w-5" />
-          Subscription Status
-        </CardTitle>
-        <CardDescription>Manage your subscription and billing information</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {isProUser ? (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-950/50 rounded-lg border border-neutral-200 dark:border-neutral-800">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-black dark:bg-white rounded-full">
-                  <Crown className="h-5 w-5 text-white dark:text-black" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">PRO Subscription Active</h3>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                    Unlimited access to all premium features
-                  </p>
-                </div>
-              </div>
-              <Badge className="bg-black text-white border-0 font-medium">ACTIVE</Badge>
-            </div>
-
-            {subscriptionDetails?.subscription && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Plan</Label>
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="font-medium">Pro Plan</p>
-                    <p className="text-sm text-muted-foreground">
-                      ${(subscriptionDetails.subscription.amount / 100).toFixed(2)}/
-                      {subscriptionDetails.subscription.recurringInterval}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Next Billing</Label>
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="font-medium">
-                      {new Date(subscriptionDetails.subscription.currentPeriodEnd).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Auto-renewal {subscriptionDetails.subscription.cancelAtPeriodEnd ? 'disabled' : 'enabled'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleManageSubscription}>
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Manage Billing
-              </Button>
-              <Button variant="outline">
-                <Gear className="h-4 w-4 mr-2" />
-                Update Plan
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="text-center p-8 border border-dashed rounded-lg">
-              <Crown className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Active Subscription</h3>
-              <p className="text-muted-foreground mb-6">
-                You&apos;re currently on the free plan with limited daily searches. Upgrade to Pro for unlimited access
-                and premium features.
-              </p>
-
-              <div className="space-y-4">
-                <Button asChild size="lg" className="w-full max-w-xs">
-                  <Link href="/pricing">
-                    <Crown className="h-4 w-4 mr-2" />
-                    Upgrade to Pro
-                  </Link>
-                </Button>
-
-                <div className="text-sm text-muted-foreground">
-                  <Link href="/pricing" className="hover:underline">
-                    View all plans and pricing →
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {subscriptionDetails?.error && (
-              <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <div className="flex items-center gap-2 text-red-800 dark:text-red-200 mb-1">
-                  <span className="text-sm font-medium">Subscription Issue</span>
-                </div>
-                <p className="text-xs text-red-700 dark:text-red-300">{subscriptionDetails.error}</p>
-                {subscriptionDetails.errorType === 'CANCELED' && (
-                  <Button asChild size="sm" className="mt-3">
-                    <Link href="/pricing">Reactivate Subscription</Link>
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Billing History Section */}
-        <div className="border-t pt-6 mt-6">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h4 className="text-lg font-medium">Billing History</h4>
-              <p className="text-sm text-muted-foreground">View your past and upcoming invoices</p>
-            </div>
-            <Button variant="outline" size="sm" onClick={handleManageSubscription} disabled={orders === null}>
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Manage Subscription
-            </Button>
-          </div>
-
-          {orders?.result?.items && orders.result.items.length > 0 ? (
-            <div className="space-y-3">
-              {orders.result.items.map((order) => (
-                <Card key={order.id} className="overflow-hidden">
-                  <CardContent className="p-4">
-                    <div className="flex flex-col gap-3">
-                      {/* Header Row */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h5 className="font-medium text-base">{order.product?.name || 'Subscription'}</h5>
-                            {order.subscription?.status === 'paid' ? (
-                              <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs">
-                                Paid
-                              </Badge>
-                            ) : order.subscription?.status === 'canceled' ? (
-                              <Badge variant="destructive" className="text-xs">
-                                Canceled
-                              </Badge>
-                            ) : order.subscription?.status === 'refunded' ? (
-                              <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 text-xs">
-                                Refunded
-                              </Badge>
-                            ) : order.subscription?.status ? (
-                              <Badge variant="outline" className="text-xs">
-                                {order.subscription.status}
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-xs">
-                                {order.status}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {new Date(order.createdAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                            {order.subscription?.status === 'canceled' && order.subscription.endedAt && (
-                              <span className="ml-2">
-                                • Canceled on{' '}
-                                {new Date(order.subscription.endedAt).toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                })}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <div className="font-medium text-base">${(order.totalAmount / 100).toFixed(2)}</div>
-                          <div className="text-xs text-muted-foreground">{order.currency?.toUpperCase()}</div>
-                        </div>
-                      </div>
-
-                      {/* Order Items */}
-                      {order.items?.length > 0 && (
-                        <div className="pt-3 border-t">
-                          <ul className="space-y-1.5 text-sm">
-                            {order.items.map((item, index: number) => (
-                              <li key={`${order.id}-${item.label}-${index}`} className="flex justify-between">
-                                <span className="text-muted-foreground truncate max-w-[200px]">{item.label}</span>
-                                <span className="font-medium">${(item.amount / 100).toFixed(2)}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.5"
-                    className="h-10 w-10 text-muted-foreground mb-4"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                  </svg>
-                  <h5 className="mt-4 text-lg font-semibold">No orders found</h5>
-                  <p className="mb-4 mt-2 text-sm text-muted-foreground">
-                    {orders === null
-                      ? 'Unable to load billing history. This may be because your account is not yet set up for billing.'
-                      : "You don't have any orders yet. Your billing history will appear here."}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </CardContent>
     </Card>
@@ -1013,7 +505,7 @@ function MemoriesSection() {
                     </Button>
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
-                    <Calendar className="h-3 w-3" />
+                    <Memory className="h-3 w-3" />
                     <span>{formatDate(memory.created_at)}</span>
                   </div>
                 </div>
@@ -1052,17 +544,10 @@ function SettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Get subscription status for the header badge (lightweight query)
-  const { data: subscriptionDetails, isLoading: subscriptionLoading } = useQuery({
-    queryKey: ['subscription'],
-    queryFn: getSubDetails,
-    staleTime: 1000 * 60 * 2, // 2 minutes
-  });
-
   // Handle URL tab parameter
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['profile', 'usage', 'subscription', 'memories'].includes(tab)) {
+    if (tab && ['profile', 'usage', 'memories'].includes(tab)) {
       setCurrentTab(tab);
     }
   }, [searchParams]);
@@ -1073,8 +558,6 @@ function SettingsContent() {
     url.searchParams.set('tab', value);
     router.replace(url.pathname + url.search, { scroll: false });
   };
-
-  const isProUser = subscriptionDetails?.hasSubscription && subscriptionDetails?.subscription?.status === 'active';
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-4xl mx-auto">
@@ -1094,30 +577,17 @@ function SettingsContent() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
-            <p className="text-muted-foreground mt-2">Manage your account, subscription, and usage preferences</p>
-          </div>
-          {subscriptionLoading ? (
-            <Skeleton className="h-6 w-24" />
-          ) : (
-            isProUser && (
-              <Badge className="bg-black text-white border-0 font-medium">
-                <Crown className="h-3 w-3 mr-1" />
-                PRO
-              </Badge>
-            )
-          )}
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground mt-2">Manage your account and usage preferences</p>
         </div>
       </div>
 
       {/* Tabs - always shows immediately */}
       <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="usage">Usage</TabsTrigger>
-          <TabsTrigger value="subscription">Subscription</TabsTrigger>
           <TabsTrigger value="memories">Memories</TabsTrigger>
         </TabsList>
 
@@ -1130,12 +600,6 @@ function SettingsContent() {
         <TabsContent value="usage" className="space-y-6">
           <Suspense fallback={<div>Loading usage data...</div>}>
             <UsageSection />
-          </Suspense>
-        </TabsContent>
-
-        <TabsContent value="subscription" className="space-y-6">
-          <Suspense fallback={<div>Loading subscription data...</div>}>
-            <SubscriptionSection />
           </Suspense>
         </TabsContent>
 

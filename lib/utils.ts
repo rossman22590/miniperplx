@@ -17,6 +17,7 @@ export const searchGroups = [
     description: 'Search across the entire internet powered by Tavily',
     icon: Globe,
     show: true,
+    requireAuth: false,
   },
   {
     id: 'memory' as const,
@@ -32,6 +33,7 @@ export const searchGroups = [
     description: 'Code, stock and currency stuff',
     icon: CodeIcon,
     show: true,
+    requireAuth: false,
   },
   {
     id: 'crypto' as const,
@@ -39,6 +41,7 @@ export const searchGroups = [
     description: 'Cryptocurrency research powered by CoinGecko',
     icon: DollarSign,
     show: true,
+    requireAuth: false,
   },
   {
     id: 'chat' as const,
@@ -46,6 +49,7 @@ export const searchGroups = [
     description: 'Talk to the model directly.',
     icon: ChatsCircleIcon,
     show: true,
+    requireAuth: false,
   },
   {
     id: 'x' as const,
@@ -53,6 +57,7 @@ export const searchGroups = [
     description: 'Search X posts',
     icon: XLogoIcon,
     show: true,
+    requireAuth: false,
   },
   {
     id: 'reddit' as const,
@@ -60,6 +65,7 @@ export const searchGroups = [
     description: 'Search Reddit posts',
     icon: RedditLogoIcon,
     show: true,
+    requireAuth: false,
   },
   {
     id: 'academic' as const,
@@ -67,6 +73,7 @@ export const searchGroups = [
     description: 'Search academic papers powered by Exa',
     icon: Book,
     show: true,
+    requireAuth: false,
   },
   {
     id: 'youtube' as const,
@@ -74,6 +81,7 @@ export const searchGroups = [
     description: 'Search YouTube videos powered by Exa',
     icon: YoutubeLogoIcon,
     show: true,
+    requireAuth: false,
   },
   {
     id: 'extreme' as const,
@@ -81,6 +89,7 @@ export const searchGroups = [
     description: 'Deep research with multiple sources and analysis',
     icon: TelescopeIcon,
     show: false,
+    requireAuth: true,
   },
 ] as const;
 

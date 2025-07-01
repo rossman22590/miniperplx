@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getCurrentUser, getSubDetails } from '@/app/actions';
 import { User } from '@/lib/db/schema';
+import { useSession } from '@/lib/auth-client';
 
 // Hook for user data
 export function useUserData() {
@@ -27,28 +28,15 @@ export function useSubscriptionData(user: User | null) {
   });
 }
 
-// Combined hook for Pro user status with optimized caching
+// Hook for user status with simplified caching (no Pro tiers)
 export function useProUserStatus() {
-  const { data: user, isLoading: userLoading } = useUserData();
-  const { data: subscriptionData, isLoading: subscriptionLoading } = useSubscriptionData(user || null);
-
-  const isProUser = subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active';
-  const isLoading = userLoading || (user && subscriptionLoading);
-
-  // Helper function to check if user should have unlimited access for specific models
-  const shouldBypassLimitsForModel = (selectedModel: string) => {
-    // Free unlimited models for registered users
-    const freeUnlimitedModels = ['scira-default', 'scira-vision'];
-    return user && freeUnlimitedModels.includes(selectedModel);
-  };
+  const { data: session } = useSession();
+  const user = session?.user ? {
+    ...session.user,
+    image: session.user.image || null,
+  } as User : null;
 
   return {
-    user: (user || null) as User | null,
-    subscriptionData,
-    isProUser: Boolean(isProUser),
-    isLoading: Boolean(isLoading),
-    // Pro users should never see limit checks
-    shouldCheckLimits: !isLoading && user && !isProUser,
-    shouldBypassLimitsForModel,
+    user,
   };
 } 

@@ -345,7 +345,7 @@ export default function PricingTable({ subscriptionDetails }: PricingTableProps)
             <div className="bg-white dark:bg-zinc-900 border-[1.5px] border-black dark:border-white rounded-xl p-10 relative shadow-sm">
               <div className="mb-10">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 tracking-[-0.01em]">Scira Pro</h3>
+                  <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 tracking-[-0.01em]">Datavibes Pro</h3>
                   <Badge
                     variant="secondary"
                     className="bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-normal px-2.5 py-1"
@@ -412,7 +412,7 @@ export default function PricingTable({ subscriptionDetails }: PricingTableProps)
                   className="w-full h-9 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black group font-normal text-sm tracking-[-0.01em] transition-all duration-200"
                   onClick={() => handleCheckout(STARTER_TIER, STARTER_SLUG)}
                 >
-                  {isAuthenticated === false ? 'Sign in to upgrade' : 'Upgrade to Scira Pro'}
+                  {isAuthenticated === false ? 'Sign in to upgrade' : 'Upgrade to Datavibes Pro'}
                   <ArrowRight className="w-3.5 h-3.5 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
                 </Button>
               )}
@@ -421,7 +421,7 @@ export default function PricingTable({ subscriptionDetails }: PricingTableProps)
         </div>
 
         {/* Terms Notice */}
-        <div className="text-center mt-16 mb-8">
+        {/* <div className="text-center mt-16 mb-8">
           <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-6 py-4 inline-block">
             <p className="text-sm text-zinc-700 dark:text-zinc-300">
               By subscribing, you agree to our{' '}
@@ -433,10 +433,10 @@ export default function PricingTable({ subscriptionDetails }: PricingTableProps)
               </Link>
             </p>
           </div>
-        </div>
+        </div> */}
 
         {/* Footer */}
-        <div className="text-center mt-12">
+        {/* <div className="text-center mt-12">
           <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
             Have questions?{' '}
             <a
@@ -446,7 +446,7 @@ export default function PricingTable({ subscriptionDetails }: PricingTableProps)
               Get in touch
             </a>
           </p>
-        </div>
+        </div> */}
       </div>
     </div>
   );

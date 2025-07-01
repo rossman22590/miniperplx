@@ -28,7 +28,10 @@ import {
   SelectLabel,
   SelectValue,
   SelectTrigger,
+  SelectSeparator,
 } from '@/components/ui/select';
+import { Fragment } from 'react';
+import { Badge } from '@/components/ui/badge';
 
 interface ModelSwitcherProps {
   selectedModel: string;
@@ -38,7 +41,6 @@ interface ModelSwitcherProps {
   messages: Array<Message>;
   status: 'submitted' | 'streaming' | 'ready' | 'error';
   onModelSelect?: (model: (typeof models)[0]) => void;
-  subscriptionData?: any;
   user?: any;
 }
 
@@ -50,20 +52,16 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
   messages,
   status,
   onModelSelect,
-  subscriptionData,
   user,
 }) => {
-  const isProUser = subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active';
-
-  // Show all models to everyone, but control access via dialogs
+  // Show all models to everyone
   const availableModels = useMemo(() => {
     return models;
   }, []);
 
-  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showSignInDialog, setShowSignInDialog] = useState(false);
-  const [selectedProModel, setSelectedProModel] = useState<(typeof models)[0] | null>(null);
   const [selectedAuthModel, setSelectedAuthModel] = useState<(typeof models)[0] | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Check for attachments in current and previous messages
   const hasAttachments =
@@ -71,39 +69,46 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
     messages.some((msg) => msg.experimental_attachments && msg.experimental_attachments.length > 0);
 
   // Filter models based on attachments first
-  // Always show experimental models by removing the experimental filter
-  const filteredModels = hasAttachments ? availableModels.filter((model) => model.vision) : availableModels;
+  const filteredModels = useMemo(() => {
+    let filtered = hasAttachments ? availableModels.filter((model) => model.vision) : availableModels;
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (model) =>
+          model.label.toLowerCase().includes(query) ||
+          model.description.toLowerCase().includes(query) ||
+          model.category.toLowerCase().includes(query)
+      );
+    }
+    
+    return filtered;
+  }, [availableModels, hasAttachments, searchQuery]);
 
   // Group filtered models by category
-  const groupedModels = filteredModels.reduce((acc, model) => {
-    const category = model.category;
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(model);
-    return acc;
-  }, {} as Record<string, typeof availableModels>);
+  const groupedModels = useMemo(() => {
+    return filteredModels.reduce((acc, model) => {
+      const category = model.category;
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(model);
+      return acc;
+    }, {} as Record<string, typeof availableModels>);
+  }, [filteredModels]);
 
   const handleModelChange = (value: string) => {
     const model = availableModels.find((m) => m.value === value);
     if (!model) return;
 
-    const isProModel = model.pro;
-    const canUseModel = !isProModel || isProUser;
     const authRequiredModels = ['scira-google-lite', 'scira-4o-mini'];
     const requiresAuth = authRequiredModels.includes(model.value) && !user;
 
-    // Check for authentication requirement first
+    // Only check for authentication requirement
     if (requiresAuth) {
       setSelectedAuthModel(model);
       setShowSignInDialog(true);
-      return;
-    }
-
-    // Then check for Pro requirement
-    if (!canUseModel) {
-      setSelectedProModel(model);
-      setShowUpgradeDialog(true);
       return;
     }
 
@@ -142,175 +147,104 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
           </SelectValue>
         </SelectTrigger>
         <SelectContent
-          className="w-[240px] p-1 font-sans rounded-xl bg-gradient-to-b from-white via-neutral-50 to-neutral-100 dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-950 z-40 shadow-lg border border-neutral-200 dark:border-neutral-800 max-h-[280px] overflow-y-auto"
+          className="w-[240px] font-sans rounded-xl bg-gradient-to-b from-white via-neutral-50 to-neutral-100 dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-950 z-40 shadow-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden flex flex-col"
           align="start"
           side="bottom"
           sideOffset={4}
         >
-          {Object.entries(groupedModels).map(([category, categoryModels], categoryIndex) => (
-            <SelectGroup key={category}>
-              {categoryIndex > 0 && <div className="my-1 border-t border-neutral-100 dark:border-neutral-800" />}
-              <SelectLabel className="px-2 py-1 text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
-                {category} Models
-              </SelectLabel>
-              {categoryModels.map((model) => {
-                const isProModel = model.pro;
-                const canUseModel = !isProModel || isProUser;
-                const authRequiredModels = ['scira-google-lite', 'scira-4o-mini'];
-                const requiresAuth = authRequiredModels.includes(model.value) && !user;
-                const isLocked = !canUseModel || requiresAuth;
+          {/* Search input */}
+          <div className="p-2 sticky top-0 z-10 bg-inherit border-b border-neutral-200 dark:border-neutral-800">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search models..."
+                className={cn(
+                  'w-full px-2.5 py-1.5 text-xs rounded-md',
+                  'bg-white dark:bg-neutral-800',
+                  'border border-neutral-200 dark:border-neutral-700',
+                  'placeholder:text-neutral-500 dark:placeholder:text-neutral-400',
+                  'focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-600',
+                  'transition-all duration-200'
+                )}
+              />
+            </div>
+          </div>
 
-                if (isLocked) {
-                  return (
-                    <div
-                      key={model.value}
-                      className={cn(
-                        'flex items-center justify-between px-2 py-1.5 mb-0.5 rounded-lg text-xs cursor-pointer',
-                        'transition-all duration-200',
-                        'opacity-50 hover:opacity-70 hover:bg-neutral-100 dark:hover:bg-neutral-800',
-                      )}
-                      onClick={() => {
-                        if (requiresAuth) {
+          {/* Scrollable content */}
+          <div className="p-1 overflow-y-auto max-h-[280px] flex-1">
+            {Object.entries(groupedModels).map(([category, categoryModels], categoryIndex) => (
+              <SelectGroup key={category}>
+                {categoryIndex > 0 && <div className="my-1 border-t border-neutral-100 dark:border-neutral-800" />}
+                <SelectLabel className="px-2 py-1 text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
+                  {category} Models
+                </SelectLabel>
+                {categoryModels.map((model) => {
+                  const authRequiredModels = ['scira-google-lite', 'scira-4o-mini'];
+                  const requiresAuth = authRequiredModels.includes(model.value) && !user;
+
+                  if (requiresAuth) {
+                    return (
+                      <div
+                        key={model.value}
+                        className={cn(
+                          'flex items-center justify-between px-2 py-1.5 mb-0.5 rounded-lg text-xs cursor-pointer',
+                          'transition-all duration-200',
+                          'opacity-50 hover:opacity-70 hover:bg-neutral-100 dark:hover:bg-neutral-800',
+                        )}
+                        onClick={() => {
                           setSelectedAuthModel(model);
                           setShowSignInDialog(true);
-                        } else if (!canUseModel) {
-                          setSelectedProModel(model);
-                          setShowUpgradeDialog(true);
-                        }
-                      }}
+                        }}
+                      >
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <div className="font-medium truncate text-[11px] flex items-center gap-1">
+                            {model.label}
+                            <LockIcon className="size-3 text-neutral-400" />
+                          </div>
+                          <div className="text-[9px] text-neutral-500 dark:text-neutral-400 truncate leading-tight">
+                            {model.description}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <SelectItem
+                      key={model.value}
+                      value={model.value}
+                      className={cn(
+                        'flex items-center justify-between px-2 py-1.5 mb-0.5 rounded-lg text-xs',
+                        'transition-all duration-200',
+                        'hover:bg-neutral-100 dark:hover:bg-neutral-800',
+                        'data-[state=checked]:bg-neutral-200 dark:data-[state=checked]:bg-neutral-700',
+                      )}
                     >
                       <div className="flex flex-col min-w-0 flex-1">
                         <div className="font-medium truncate text-[11px] flex items-center gap-1">
                           {model.label}
-                          {requiresAuth ? (
-                            <LockIcon className="size-3 text-neutral-400" />
-                          ) : (
-                            <Crown className="size-3 text-neutral-400" />
-                          )}
                         </div>
                         <div className="text-[9px] text-neutral-500 dark:text-neutral-400 truncate leading-tight">
                           {model.description}
                         </div>
                       </div>
-                    </div>
+                    </SelectItem>
                   );
-                }
+                })}
+              </SelectGroup>
+            ))}
 
-                return (
-                  <SelectItem
-                    key={model.value}
-                    value={model.value}
-                    className={cn(
-                      'flex items-center justify-between px-2 py-1.5 mb-0.5 rounded-lg text-xs',
-                      'transition-all duration-200',
-                      'hover:bg-neutral-100 dark:hover:bg-neutral-800',
-                      'data-[state=checked]:bg-neutral-200 dark:data-[state=checked]:bg-neutral-700',
-                    )}
-                  >
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <div className="font-medium truncate text-[11px] flex items-center gap-1">
-                        {model.label}
-                        {(() => {
-                          const authRequiredModels = ['scira-google-lite', 'scira-4o-mini'];
-                          const requiresAuth = authRequiredModels.includes(model.value) && !user;
-                          const requiresPro = isProModel && !isProUser;
-
-                          if (requiresAuth) {
-                            return <LockIcon className="size-3 text-neutral-400" />;
-                          } else if (requiresPro) {
-                            return <Crown className="size-3 text-neutral-400" />;
-                          }
-                          return null;
-                        })()}
-                      </div>
-                      <div className="text-[9px] text-neutral-500 dark:text-neutral-400 truncate leading-tight">
-                        {model.description}
-                      </div>
-                    </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectGroup>
-          ))}
+            {/* No results message */}
+            {Object.keys(groupedModels).length === 0 && (
+              <div className="px-2 py-4 text-center text-xs text-neutral-500 dark:text-neutral-400">
+                No models found
+              </div>
+            )}
+          </div>
         </SelectContent>
       </Select>
-
-      {/* Upgrade Dialog */}
-      <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
-        <DialogContent className="sm:max-w-md p-0 gap-0 border border-neutral-200/60 dark:border-neutral-800/60 shadow-xl">
-          <div className="p-6 space-y-5">
-            {/* Header */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-black dark:bg-white flex items-center justify-center">
-                  <Crown className="w-4 h-4 text-white dark:text-black" weight="fill" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-medium text-neutral-900 dark:text-neutral-100">
-                    {selectedProModel?.label} requires Pro
-                  </h2>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">Upgrade to access premium AI models</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Features */}
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-neutral-400 dark:bg-neutral-500 mt-2 flex-shrink-0"></div>
-                <div>
-                  <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Unlimited searches</p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">No daily limits or restrictions</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-neutral-400 dark:bg-neutral-500 mt-2 flex-shrink-0"></div>
-                <div>
-                  <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Premium AI models</p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    Claude 4 Opus, Grok 3, advanced reasoning
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-neutral-400 dark:bg-neutral-500 mt-2 flex-shrink-0"></div>
-                <div>
-                  <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">PDF analysis</p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Upload and analyze documents</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Pricing */}
-            <div className="bg-neutral-50 dark:bg-neutral-900/50 rounded-lg p-4 space-y-2">
-              <div className="flex items-baseline gap-1">
-                <span className="text-xl font-medium text-neutral-900 dark:text-neutral-100">$15</span>
-                <span className="text-sm text-neutral-500 dark:text-neutral-400">/month</span>
-              </div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">Cancel anytime</p>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowUpgradeDialog(false)}
-                className="flex-1 h-9 text-sm font-normal border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
-              >
-                Maybe later
-              </Button>
-              <Button
-                onClick={() => {
-                  window.location.href = '/pricing';
-                }}
-                className="flex-1 h-9 text-sm font-normal bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black"
-              >
-                Upgrade now
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Sign In Dialog */}
       <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
@@ -473,10 +407,10 @@ const hasVisionSupport = (modelValue: string): boolean => {
   return selectedModel?.vision === true;
 };
 
-// Update the getAcceptFileTypes function to use pdf property and check Pro status
-const getAcceptFileTypes = (modelValue: string, isProUser: boolean): string => {
-  const selectedModel = models.find((model) => model.value === modelValue);
-  if (selectedModel?.pdf && isProUser) {
+// Update the getAcceptFileTypes function to allow PDFs for everyone
+const getAcceptFileTypes = (modelValue: string): string => {
+  const selectedModel = models.find((m) => m.value === modelValue);
+  if (selectedModel?.pdf) {
     return 'image/*,.pdf';
   }
   return 'image/*';
@@ -652,7 +586,6 @@ interface FormComponentProps {
   setAttachments: React.Dispatch<React.SetStateAction<Array<Attachment>>>;
   chatId: string;
   user: User | null;
-  subscriptionData?: any;
   handleSubmit: (
     event?: {
       preventDefault?: () => void;
@@ -688,29 +621,39 @@ interface GroupSelectorProps {
 const GroupSelector: React.FC<GroupSelectorProps> = ({ selectedGroup, onGroupSelect, status }) => {
   const { data: session } = useSession();
 
-  // If user is not authenticated and selectedGroup is memory, switch to web
+  // Filter groups based on authentication status first
+  const visibleGroups = useMemo(() => {
+    return searchGroups.filter((group) => {
+      if (!group.show) return false;
+      if ('requireAuth' in group && group.requireAuth && !session) return false;
+      return true;
+    });
+  }, [session]);
+
+  // Ensure web is always available as a fallback
+  const webGroup = useMemo(() => searchGroups.find((group) => group.id === 'web'), []);
+
+  // If user is not authenticated and selectedGroup requires auth, switch to web
   useEffect(() => {
-    if (!session && selectedGroup === 'memory') {
-      const webGroup = searchGroups.find((group) => group.id === 'web');
-      if (webGroup) {
+    if (!session) {
+      const currentGroup = searchGroups.find((group) => group.id === selectedGroup);
+      if (currentGroup?.requireAuth && webGroup) {
         onGroupSelect(webGroup);
       }
     }
-  }, [session, selectedGroup, onGroupSelect]);
+  }, [session, selectedGroup, onGroupSelect, webGroup]);
 
-  // Filter groups based on authentication status
-  const visibleGroups = searchGroups.filter((group) => {
-    if (!group.show) return false;
-    if ('requireAuth' in group && group.requireAuth && !session) return false;
-    return true;
-  });
-
-  const selectedGroupData = visibleGroups.find((group) => group.id === selectedGroup);
+  const selectedGroupData = visibleGroups.find((group) => group.id === selectedGroup) || webGroup;
 
   const handleGroupChange = (value: string) => {
     const group = visibleGroups.find((g) => g.id === value);
     if (group) {
       onGroupSelect(group);
+      // Track the group change
+      track('group_change', {
+        from: selectedGroup,
+        to: group.id,
+      });
     }
   };
 
@@ -793,7 +736,6 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({ selectedGroup, onGroupSel
 const FormComponent: React.FC<FormComponentProps> = ({
   chatId,
   user,
-  subscriptionData,
   input,
   setInput,
   attachments,
@@ -953,15 +895,11 @@ const FormComponent: React.FC<FormComponentProps> = ({
         files.map((f) => `${f.name} (${f.type})`),
       );
 
-      // Check if user is Pro
-      const isProUser = subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active';
-
       // First, separate images and PDFs
       const imageFiles: File[] = [];
       const pdfFiles: File[] = [];
       const unsupportedFiles: File[] = [];
       const oversizedFiles: File[] = [];
-      const blockedPdfFiles: File[] = [];
 
       files.forEach((file) => {
         // Check file size first
@@ -974,11 +912,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
         if (file.type.startsWith('image/')) {
           imageFiles.push(file);
         } else if (file.type === 'application/pdf') {
-          if (!isProUser) {
-            blockedPdfFiles.push(file);
-          } else {
-            pdfFiles.push(file);
-          }
+          pdfFiles.push(file);
         } else {
           unsupportedFiles.push(file);
         }
@@ -990,19 +924,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
           unsupportedFiles.map((f) => `${f.name} (${f.type})`),
         );
         toast.error(`Some files are not supported: ${unsupportedFiles.map((f) => f.name).join(', ')}`);
-      }
-
-      if (blockedPdfFiles.length > 0) {
-        console.log(
-          'Blocked PDF files for non-Pro user:',
-          blockedPdfFiles.map((f) => f.name),
-        );
-        toast.error(`PDF uploads require Pro subscription. Upgrade to access PDF analysis.`, {
-          action: {
-            label: 'Upgrade',
-            onClick: () => (window.location.href = '/pricing'),
-          },
-        });
       }
 
       if (imageFiles.length === 0 && pdfFiles.length === 0) {
@@ -1186,15 +1107,11 @@ const FormComponent: React.FC<FormComponentProps> = ({
       // Simple verification to ensure we're actually getting Files from the drop
       toast.info(`Detected ${allFiles.length} dropped files`);
 
-      // Check if user is Pro
-      const isProUser = subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active';
-
       // First, separate images and PDFs
       const imageFiles: File[] = [];
       const pdfFiles: File[] = [];
       const unsupportedFiles: File[] = [];
       const oversizedFiles: File[] = [];
-      const blockedPdfFiles: File[] = [];
 
       allFiles.forEach((file) => {
         console.log(`Processing file: ${file.name} (${file.type})`);
@@ -1209,11 +1126,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
         if (file.type.startsWith('image/')) {
           imageFiles.push(file);
         } else if (file.type === 'application/pdf') {
-          if (!isProUser) {
-            blockedPdfFiles.push(file);
-          } else {
-            pdfFiles.push(file);
-          }
+          pdfFiles.push(file);
         } else {
           unsupportedFiles.push(file);
         }
@@ -1237,19 +1150,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
           oversizedFiles.map((f) => `${f.name} (${f.size} bytes)`),
         );
         toast.error(`Some files exceed the 5MB limit: ${oversizedFiles.map((f) => f.name).join(', ')}`);
-      }
-
-      if (blockedPdfFiles.length > 0) {
-        console.log(
-          'Blocked PDF files for non-Pro user:',
-          blockedPdfFiles.map((f) => f.name),
-        );
-        toast.error(`PDF uploads require Pro subscription. Upgrade to access PDF analysis.`, {
-          action: {
-            label: 'Upgrade',
-            onClick: () => (window.location.href = '/pricing'),
-          },
-        });
       }
 
       // Check if we have any supported files
@@ -1524,12 +1424,9 @@ const FormComponent: React.FC<FormComponentProps> = ({
         return;
       }
 
-      // Check if user should bypass limits for this model
-      const freeUnlimitedModels = ['scira-default', 'scira-vision'];
-      const shouldBypassLimitsForThisModel = user && freeUnlimitedModels.includes(selectedModel);
-
-      if (isLimitBlocked && !shouldBypassLimitsForThisModel) {
-        toast.error('Daily search limit reached. Please upgrade to Pro for unlimited searches.');
+      // Check daily search limit for all users  
+      if (isLimitBlocked) {
+        toast.error('Daily search limit reached. Your limit will reset tomorrow.');
         return;
       }
 
@@ -1607,12 +1504,9 @@ const FormComponent: React.FC<FormComponentProps> = ({
       } else if (isRecording) {
         toast.error('Please stop recording before submitting!');
       } else {
-        // Check if user should bypass limits for this model
-        const freeUnlimitedModels = ['scira-default', 'scira-vision'];
-        const shouldBypassLimitsForThisModel = user && freeUnlimitedModels.includes(selectedModel);
-
-        if (isLimitBlocked && !shouldBypassLimitsForThisModel) {
-          toast.error('Daily search limit reached. Please upgrade to Pro for unlimited searches.');
+        // Check daily search limit
+        if (isLimitBlocked) {
+          toast.error('Daily search limit reached. Your limit will reset tomorrow.');
         } else {
           submitForm();
           setTimeout(() => {
@@ -1700,10 +1594,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
             ref={fileInputRef}
             multiple
             onChange={handleFileChange}
-            accept={getAcceptFileTypes(
-              selectedModel,
-              subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active',
-            )}
+            accept={getAcceptFileTypes(selectedModel)}
             tabIndex={-1}
           />
           <input
@@ -1712,10 +1603,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
             ref={postSubmitFileInputRef}
             multiple
             onChange={handleFileChange}
-            accept={getAcceptFileTypes(
-              selectedModel,
-              subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active',
-            )}
+            accept={getAcceptFileTypes(selectedModel)}
             tabIndex={-1}
           />
 
@@ -1870,7 +1758,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
                           description: isVisionModel ? 'You can now upload images to the model.' : undefined,
                         });
                       }}
-                      subscriptionData={subscriptionData}
                       user={user}
                     />
                   </div>

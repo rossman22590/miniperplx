@@ -18,6 +18,7 @@ import {
   getExtremeSearchCount,
   incrementMessageUsage,
   getMessageCount,
+  getDailySearchCount as getDbDailySearchCount,
 } from '@/lib/db/queries';
 import { getDiscountConfig } from '@/lib/discount';
 import { groq } from '@ai-sdk/groq';
@@ -1116,42 +1117,45 @@ export async function getSubDetails() {
 }
 
 export async function getUserMessageCount() {
-  'use server';
-
   try {
     const user = await getUser();
-    if (!user) {
-      return { count: 0, error: 'User not found' };
-    }
+    if (!user) return null;
 
-    const count = await getMessageCount({
-      userId: user.id,
-    });
+    const [messageCount, dailySearchCount, extremeSearchCount] = await Promise.all([
+      getMessageCount({ userId: user.id }),
+      getDbDailySearchCount({ userId: user.id }),
+      getExtremeSearchCount({ userId: user.id }),
+    ]);
 
-    return { count, error: null };
+    return {
+      count: dailySearchCount,
+      messageCount,
+      extremeSearchCount,
+    };
   } catch (error) {
-    console.error('Error getting user message count:', error);
-    return { count: 0, error: 'Failed to get message count' };
+    console.error('Error in getUserMessageCount:', error);
+    return null;
   }
 }
 
 export async function incrementUserMessageCount() {
-  'use server';
-
   try {
     const user = await getUser();
-    if (!user) {
-      return { success: false, error: 'User not found' };
-    }
+    if (!user) return null;
 
-    await incrementMessageUsage({
-      userId: user.id,
-    });
+    await Promise.all([
+      incrementMessageUsage({ userId: user.id }),
+    ]);
 
-    return { success: true, error: null };
+    return {
+      success: true,
+    };
   } catch (error) {
-    console.error('Error incrementing user message count:', error);
-    return { success: false, error: 'Failed to increment message count' };
+    console.error('Error in incrementUserMessageCount:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
   }
 }
 
@@ -1187,3 +1191,24 @@ export async function getDiscountConfigAction() {
     };
   }
 }
+
+export async function getDailySearchCount(): Promise<number> {
+  try {
+    const user = await getUser();
+    if (!user) {
+      return 0;
+    }
+
+    const count = await getDbDailySearchCount({ userId: user.id });
+    return count;
+  } catch (error) {
+    console.error('Error getting daily search count:', error);
+    return 0;
+  }
+}
+
+// Export additional functions from db/queries
+export {
+  incrementMessageUsage,
+  getExtremeSearchCount,
+};
