@@ -89,7 +89,7 @@ A minimalistic AI-powered search engine that helps you find information on the i
 
 ## Built with
 - [Next.js](https://nextjs.org/) - React framework
-- [Tailwind CSS](https://tailwindcss.com/) - Styling
+- [Tailwind CSS](https://tailwindcss.com/) - Styling 
 - [Vercel AI SDK](https://sdk.vercel.ai/docs) - AI model integration
 - [Shadcn/UI](https://ui.shadcn.com/) - UI components
 - [Exa.AI](https://exa.ai/) - Web search and content retrieval
