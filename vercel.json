@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
-  "installCommand": "pnpm install --no-strict-peer-deps",
+  "installCommand": "pnpm install --no-strict-peer-dependencies",
   "buildCommand": "pnpm run build"
 }
