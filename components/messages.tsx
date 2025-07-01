@@ -47,13 +47,13 @@ const SciraLogoHeader = () => (
     <Image
       src="/scira.png"
       alt="Scira"
-      className="size-7 invert dark:invert-0"
+      className="size-7"
       width={100}
       height={100}
       unoptimized
       quality={100}
     />
-    <h2 className="text-xl font-normal font-be-vietnam-pro text-neutral-800 dark:text-neutral-200">Scira</h2>
+    <h2 className="text-xl font-normal font-be-vietnam-pro text-neutral-800 dark:text-neutral-200">Datavibes</h2>
   </div>
 );
 
@@ -278,7 +278,7 @@ const Messages: React.FC<MessagesProps> = ({
                         }
 
                         // Then copy the share link
-                        const shareUrl = `https://scira.ai/search/${chatId}`;
+                        const shareUrl = `https://datavibesv2.vercel.app/search/${chatId}`;
                         await navigator.clipboard.writeText(shareUrl);
 
                         return selectedVisibilityType === 'private'

@@ -88,25 +88,7 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
     const model = availableModels.find((m) => m.value === value);
     if (!model) return;
 
-    const isProModel = model.pro;
-    const canUseModel = !isProModel || isProUser;
-    const authRequiredModels = ['scira-google-lite', 'scira-4o-mini'];
-    const requiresAuth = authRequiredModels.includes(model.value) && !user;
-
-    // Check for authentication requirement first
-    if (requiresAuth) {
-      setSelectedAuthModel(model);
-      setShowSignInDialog(true);
-      return;
-    }
-
-    // Then check for Pro requirement
-    if (!canUseModel) {
-      setSelectedProModel(model);
-      setShowUpgradeDialog(true);
-      return;
-    }
-
+    // Bypass all checks and allow using any model
     console.log('Selected model:', model.value);
     setSelectedModel(model.value.trim());
 

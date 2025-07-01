@@ -31,7 +31,7 @@ const daytona = new Daytona({
 const runCode = async (code: string, installLibs: string[] = []) => {
     const sandbox = await daytona.create(
         {
-            snapshot: 'scira-analysis:1751171803',
+            snapshot: 'scira-analysis:1751323494',
         }
     );
 

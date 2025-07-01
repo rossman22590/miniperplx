@@ -282,7 +282,7 @@ function UsageSection() {
           <div className="p-4 border rounded-lg bg-card h-32 flex flex-col justify-between">
             <div className="flex items-start justify-between">
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs text-muted-foreground leading-tight">Grok 3 Mini & Vision</span>
+                <span className="text-xs text-muted-foreground leading-tight">AI Tutor Models</span>
                 <span className="text-[10px] text-muted-foreground/70">Unlimited access</span>
               </div>
               <Sparkle className="h-6 w-6 text-muted-foreground flex-shrink-0" />
@@ -342,7 +342,7 @@ function UsageSection() {
                 <span className="text-sm font-medium">Unlimited Access Available</span>
               </div>
               <p className="text-xs text-green-700 dark:text-green-300">
-                You have unlimited access to Grok 3 Mini and Grok 2 Vision models. Daily limits only apply to other AI
+                You have unlimited access to AI Tutor Models. Daily limits only apply to other AI
                 models.
               </p>
             </div>
@@ -376,8 +376,8 @@ function UsageSection() {
                   </div>
                   <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
                     {usagePercentage >= 100
-                      ? 'You can still use Grok 3 Mini & Vision unlimited. Upgrade to Pro for unlimited access to all models.'
-                      : 'Remember: Grok 3 Mini & Vision are always unlimited. Upgrade to Pro for unlimited access to all models.'}
+                      ? 'You can still use AI Tutor Models unlimited.'
+                      : 'Remember: AI Tutor Models are always unlimited.'}
                   </p>
                 </div>
               )}
@@ -439,13 +439,13 @@ function UsageSection() {
           <div className="border-t pt-6">
             <div className="space-y-4">
               <div>
-                <h4 className="font-medium mb-2">Upgrade to Pro</h4>
+                <h4 className="font-medium mb-2">AI Tutor Ultra</h4>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Get unlimited searches and access to premium features
+                  Get limited searches and access to premium features
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 border rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <MagnifyingGlass className="h-4 w-4 text-blue-500" />
@@ -469,10 +469,10 @@ function UsageSection() {
                   </div>
                   <p className="text-xs text-muted-foreground">Faster response times and dedicated help</p>
                 </div>
-              </div>
+              </div> */}
 
               <div className="flex gap-2">
-                <Button asChild className="flex-1">
+                {/* <Button asChild className="flex-1">
                   <Link href="/pricing">
                     <Crown className="h-4 w-4 mr-2" />
                     Upgrade to Pro
@@ -483,347 +483,11 @@ function UsageSection() {
                     View Plans
                     <ArrowSquareOut className="h-4 w-4 ml-2" />
                   </Link>
-                </Button>
+                </Button> */}
               </div>
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// Types for billing history
-interface OrderItem {
-  label: string;
-  amount: number;
-}
-
-interface Order {
-  id: string;
-  product?: {
-    name: string;
-  };
-  createdAt: string;
-  totalAmount: number;
-  currency: string;
-  status: string;
-  subscription?: {
-    status: string;
-    endedAt?: string;
-  };
-  items: OrderItem[];
-}
-
-interface OrdersResponse {
-  result: {
-    items: Order[];
-  };
-}
-
-// Component for Subscription Information with its own loading state
-function SubscriptionSection() {
-  const [orders, setOrders] = useState<OrdersResponse | null>(null);
-  const [ordersLoading, setOrdersLoading] = useState(true);
-
-  const {
-    data: subscriptionDetails,
-    isLoading: subscriptionLoading,
-    error: subscriptionError,
-  } = useQuery({
-    queryKey: ['subscription'],
-    queryFn: getSubDetails,
-    staleTime: 1000 * 60 * 2, // 2 minutes
-  });
-
-  // Fetch billing history
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const ordersResponse = await authClient.customer.orders.list({});
-        if (ordersResponse.data) {
-          setOrders(ordersResponse.data as unknown as OrdersResponse);
-        } else {
-          setOrders(null);
-        }
-      } catch (orderError) {
-        console.log('Orders fetch failed - customer may not exist yet:', orderError);
-        setOrders(null);
-      } finally {
-        setOrdersLoading(false);
-      }
-    };
-
-    fetchOrders();
-  }, []);
-
-  useEffect(() => {
-    if (subscriptionError) {
-      console.error('Error fetching subscription data:', subscriptionError);
-      toast.error('Failed to load subscription data');
-    }
-  }, [subscriptionError]);
-
-  const handleManageSubscription = async () => {
-    try {
-      await authClient.customer.portal();
-    } catch (error) {
-      console.error('Failed to open customer portal:', error);
-      toast.error('Failed to open subscription management');
-    }
-  };
-
-  const isProUser = subscriptionDetails?.hasSubscription && subscriptionDetails?.subscription?.status === 'active';
-
-  if (subscriptionLoading || ordersLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-40" />
-          <Skeleton className="h-4 w-72" />
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Skeleton className="h-20 w-full" />
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-16" />
-            <Skeleton className="h-16" />
-          </div>
-          <div className="space-y-4">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Crown className="h-5 w-5" />
-          Subscription Status
-        </CardTitle>
-        <CardDescription>Manage your subscription and billing information</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {isProUser ? (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-950/50 rounded-lg border border-neutral-200 dark:border-neutral-800">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-black dark:bg-white rounded-full">
-                  <Crown className="h-5 w-5 text-white dark:text-black" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">PRO Subscription Active</h3>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                    Unlimited access to all premium features
-                  </p>
-                </div>
-              </div>
-              <Badge className="bg-black text-white border-0 font-medium">ACTIVE</Badge>
-            </div>
-
-            {subscriptionDetails?.subscription && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Plan</Label>
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="font-medium">Pro Plan</p>
-                    <p className="text-sm text-muted-foreground">
-                      ${(subscriptionDetails.subscription.amount / 100).toFixed(2)}/
-                      {subscriptionDetails.subscription.recurringInterval}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Next Billing</Label>
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="font-medium">
-                      {new Date(subscriptionDetails.subscription.currentPeriodEnd).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Auto-renewal {subscriptionDetails.subscription.cancelAtPeriodEnd ? 'disabled' : 'enabled'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleManageSubscription}>
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Manage Billing
-              </Button>
-              <Button variant="outline">
-                <Gear className="h-4 w-4 mr-2" />
-                Update Plan
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="text-center p-8 border border-dashed rounded-lg">
-              <Crown className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Active Subscription</h3>
-              <p className="text-muted-foreground mb-6">
-                You&apos;re currently on the free plan with limited daily searches. Upgrade to Pro for unlimited access
-                and premium features.
-              </p>
-
-              <div className="space-y-4">
-                <Button asChild size="lg" className="w-full max-w-xs">
-                  <Link href="/pricing">
-                    <Crown className="h-4 w-4 mr-2" />
-                    Upgrade to Pro
-                  </Link>
-                </Button>
-
-                <div className="text-sm text-muted-foreground">
-                  <Link href="/pricing" className="hover:underline">
-                    View all plans and pricing →
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {subscriptionDetails?.error && (
-              <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <div className="flex items-center gap-2 text-red-800 dark:text-red-200 mb-1">
-                  <span className="text-sm font-medium">Subscription Issue</span>
-                </div>
-                <p className="text-xs text-red-700 dark:text-red-300">{subscriptionDetails.error}</p>
-                {subscriptionDetails.errorType === 'CANCELED' && (
-                  <Button asChild size="sm" className="mt-3">
-                    <Link href="/pricing">Reactivate Subscription</Link>
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Billing History Section */}
-        <div className="border-t pt-6 mt-6">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h4 className="text-lg font-medium">Billing History</h4>
-              <p className="text-sm text-muted-foreground">View your past and upcoming invoices</p>
-            </div>
-            <Button variant="outline" size="sm" onClick={handleManageSubscription} disabled={orders === null}>
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Manage Subscription
-            </Button>
-          </div>
-
-          {orders?.result?.items && orders.result.items.length > 0 ? (
-            <div className="space-y-3">
-              {orders.result.items.map((order) => (
-                <Card key={order.id} className="overflow-hidden">
-                  <CardContent className="p-4">
-                    <div className="flex flex-col gap-3">
-                      {/* Header Row */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h5 className="font-medium text-base">{order.product?.name || 'Subscription'}</h5>
-                            {order.subscription?.status === 'paid' ? (
-                              <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs">
-                                Paid
-                              </Badge>
-                            ) : order.subscription?.status === 'canceled' ? (
-                              <Badge variant="destructive" className="text-xs">
-                                Canceled
-                              </Badge>
-                            ) : order.subscription?.status === 'refunded' ? (
-                              <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 text-xs">
-                                Refunded
-                              </Badge>
-                            ) : order.subscription?.status ? (
-                              <Badge variant="outline" className="text-xs">
-                                {order.subscription.status}
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-xs">
-                                {order.status}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {new Date(order.createdAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                            {order.subscription?.status === 'canceled' && order.subscription.endedAt && (
-                              <span className="ml-2">
-                                • Canceled on{' '}
-                                {new Date(order.subscription.endedAt).toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                })}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <div className="font-medium text-base">${(order.totalAmount / 100).toFixed(2)}</div>
-                          <div className="text-xs text-muted-foreground">{order.currency?.toUpperCase()}</div>
-                        </div>
-                      </div>
-
-                      {/* Order Items */}
-                      {order.items?.length > 0 && (
-                        <div className="pt-3 border-t">
-                          <ul className="space-y-1.5 text-sm">
-                            {order.items.map((item, index: number) => (
-                              <li key={`${order.id}-${item.label}-${index}`} className="flex justify-between">
-                                <span className="text-muted-foreground truncate max-w-[200px]">{item.label}</span>
-                                <span className="font-medium">${(item.amount / 100).toFixed(2)}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.5"
-                    className="h-10 w-10 text-muted-foreground mb-4"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                  </svg>
-                  <h5 className="mt-4 text-lg font-semibold">No orders found</h5>
-                  <p className="mb-4 mt-2 text-sm text-muted-foreground">
-                    {orders === null
-                      ? 'Unable to load billing history. This may be because your account is not yet set up for billing.'
-                      : "You don't have any orders yet. Your billing history will appear here."}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
       </CardContent>
     </Card>
   );
@@ -1062,7 +726,7 @@ function SettingsContent() {
   // Handle URL tab parameter
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['profile', 'usage', 'subscription', 'memories'].includes(tab)) {
+    if (tab && ['profile', 'usage', 'memories'].includes(tab)) {
       setCurrentTab(tab);
     }
   }, [searchParams]);
@@ -1097,7 +761,7 @@ function SettingsContent() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
-            <p className="text-muted-foreground mt-2">Manage your account, subscription, and usage preferences</p>
+            <p className="text-muted-foreground mt-2">Manage your account and usage preferences</p>
           </div>
           {subscriptionLoading ? (
             <Skeleton className="h-6 w-24" />
@@ -1113,11 +777,10 @@ function SettingsContent() {
       </div>
 
       {/* Tabs - always shows immediately */}
-      <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
+      <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="usage">Usage</TabsTrigger>
-          <TabsTrigger value="subscription">Subscription</TabsTrigger>
           <TabsTrigger value="memories">Memories</TabsTrigger>
         </TabsList>
 
@@ -1130,12 +793,6 @@ function SettingsContent() {
         <TabsContent value="usage" className="space-y-6">
           <Suspense fallback={<div>Loading usage data...</div>}>
             <UsageSection />
-          </Suspense>
-        </TabsContent>
-
-        <TabsContent value="subscription" className="space-y-6">
-          <Suspense fallback={<div>Loading subscription data...</div>}>
-            <SubscriptionSection />
           </Suspense>
         </TabsContent>
 

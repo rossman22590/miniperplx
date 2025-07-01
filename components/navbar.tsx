@@ -78,7 +78,7 @@ const Navbar = memo(
 
       if (!chatId) return;
 
-      const url = `https://scira.ai/search/${chatId}`;
+      const url = `https://datavibesv2.vercel.app/search/${chatId}`;
       navigator.clipboard.writeText(url);
       setCopied(true);
       toast.success('Link copied to clipboard');
@@ -87,7 +87,7 @@ const Navbar = memo(
     };
 
     // Generate the share URL
-    const shareUrl = chatId ? `https://scira.ai/search/${chatId}` : '';
+    const shareUrl = chatId ? `https://datavibesv2.vercel.app/search/${chatId}` : '';
 
     // Social media share handlers
     const handleShareLinkedIn = (e: React.MouseEvent) => {
@@ -396,7 +396,7 @@ const Navbar = memo(
             </>
           )}
 
-          {/* Subscription Status - show loading or actual status */}
+          {/* Subscription Status - show loading or actual status
           {user && (
             <>
               {isProStatusLoading ? (
@@ -444,7 +444,7 @@ const Navbar = memo(
                 )
               ) : null}
             </>
-          )}
+          )} */}
 
           {/* Chat History Button */}
           <ChatHistoryButton onClick={onHistoryClick} />

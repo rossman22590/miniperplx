@@ -43,7 +43,7 @@ export default function PrivacyPage() {
                   <NextImage
                     src="/scira.png"
                     alt="Scira Logo"
-                    className="h-8 w-8 opacity-90 invert dark:invert-0"
+                    className="h-8 w-8 opacity-90"
                     width={32}
                     height={32}
                     unoptimized
@@ -187,7 +187,7 @@ export default function PrivacyPage() {
                 <NextImage
                   src="/scira.png"
                   alt="Scira Logo"
-                  className="h-4 w-4 opacity-80 invert dark:invert-0"
+                  className="h-4 w-4 opacity-80"
                   width={16}
                   height={16}
                   unoptimized

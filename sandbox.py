@@ -36,7 +36,7 @@ daytona.snapshot.create(
 
 sandbox = daytona.create(
     CreateSandboxFromSnapshotParams(
-        snapshot="scira-analysis:1751171803",
+        snapshot="scira-analysis:1751323494",
         language=CodeLanguage.PYTHON,
     ),
 )

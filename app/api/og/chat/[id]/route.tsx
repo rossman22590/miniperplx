@@ -87,7 +87,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
                   fontFamily: 'Syne',
                 }}
               >
-                Scira AI
+                Datavibes
               </div>
             </div>
           </div>
@@ -185,7 +185,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
                     lineHeight: 1,
                   }}
                 >
-                  Scira AI
+                 Datavibes
                 </div>
                 <div
                   style={{

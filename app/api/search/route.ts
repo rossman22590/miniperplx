@@ -358,9 +358,9 @@ export async function POST(req: Request) {
       'scira-google-pro',
     ];
 
-    if (proRequiredModels.includes(model) && !isProUser) {
-      return new ChatSDKError('upgrade_required:model', `${model} requires a Pro subscription`).toResponse();
-    }
+    // if (proRequiredModels.includes(model) && !isProUser) {
+    //   return new ChatSDKError('upgrade_required:model', `${model} requires a Pro subscription`).toResponse();
+    // }
 
     // Check if user should bypass limits for free unlimited models
     const freeUnlimitedModels = ['scira-default', 'scira-vision'];
@@ -751,7 +751,7 @@ plt.show()`;
 
               const sandbox = await daytona.create(
                 {
-                  snapshot: 'scira-analysis:1751171803',
+                  snapshot: 'scira-analysis:1751323494',
                 }
               );
 
@@ -843,7 +843,7 @@ print(f"Converted amount: {converted_amount}")
               });
               const sandbox = await daytona.create(
                 {
-                  snapshot: 'scira-analysis:1751171803',
+                  snapshot: 'scira-analysis:1751323494',
                 }
               );
 
@@ -1697,7 +1697,7 @@ print(f"Converted amount: {converted_amount}")
 
               const sandbox = await daytona.create(
                 {
-                  snapshot: 'scira-analysis:1751171803',
+                  snapshot: 'scira-analysis:1751323494',
                 },
               );
 
