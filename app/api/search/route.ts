@@ -748,7 +748,7 @@ plt.show()`;
 
               const sandbox = await daytona.create(
                 {
-                  snapshot: 'scira-analysis:1751171803',
+                  snapshot: 'scira-analysis:1751323494',
                 }
               );
 
@@ -840,7 +840,7 @@ print(f"Converted amount: {converted_amount}")
               });
               const sandbox = await daytona.create(
                 {
-                  snapshot: 'scira-analysis:1751171803',
+                  snapshot: 'scira-analysis:1751323494',
                 }
               );
 
@@ -1694,7 +1694,7 @@ print(f"Converted amount: {converted_amount}")
 
               const sandbox = await daytona.create(
                 {
-                  snapshot: 'scira-analysis:1751171803',
+                  snapshot: 'scira-analysis:1751323494',
                 },
               );
 
