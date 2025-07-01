@@ -441,7 +441,7 @@ export async function POST(req: Request) {
       const result = streamText({
         model: scira.languageModel(model),
         messages: convertToCoreMessages(messages),
-        maxTokens: 12000,
+        maxTokens: 8192,
         ...(model.includes('scira-qwq') || model.includes('scira-qwen-32b')
           ? {
             temperature: 0.6,
