@@ -13,15 +13,22 @@ export const auth = betterAuth({
             clientId: serverEnv.GOOGLE_CLIENT_ID,
             clientSecret: serverEnv.GOOGLE_CLIENT_SECRET,
             scope: ["openid", "email", "profile"],
-            params: {
-                prompt: "select_account",
-                access_type: "offline",
-                response_type: "code"
-            }
+            enabled: true,
+            type: "oauth2",
         }
     },
     plugins: [
-        nextCookies()
+        {
+            id: "next-cookies",
+            hooks: {
+                after: [
+                    {
+                        matcher: (context) => true,
+                        handler: nextCookies().hooks.after[0].handler
+                    }
+                ]
+            }
+        }
     ],
     secret: serverEnv.BETTER_AUTH_SECRET,
     baseUrl: process.env.NODE_ENV === 'production' 
@@ -39,6 +46,20 @@ export const auth = betterAuth({
     session: {
         maxAge: 30 * 24 * 60 * 60, // 30 days
         updateAge: 24 * 60 * 60, // 24 hours
+    },
+    advanced: {
+        useSecureCookies: process.env.NODE_ENV === 'production',
+        cookiePrefix: "miniperplx",
+        cookies: {
+            session_token: {
+                name: "session_token",
+                attributes: {
+                    sameSite: "lax",
+                    path: "/",
+                    secure: process.env.NODE_ENV === 'production'
+                }
+            }
+        }
     },
     debug: true
 });

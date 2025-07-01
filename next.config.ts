@@ -25,6 +25,7 @@ const nextConfig: NextConfig = {
       static: 30,
     },
     reactCompiler: true,
+    ppr: true,
   },
   transpilePackages: ['geist'],
   output: 'standalone',
@@ -160,6 +161,9 @@ const nextConfig: NextConfig = {
     formats: ['image/webp'],
     minimumCacheTTL: 60,
     unoptimized: false,
+  },
+  typescript: {
+    ignoreBuildErrors: false,
   },
 };
 

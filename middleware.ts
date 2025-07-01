@@ -26,7 +26,13 @@ export async function middleware(request: NextRequest) {
   try {
     // For API routes, handle auth
     if (pathname.startsWith('/api/')) {
-      const session = await auth.api.getSession({ headers: request.headers });
+      const session = await auth.api.getSession({ 
+        headers: request.headers,
+        query: { 
+          disableCookieCache: true, // Disable cookie caching
+          disableRefresh: false // Allow token refresh
+        }
+      });
       if (!session) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
@@ -34,7 +40,13 @@ export async function middleware(request: NextRequest) {
     }
 
     // For protected routes, verify session
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await auth.api.getSession({ 
+      headers: request.headers,
+      query: { 
+        disableCookieCache: true, // Disable cookie caching
+        disableRefresh: false // Allow token refresh
+      }
+    });
     
     // Redirect to sign-in for protected routes when not authenticated
     if (!session && (
@@ -51,7 +63,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   } catch (error) {
     console.error('Auth middleware error:', error);
-    return NextResponse.redirect(new URL('/error', request.url));
+    // Only redirect to error page for non-API routes
+    if (!pathname.startsWith('/api/')) {
+      return NextResponse.redirect(new URL('/error', request.url));
+    }
+    // For API routes, return error response
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 

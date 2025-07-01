@@ -5,7 +5,8 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Metadata, Viewport } from 'next';
-import { Be_Vietnam_Pro, Geist } from 'next/font/google';
+import { Be_Vietnam_Pro } from 'next/font/google';
+import { GeistSans } from 'geist/font/sans';
 
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { Toaster } from 'sonner';
@@ -89,20 +90,13 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   minimumScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#ffffff' },
     { media: '(prefers-color-scheme: dark)', color: '#0A0A0A' },
   ],
 };
-
-const geist = Geist({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  preload: true,
-  display: 'swap',
-});
 
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['latin'],
@@ -119,7 +113,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geist.variable} ${beVietnamPro.variable} font-sans antialiased`} suppressHydrationWarning>
+      <body className={`${GeistSans.variable} ${beVietnamPro.variable} font-sans antialiased`} suppressHydrationWarning>
         <NuqsAdapter>
           <Providers>
             <Toaster position="top-center" />
