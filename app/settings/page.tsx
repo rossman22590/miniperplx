@@ -227,7 +227,7 @@ function UsageSection() {
           <div className="p-4 border rounded-lg bg-card h-32 flex flex-col justify-between">
             <div className="flex items-start justify-between">
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs text-muted-foreground leading-tight">Today's Searches</span>
+                <span className="text-xs text-muted-foreground leading-tight">Today&apos;s Searches</span>
                 <span className="text-[10px] text-muted-foreground/70">(Other models)</span>
               </div>
               <MagnifyingGlass className="h-6 w-6 text-muted-foreground flex-shrink-0" />
