@@ -2754,19 +2754,39 @@ print(f"Converted amount: {converted_amount}")
           console.log('Sources: ', event.sources);
 
           // Track message usage for rate limiting (deletion-proof)
-          // Only track usage for models that are not free unlimited
           if (user?.id) {
             try {
+              console.log('--------------------------------');
+              console.log('Starting usage tracking for user:', user.id);
+              
+              // Always increment daily search usage
+              console.log('Incrementing daily search usage...');
+              const updatedUsage = await incrementDailySearchUsage({ userId: user.id });
+              console.log('Daily search usage updated:', updatedUsage);
+
+              // Only increment message usage for non-free models
               const freeUnlimitedModels = ['scira-default', 'scira-vision'];
+              console.log('Current model:', model);
+              console.log('Is free model:', freeUnlimitedModels.includes(model));
+              
               if (!freeUnlimitedModels.includes(model)) {
-                await Promise.all([
-                  incrementMessageUsage({ userId: user.id }),
-                  incrementDailySearchUsage({ userId: user.id }),
-                ]);
+                console.log('Incrementing message usage for non-free model...');
+                await incrementMessageUsage({ userId: user.id });
+                console.log('Message usage incremented successfully');
               }
+              
+              console.log('Usage tracking completed successfully');
+              console.log('--------------------------------');
             } catch (error) {
-              console.error('Failed to track message usage:', error);
+              console.error('Failed to track usage - Details:', {
+                error,
+                userId: user.id,
+                model,
+                timestamp: new Date().toISOString()
+              });
             }
+          } else {
+            console.log('No user ID available for usage tracking');
           }
 
           // Track extreme search usage if it was used successfully
