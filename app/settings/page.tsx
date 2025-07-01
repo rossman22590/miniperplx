@@ -34,7 +34,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery, InfiniteData, QueryFunctionContext } from '@tanstack/react-query';
 import { getAllMemories, searchMemories, deleteMemory, MemoryItem } from '@/lib/memory-actions';
 import { Loader2, Search, Trash2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -339,10 +339,10 @@ function MemoriesSection() {
     hasNextPage,
     isFetchingNextPage,
     isLoading: memoriesLoading,
-  } = useInfiniteQuery<MemoriesResponse>({
+  } = useInfiniteQuery<MemoriesResponse, Error, InfiniteData<MemoriesResponse>, [string], number>({
     queryKey: ['memories'],
-    queryFn: async ({ pageParam }: { pageParam: number }) => {
-      return await getAllMemories(pageParam);
+    queryFn: async (context: QueryFunctionContext<[string], number>) => {
+      return await getAllMemories(context.pageParam);
     },
     initialPageParam: 1,
     getNextPageParam: (lastPage: MemoriesResponse) => {

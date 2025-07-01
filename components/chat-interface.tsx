@@ -314,7 +314,7 @@ const ChatInterface = memo(
         },
         initialMessages,
       }),
-      [selectedModel, selectedGroup, chatId, initialChatId, initialMessages, selectedVisibilityType],
+      [selectedModel, selectedGroup, chatId, initialChatId, initialMessages, selectedVisibilityType, refetchUsage, usageData],
     );
 
     const {
