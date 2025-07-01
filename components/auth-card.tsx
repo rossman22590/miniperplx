@@ -101,14 +101,14 @@ export default function AuthCard({ title, description, mode = 'sign-in' }: AuthC
         <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-6">{description}</p>
 
         <div className="space-y-2 mb-4">
-          <SignInButton
+          {/* <SignInButton
             title="GitHub"
             provider="github"
             loading={githubLoading}
             setLoading={setGithubLoading}
             callbackURL="/"
             icon={<AuthIcons.Github className="w-3.5 h-3.5" />}
-          />
+          /> */}
           <SignInButton
             title="Google"
             provider="google"
@@ -117,14 +117,14 @@ export default function AuthCard({ title, description, mode = 'sign-in' }: AuthC
             callbackURL="/"
             icon={<AuthIcons.Google className="w-3.5 h-3.5" />}
           />
-          <SignInButton
+          {/* <SignInButton
             title="X (Twitter)"
             provider="twitter"
             loading={twitterLoading}
             setLoading={setTwitterLoading}
             callbackURL="/"
             icon={<AuthIcons.Twitter className="w-3.5 h-3.5" />}
-          />
+          /> */}
         </div>
 
         <p className="text-xs text-neutral-400 dark:text-neutral-500 mb-6">
