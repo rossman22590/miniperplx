@@ -32,6 +32,7 @@ import { User } from '@/lib/db/schema';
 import { LinkedinLogo, RedditLogo, XLogo } from '@phosphor-icons/react';
 import { ClassicLoader } from '@/components/ui/loading';
 import { useRouter } from 'next/navigation';
+import { useSession } from '@/hooks/use-session';
 
 type VisibilityType = 'public' | 'private';
 
@@ -56,13 +57,18 @@ const Navbar = memo(
     selectedVisibilityType,
     onVisibilityChange,
     status,
-    user,
+    user: propUser,
     onHistoryClick,
     isOwner = true,
     subscriptionData,
     isProUser,
     isProStatusLoading,
   }: NavbarProps) => {
+    const { data: session, isLoading: isSessionLoading } = useSession();
+    const user = session?.user ? {
+      ...session.user,
+      image: session.user.image || null // Ensure image is string | null
+    } : propUser;
     const [copied, setCopied] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [privateDropdownOpen, setPrivateDropdownOpen] = useState(false);
@@ -71,6 +77,14 @@ const Navbar = memo(
 
     // Use passed Pro status instead of calculating it
     const hasActiveSubscription = isProUser;
+
+    // Update user profile when session changes
+    useEffect(() => {
+      if (session?.user) {
+        // Force a re-render of user-dependent components
+        router.refresh();
+      }
+    }, [session, router]);
 
     const handleCopyLink = (e: React.MouseEvent) => {
       e.preventDefault();

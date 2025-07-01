@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getUserMessageCount, getCurrentUser, getExtremeSearchUsageCount } from '@/app/actions';
 import { SEARCH_LIMITS } from '@/lib/constants';
 import { authClient } from '@/lib/auth-client';
-import { useSession } from '@/lib/auth-client';
+import { useSession } from '@/hooks/use-session';
 import { useUsageData } from '@/hooks/use-usage-data';
 import { User } from '@/lib/db/schema';
 
@@ -174,19 +174,14 @@ function ProfileSection() {
 // Component for Usage Information with its own loading state
 function UsageSection() {
   const { data: session } = useSession();
-  const user = session?.user ? {
-    id: session.user.id,
-    name: session.user.name,
-    email: session.user.email,
-    image: session.user.image,
-  } : null;
+  const user = session?.user;
   
   const {
     data: usageData,
     isLoading: usageLoading,
     error: usageError,
     refetch: refetchUsageData,
-  } = useUsageData(user);
+  } = useUsageData(user || null, true);
 
   useEffect(() => {
     if (usageError) {
@@ -194,6 +189,13 @@ function UsageSection() {
       toast.error('Failed to load usage data');
     }
   }, [usageError]);
+
+  // Refetch usage data when session changes
+  useEffect(() => {
+    if (user) {
+      refetchUsageData();
+    }
+  }, [user, refetchUsageData]);
 
   const handleRefreshUsage = async () => {
     try {
@@ -251,7 +253,7 @@ function UsageSection() {
           <div className="p-4 border rounded-lg bg-card h-32 flex flex-col justify-between">
             <div className="flex items-start justify-between">
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs text-muted-foreground leading-tight">Grok 3 Mini & Vision</span>
+                <span className="text-xs text-muted-foreground leading-tight">AI Tutor Models</span>
                 <span className="text-[10px] text-muted-foreground/70">Unlimited access</span>
               </div>
               <Sparkle className="h-6 w-6 text-muted-foreground flex-shrink-0" />

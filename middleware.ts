@@ -1,42 +1,63 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getSessionCookie } from 'better-auth/cookies';
-
-const authRoutes = ['/sign-in', '/sign-up'];
-const protectedRoutes = ['/settings'];
+import { auth } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  const sessionCookie = getSessionCookie(request);
+  const pathname = request.nextUrl.pathname;
 
-  const { pathname } = request.nextUrl;
-  console.log('Pathname: ', pathname);
-
-  // /api/payments/webhooks is a webhook endpoint that should be accessible without authentication
-  if (pathname.startsWith('/api/payments/webhooks')) {
+  // Skip auth for public routes and assets
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/static') ||
+    pathname.startsWith('/images') ||
+    pathname.startsWith('/fonts') ||
+    pathname === '/favicon.ico' ||
+    pathname === '/robots.txt' ||
+    pathname === '/sitemap.xml' ||
+    pathname === '/sign-in' ||
+    pathname === '/sign-up' ||
+    pathname === '/error' ||
+    pathname === '/verify-request'
+  ) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith('/polar/webhooks')) {
+  try {
+    // For API routes, handle auth
+    if (pathname.startsWith('/api/')) {
+      const session = await auth.api.getSession({ headers: request.headers });
+      if (!session) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      return NextResponse.next();
+    }
+
+    // For protected routes, verify session
+    const session = await auth.api.getSession({ headers: request.headers });
+    
+    // Redirect to sign-in for protected routes when not authenticated
+    if (!session && (
+      pathname.startsWith('/settings') ||
+      pathname.startsWith('/new') ||
+      pathname.startsWith('/search')
+    )) {
+      const signInUrl = new URL('/sign-in', request.url);
+      signInUrl.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(signInUrl);
+    }
+
+    // Allow access to public routes
     return NextResponse.next();
+  } catch (error) {
+    console.error('Auth middleware error:', error);
+    return NextResponse.redirect(new URL('/error', request.url));
   }
-
-  // If user is authenticated but trying to access auth routes
-  if (sessionCookie && authRoutes.some((route) => pathname.startsWith(route))) {
-    console.log('Redirecting to home');
-    console.log('Session cookie: ', sessionCookie);
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  if (!sessionCookie && protectedRoutes.some((route) => pathname.startsWith(route))) {
-    return NextResponse.redirect(new URL('/sign-in', request.url));
-  }
-
-  return NextResponse.next();
 }
 
 export const config = {
-  runtime: 'nodejs',
   matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    '/(api|trpc)(.*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };
+

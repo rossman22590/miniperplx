@@ -149,7 +149,7 @@ The application can be run using Docker in two ways:
    ```bash
    docker compose up
    ```
-4. The application will be available at `http://localhost:3000`
+4. The application will be available at `http://localhost:3001`
 
 ##### Using Docker Directly
 
@@ -182,7 +182,7 @@ To run the application locally without Docker:
    ```bash
    pnpm dev
    ```
-5. Open `http://localhost:3000` in your browser
+5. Open `http://localhost:3001` in your browser
 
 # License
 

@@ -39,7 +39,7 @@ export const serverEnv = createEnv({
     SMITHERY_API_KEY: z.string().min(1),
     COINGECKO_API_KEY: z.string().min(1),
     ADMIN_KEY: z.string().min(1),
-    ALLOWED_ORIGINS: z.string().optional().default('http://localhost:3000'),
+    ALLOWED_ORIGINS: z.string().optional().default('http://localhost:3001'),
   },
   experimental__runtimeEnv: process.env,
 })
