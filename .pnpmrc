@@ -1,0 +1,9 @@
+network-concurrency=1
+child-concurrency=1
+registry=https://registry.npmjs.org/
+strict-peer-dependencies=false
+auto-install-peers=true
+resolution-mode=highest
+prefer-frozen-lockfile=false
+verify-store-integrity=false
+ignore-compatibility-db=true 

@@ -1,5 +1,12 @@
 {
-  "buildCommand": "pnpm run build",
-  "installCommand": "pnpm install --no-frozen-lockfile",
-  "framework": "nextjs"
+  "buildCommand": "pnpm install --registry=https://registry.npmjs.org/ --registry=https://registry.yarnpkg.com/ --registry=https://npm.pkg.github.com/ --no-frozen-lockfile --network-timeout 600000 && pnpm run build",
+  "installCommand": "pnpm install --registry=https://registry.npmjs.org/ --registry=https://registry.yarnpkg.com/ --registry=https://npm.pkg.github.com/ --no-frozen-lockfile --network-timeout 600000",
+  "framework": "nextjs",
+  "build": {
+    "env": {
+      "NPM_FLAGS": "--no-audit --no-fund",
+      "NEXT_TELEMETRY_DISABLED": "1",
+      "NODE_OPTIONS": "--max-old-space-size=4096"
+    }
+  }
 } 
