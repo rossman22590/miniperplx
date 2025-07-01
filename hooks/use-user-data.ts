@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getCurrentUser, getSubDetails } from '@/app/actions';
 import { User } from '@/lib/db/schema';
-import { useSession } from '@/lib/auth-client';
+import { useSession } from '@/hooks/use-session';
 
 // Hook for user data
 export function useUserData() {
