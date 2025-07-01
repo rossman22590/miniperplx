@@ -260,7 +260,7 @@ const ChatInterface = memo(
 
     const [selectedVisibilityType, setSelectedVisibilityType] = useState<VisibilityType>(initialVisibility);
 
-    const chatOptions: UseChatOptions = useMemo(
+    const chatOptions = useMemo(
       () => ({
         id: chatId,
         api: '/api/search',
@@ -275,33 +275,12 @@ const ChatInterface = memo(
           ...(initialChatId ? { chat_id: initialChatId } : {}),
           selectedVisibilityType,
         },
-        onFinish: async (message, { finishReason }) => {
+        onFinish: async (message: any, { finishReason }: { finishReason: string }) => {
           console.log('[finish reason]:', finishReason);
 
           // Refresh usage data after message completion for authenticated users
           if (usageData) {
             refetchUsage();
-          }
-
-          // Check if this is the first message completion and user is not Pro
-          // messages.length will be 1 (just the user message) when the first assistant response completes
-          const isFirstMessage = messages.length <= 1;
-
-          console.log('Upgrade dialog check:', {
-            isFirstMessage,
-            isProUser: false,
-            hasShownUpgradeDialog,
-            user: !!usageData,
-            messagesLength: messages.length,
-          });
-
-          // Show upgrade dialog after first message if user is not Pro and hasn't seen it before
-          if (isFirstMessage && !usageData && !hasShownUpgradeDialog) {
-            console.log('Showing upgrade dialog...');
-            setTimeout(() => {
-              setShowUpgradeDialog(true);
-              setHasShownUpgradeDialog(true);
-            }, 1000); // Reduced delay for testing
           }
 
           // Only generate suggested questions if authenticated user or private chat
@@ -318,11 +297,9 @@ const ChatInterface = memo(
             setSuggestedQuestions(questions);
           }
         },
-        onError: (error) => {
-          // Don't show toast for ChatSDK errors as they will be handled by the enhanced error display
+        onError: (error: Error) => {
           if (error instanceof ChatSDKError) {
             console.log('ChatSDK Error:', error.type, error.surface, error.message);
-            // Only show toast for certain error types that need immediate attention
             if (error.type === 'offline' || error.surface === 'stream') {
               toast.error('Connection Error', {
                 description: error.message,
@@ -335,10 +312,9 @@ const ChatInterface = memo(
             });
           }
         },
-        initialMessages: initialMessages,
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        initialMessages,
       }),
-      [selectedModel, selectedGroup, chatId, initialChatId, initialMessages, selectedVisibilityType, hasShownUpgradeDialog, messages.length, refetchUsage, setHasShownUpgradeDialog, usageData],
+      [selectedModel, selectedGroup, chatId, initialChatId, initialMessages, selectedVisibilityType],
     );
 
     const {
@@ -356,13 +332,17 @@ const ChatInterface = memo(
       experimental_resume,
     } = useChat(chatOptions);
 
-    // Debug error structure
-    if (error) {
-      console.log('[useChat error]:', error);
-      console.log('[error type]:', typeof error);
-      console.log('[error message]:', error.message);
-      console.log('[error instance]:', error instanceof Error, error instanceof ChatSDKError);
-    }
+    // Handle upgrade dialog separately
+    useEffect(() => {
+      const isFirstMessage = messages.length <= 1;
+      if (isFirstMessage && !usageData && !hasShownUpgradeDialog) {
+        console.log('Showing upgrade dialog...');
+        setTimeout(() => {
+          setShowUpgradeDialog(true);
+          setHasShownUpgradeDialog(true);
+        }, 1000);
+      }
+    }, [messages.length, usageData, hasShownUpgradeDialog, setShowUpgradeDialog, setHasShownUpgradeDialog]);
 
     useAutoResume({
       autoResume: true,

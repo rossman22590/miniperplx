@@ -33,7 +33,7 @@ import { TextLoop } from '@/components/core/text-loop';
 import { TextShimmer } from '@/components/core/text-shimmer';
 import { VercelLogo } from '@/components/logos/vercel-logo';
 import { TavilyLogo } from '@/components/logos/tavily-logo';
-import { ElevenLabsLogo } from '@/components/logos/elevenlabs-logo';
+// import { ElevenLabsLogo } from '@/components/logos/elevenlabs-logo';
 import { useRouter } from 'next/navigation';
 import { GithubLogo, XLogo } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
@@ -461,7 +461,7 @@ export default function AboutPage() {
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div className="relative z-10 w-full flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300">
-                  <ElevenLabsLogo />
+                  {/* <ElevenLabsLogo /> */}
                 </div>
                 <div className="relative z-10 text-center space-y-2">
                   <h3 className="font-semibold text-lg">ElevenLabs Voice</h3>

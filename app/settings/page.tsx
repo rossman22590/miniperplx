@@ -40,6 +40,12 @@ import { Loader2, Search, Trash2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
+// Add type definitions for the API responses
+interface MemoriesResponse {
+  memories: MemoryItem[];
+  total: number;
+}
+
 // Component for Profile Information with its own loading state
 function ProfileSection() {
   const [name, setName] = useState('');
@@ -333,14 +339,13 @@ function MemoriesSection() {
     hasNextPage,
     isFetchingNextPage,
     isLoading: memoriesLoading,
-  } = useInfiniteQuery({
+  } = useInfiniteQuery<MemoriesResponse>({
     queryKey: ['memories'],
-    queryFn: async ({ pageParam }) => {
-      const pageNumber = pageParam as number;
-      return await getAllMemories(pageNumber);
+    queryFn: async ({ pageParam }: { pageParam: number }) => {
+      return await getAllMemories(pageParam);
     },
     initialPageParam: 1,
-    getNextPageParam: (lastPage) => {
+    getNextPageParam: (lastPage: MemoriesResponse) => {
       const hasMore = lastPage.memories.length >= 20;
       return hasMore ? Number(lastPage.memories[lastPage.memories.length - 1]?.id) : undefined;
     },
@@ -352,7 +357,7 @@ function MemoriesSection() {
     data: searchResults,
     isLoading: isSearching,
     refetch: performSearch,
-  } = useQuery({
+  } = useQuery<MemoriesResponse>({
     queryKey: ['memories', 'search', searchQuery],
     queryFn: async () => {
       if (!searchQuery.trim()) return { memories: [], total: 0 };
@@ -368,7 +373,7 @@ function MemoriesSection() {
       queryClient.invalidateQueries({ queryKey: ['memories'] });
       toast.success('Memory successfully deleted');
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error('Delete memory error:', error);
       toast.error('Failed to delete memory');
     },
@@ -414,13 +419,13 @@ function MemoriesSection() {
   const displayedMemories =
     searchQuery.trim() && searchResults
       ? searchResults.memories
-      : memoriesData?.pages.flatMap((page) => page.memories) || [];
+      : memoriesData?.pages.flatMap((page: MemoriesResponse) => page.memories) || [];
 
   // Calculate total memories
   const totalMemories =
     searchQuery.trim() && searchResults
       ? searchResults.total
-      : memoriesData?.pages.reduce((acc, page) => acc + page.memories.length, 0) || 0;
+      : memoriesData?.pages.reduce((acc: number, page: MemoriesResponse) => acc + page.memories.length, 0) || 0;
 
   return (
     <Card>
