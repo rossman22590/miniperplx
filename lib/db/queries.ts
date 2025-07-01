@@ -506,32 +506,72 @@ export async function getDailySearchUsageByUserId({ userId }: { userId: string }
 }
 
 export async function incrementDailySearchUsage({ userId }: { userId: string }) {
-  try {
-    // First ensure we have a usage record and it's current
-    const usage = await getDailySearchUsageByUserId({ userId });
-    if (!usage) {
-      throw new Error('Failed to get or create daily search usage record');
+  return await db.transaction(async (tx) => {
+    try {
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfDay = new Date(startOfDay);
+      endOfDay.setDate(endOfDay.getDate() + 1);
+
+      // Get current usage record
+      const [usage] = await tx
+        .select()
+        .from(dailySearchUsage)
+        .where(
+          and(
+            eq(dailySearchUsage.userId, userId),
+            gte(dailySearchUsage.date, startOfDay),
+            lt(dailySearchUsage.date, endOfDay)
+          )
+        );
+
+      if (!usage) {
+        // Create new usage record for today
+        const [newUsage] = await tx
+          .insert(dailySearchUsage)
+          .values({
+            userId,
+            searchCount: 1, // Start at 1 for the first search
+            date: startOfDay,
+            resetAt: endOfDay,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .returning();
+        return newUsage;
+      }
+
+      // Check if we need to reset the count (if past reset time)
+      if (now >= usage.resetAt) {
+        const [updatedUsage] = await tx
+          .update(dailySearchUsage)
+          .set({
+            searchCount: 1, // Reset to 1 since this is a new search
+            date: startOfDay,
+            resetAt: endOfDay,
+            updatedAt: now,
+          })
+          .where(eq(dailySearchUsage.id, usage.id))
+          .returning();
+        return updatedUsage;
+      }
+
+      // Increment the existing count using SQL to ensure atomicity
+      const [updatedUsage] = await tx
+        .update(dailySearchUsage)
+        .set({
+          searchCount: sql`${dailySearchUsage.searchCount} + 1`,
+          updatedAt: now,
+        })
+        .where(eq(dailySearchUsage.id, usage.id))
+        .returning();
+
+      return updatedUsage;
+    } catch (error) {
+      console.error('Error incrementing daily search usage:', error);
+      throw new ChatSDKError('bad_request:database', 'Failed to increment daily search usage');
     }
-
-    // Now increment the count
-    const [updatedUsage] = await db
-      .update(dailySearchUsage)
-      .set({
-        searchCount: usage.searchCount + 1,
-        updatedAt: new Date(),
-      })
-      .where(eq(dailySearchUsage.id, usage.id))
-      .returning();
-
-    if (!updatedUsage) {
-      throw new Error('Failed to update daily search usage record');
-    }
-
-    return updatedUsage;
-  } catch (error) {
-    console.error('Error incrementing daily search usage:', error);
-    throw new ChatSDKError('bad_request:database', 'Failed to increment daily search usage');
-  }
+  });
 }
 
 export async function getDailySearchCount({ userId }: { userId: string }): Promise<number> {
