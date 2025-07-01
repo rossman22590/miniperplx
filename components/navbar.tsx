@@ -148,7 +148,7 @@ const Navbar = memo(
         )}
       >
         <div className={cn('flex items-center gap-3', isDialogOpen ? 'pointer-events-auto' : '')}>
-          <Link href="/new">
+          <Link href="/">
             <Button
               type="button"
               variant="secondary"

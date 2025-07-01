@@ -50,6 +50,7 @@ export async function middleware(request: NextRequest) {
     
     // Redirect to sign-in for protected routes when not authenticated
     if (!session && (
+      pathname === '/' ||
       pathname.startsWith('/settings') ||
       pathname.startsWith('/new') ||
       pathname.startsWith('/search')

@@ -583,7 +583,7 @@ function SettingsContent() {
       <div className="space-y-4">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" className="h-9 w-9 p-0" asChild>
-            <Link href="/new">
+            <Link href="/">
               <ArrowLeft className="h-4 w-4" />
               <span className="sr-only">Back to search</span>
             </Link>
