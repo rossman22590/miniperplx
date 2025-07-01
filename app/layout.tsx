@@ -20,9 +20,33 @@ export const metadata: Metadata = {
     absolute: 'Datavibes AI',
   },
   description: 'Datavibes AI is a minimalistic AI-powered search engine that helps you find information on the internet.',
+  icons: {
+    icon: [
+      { url: '/icon.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon.ico', sizes: 'any' }
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }
+    ],
+    other: [
+      {
+        rel: 'mask-icon',
+        url: '/icon.png',
+        color: '#000000'
+      }
+    ]
+  },
+  manifest: '/manifest.ts',
   openGraph: {
     url: 'https://Datavibes.ai',
     siteName: 'Datavibes AI',
+    images: [
+      {
+        url: '/icon.png',
+        width: 32,
+        height: 32
+      }
+    ]
   },
   keywords: [
     'Datavibes.ai',
