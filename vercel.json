@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
-  "installCommand": "corepack enable && pnpm install",
+  "installCommand": "pnpm install --no-strict-peer-deps",
   "buildCommand": "pnpm run build"
 }
