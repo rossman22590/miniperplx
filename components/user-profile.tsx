@@ -10,7 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useSession, signOut } from '@/lib/auth-client';
+import { signOut } from '@/lib/auth-client';
+import { useSession } from '@/hooks/use-session';
 import { redirect } from 'next/navigation';
 import { toast } from 'sonner';
 import {
