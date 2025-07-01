@@ -90,9 +90,9 @@ const SignInButton = ({ title, provider, loading, setLoading, callbackURL, icon 
  * Authentication component with social provider options
  */
 export default function AuthCard({ title, description, mode = 'sign-in' }: AuthCardProps) {
-  const [githubLoading, setGithubLoading] = useState(false);
+  // const [githubLoading, setGithubLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [twitterLoading, setTwitterLoading] = useState(false);
+  // const [twitterLoading, setTwitterLoading] = useState(false);
 
   return (
     <div className="max-w-sm w-full">
@@ -101,14 +101,14 @@ export default function AuthCard({ title, description, mode = 'sign-in' }: AuthC
         <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-6">{description}</p>
 
         <div className="space-y-2 mb-4">
-          <SignInButton
+          {/* <SignInButton
             title="GitHub"
             provider="github"
             loading={githubLoading}
             setLoading={setGithubLoading}
             callbackURL="/"
             icon={<AuthIcons.Github className="w-3.5 h-3.5" />}
-          />
+          /> */}
           <SignInButton
             title="Google"
             provider="google"
@@ -117,17 +117,17 @@ export default function AuthCard({ title, description, mode = 'sign-in' }: AuthC
             callbackURL="/"
             icon={<AuthIcons.Google className="w-3.5 h-3.5" />}
           />
-          <SignInButton
+          {/* <SignInButton
             title="X (Twitter)"
             provider="twitter"
             loading={twitterLoading}
             setLoading={setTwitterLoading}
             callbackURL="/"
             icon={<AuthIcons.Twitter className="w-3.5 h-3.5" />}
-          />
+          /> */}
         </div>
 
-        <p className="text-xs text-neutral-400 dark:text-neutral-500 mb-6">
+        {/* <p className="text-xs text-neutral-400 dark:text-neutral-500 mb-6">
           By continuing, you agree to our{' '}
           <Link
             href="/terms"
@@ -143,7 +143,7 @@ export default function AuthCard({ title, description, mode = 'sign-in' }: AuthC
             Privacy Policy
           </Link>
           .
-        </p>
+        </p> */}
 
         <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800">
           <p className="text-xs text-neutral-500 dark:text-neutral-400">

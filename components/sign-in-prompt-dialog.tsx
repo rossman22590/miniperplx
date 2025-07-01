@@ -137,7 +137,7 @@ export function SignInPromptDialog({ open, onOpenChange }: SignInPromptDialogPro
         </Button>
 
         {/* Legal */}
-        <p className="text-xs text-neutral-400 dark:text-neutral-500 text-center mt-4">
+        {/* <p className="text-xs text-neutral-400 dark:text-neutral-500 text-center mt-4">
           By continuing, you accept our{' '}
           <Link
             href="/terms"
@@ -152,7 +152,7 @@ export function SignInPromptDialog({ open, onOpenChange }: SignInPromptDialogPro
           >
             Privacy Policy
           </Link>
-        </p>
+        </p> */}
       </DialogContent>
     </Dialog>
   );
