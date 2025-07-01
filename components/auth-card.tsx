@@ -90,9 +90,9 @@ const SignInButton = ({ title, provider, loading, setLoading, callbackURL, icon 
  * Authentication component with social provider options
  */
 export default function AuthCard({ title, description, mode = 'sign-in' }: AuthCardProps) {
-  const [githubLoading, setGithubLoading] = useState(false);
+  // const [githubLoading, setGithubLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [twitterLoading, setTwitterLoading] = useState(false);
+  // const [twitterLoading, setTwitterLoading] = useState(false);
 
   return (
     <div className="max-w-sm w-full">
