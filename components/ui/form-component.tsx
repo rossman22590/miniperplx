@@ -854,7 +854,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
   );
 
   // Update uploadFile function to add more error details
-  const uploadFile = async (file: File): Promise<Attachment> => {
+  const uploadFile = useCallback(async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -879,7 +879,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
       toast.error(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
-  };
+  }, []);
 
   // Fix handleFileChange to ensure it properly processes files
   const handleFileChange = useCallback(
@@ -1496,26 +1496,12 @@ const FormComponent: React.FC<FormComponentProps> = ({
     }
   }, [attachments.length, status, fileInputRef]);
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey && !isCompositionActive.current) {
-      event.preventDefault();
-      if (status === 'submitted' || status === 'streaming') {
-        toast.error('Please wait for the response to complete!');
-      } else if (isRecording) {
-        toast.error('Please stop recording before submitting!');
-      } else {
-        // Check daily search limit
-        if (isLimitBlocked) {
-          toast.error('Daily search limit reached. Your limit will reset tomorrow.');
-        } else {
-          submitForm();
-          setTimeout(() => {
-            inputRef.current?.focus();
-          }, 100);
-        }
-      }
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey && !isRecording) {
+      e.preventDefault();
+      handleSubmit(e);
     }
-  };
+  }, [handleSubmit, isRecording, chatId]);
 
   const isProcessing = status === 'submitted' || status === 'streaming';
   const hasInteracted = messages.length > 0;

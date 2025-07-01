@@ -5,6 +5,7 @@ import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import { ArrowUpRight, ArrowDownRight, ExternalLink, Newspaper } from 'lucide-react';
 import { ChartBar } from '@phosphor-icons/react';
+import Image from 'next/image';
 
 // Currency symbol mapping with modern design tokens
 const CURRENCY_SYMBOLS = {
@@ -587,14 +588,13 @@ export const InteractiveStockChart = React.memo(
                           <div className="flex items-center justify-between mt-1.5">
                             <div className="flex items-center gap-1">
                               <div className="relative w-3 h-3 rounded-sm bg-muted/50 flex items-center justify-center overflow-hidden">
-                                <img
+                                <Image
                                   src={`https://www.google.com/s2/favicons?sz=128&domain=${new URL(news.url).hostname}`}
                                   alt=""
+                                  width={12}
+                                  height={12}
                                   className="w-3 h-3 object-contain"
-                                  onError={(e) => {
-                                    e.currentTarget.src =
-                                      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='12' y1='8' x2='12' y2='16'/%3E%3Cline x1='8' y1='12' x2='16' y2='12'/%3E%3C/svg%3E";
-                                  }}
+                                  priority
                                 />
                               </div>
                               <span className="text-[9px] text-muted-foreground/80 truncate max-w-[100px]">
@@ -660,16 +660,15 @@ export const InteractiveStockChart = React.memo(
                             <div className="flex items-center justify-between mt-1.5">
                               <div className="flex items-center gap-1">
                                 <div className="relative w-3 h-3 rounded-sm bg-muted/50 flex items-center justify-center overflow-hidden">
-                                  <img
+                                  <Image
                                     src={`https://www.google.com/s2/favicons?sz=128&domain=${
                                       new URL(news.url).hostname
                                     }`}
                                     alt=""
+                                    width={12}
+                                    height={12}
                                     className="w-3 h-3 object-contain"
-                                    onError={(e) => {
-                                      e.currentTarget.src =
-                                        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='12' y1='8' x2='12' y2='16'/%3E%3Cline x1='8' y1='12' x2='16' y2='12'/%3E%3C/svg%3E";
-                                    }}
+                                    priority
                                   />
                                 </div>
                                 <span className="text-[9px] text-muted-foreground/80 truncate max-w-[100px]">

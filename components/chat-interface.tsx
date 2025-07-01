@@ -338,7 +338,7 @@ const ChatInterface = memo(
         initialMessages: initialMessages,
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }),
-      [selectedModel, selectedGroup, chatId, initialChatId, initialMessages, selectedVisibilityType],
+      [selectedModel, selectedGroup, chatId, initialChatId, initialMessages, selectedVisibilityType, hasShownUpgradeDialog, messages.length, refetchUsage, setHasShownUpgradeDialog, usageData],
     );
 
     const {
