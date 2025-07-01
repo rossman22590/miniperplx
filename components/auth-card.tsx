@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
-type AuthProvider = 'github' | 'google' | 'twitter';
+type AuthProvider = 'google' ;
 
 interface AuthIconProps extends React.ComponentProps<'svg'> {}
 
