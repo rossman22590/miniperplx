@@ -56,25 +56,58 @@ const ChangelogDialog = ({ open, onOpenChange }: { open: boolean; onOpenChange: 
       <DialogContent className="sm:max-w-[420px] p-0 gap-0 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 shadow-2xl">
         <div className="p-8">
           {/* Header */}
-          <div className="text-center space-y-4 mb-8">
-            <div className="w-10 h-10 rounded-lg bg-neutral-900 dark:bg-neutral-100 flex items-center justify-center mx-auto">
-              <Sparkle className="w-5 h-5 text-neutral-100 dark:text-neutral-900" weight="fill" />
+          <div className="text-center space-y-6 mb-8">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center mx-auto shadow-lg">
+              <Crown className="w-7 h-7 text-white" weight="fill" />
             </div>
-            <div className="space-y-3">
-              <h2 className="text-lg font-medium text-neutral-900 dark:text-neutral-100">Free Unlimited Models</h2>
-              <p className="text-neutral-600 dark:text-neutral-400 text-sm leading-relaxed max-w-xs mx-auto">
-                Grok 3 Mini and Grok 2 Vision are now unlimited for registered users.
-              </p>
+            <div className="space-y-4">
+              <h2 className="text-2xl font-semibold text-neutral-900 dark:text-neutral-100">
+                Unlock AI Tutor Ultra
+              </h2>
+              <div className="space-y-2">
+                <p className="text-neutral-600 dark:text-neutral-400 text-sm leading-relaxed">
+                  Get unlimited access to all AI models and features:
+                </p>
+                <ul className="text-sm text-left mx-auto max-w-[240px] space-y-2">
+                  <li className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300">
+                    <Sparkle className="w-4 h-4 text-blue-500" weight="fill" />
+                    Advanced AI Models
+                  </li>
+                  <li className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300">
+                    <Sparkle className="w-4 h-4 text-blue-500" weight="fill" />
+                    Personalized Learning
+                  </li>
+                  <li className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300">
+                    <Sparkle className="w-4 h-4 text-blue-500" weight="fill" />
+                    24/7 AI Support
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
 
-          {/* Action */}
-          <Button
-            onClick={() => onOpenChange(false)}
-            className="w-full h-10 text-sm font-medium bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-neutral-200 text-neutral-100 dark:text-neutral-900 transition-colors"
-          >
-            Got it
-          </Button>
+          {/* Actions */}
+          <div className="space-y-3">
+            <a
+              href="https://myapps.ai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full"
+            >
+              <Button
+                className="w-full h-11 text-sm font-medium bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white transition-all duration-200 transform hover:scale-[1.02]"
+              >
+                Subscribe Now
+              </Button>
+            </a>
+            <Button
+              onClick={() => onOpenChange(false)}
+              variant="ghost"
+              className="w-full h-10 text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100"
+            >
+              Maybe Later
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
