@@ -17,7 +17,7 @@ import { Globe } from 'lucide-react';
 import { track } from '@vercel/analytics';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { User } from '@/lib/db/schema';
-import { useSession } from '@/lib/auth-client';
+import { useSession } from '@/hooks/use-session';
 import { checkImageModeration } from '@/app/actions';
 import { Crown, LockIcon, MicrophoneIcon, Cpu } from '@phosphor-icons/react';
 import {
