@@ -46,6 +46,17 @@ interface MemoriesResponse {
   total: number;
 }
 
+// Add the UserWithOptionalImage type
+type UserWithOptionalImage = {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  image?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+} | User | null;
+
 // Component for Profile Information with its own loading state
 function ProfileSection() {
   const [name, setName] = useState('');
@@ -174,7 +185,7 @@ function ProfileSection() {
 // Component for Usage Information with its own loading state
 function UsageSection() {
   const { data: session } = useSession();
-  const user = session?.user;
+  const user = session?.user as UserWithOptionalImage;
   
   const {
     data: usageData,

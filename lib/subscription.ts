@@ -19,7 +19,7 @@ export async function getSubscriptionDetails(): Promise<SubscriptionDetailsResul
       return { hasSubscription: false };
     }
 
-    // Since we removed Polar integration, always return no subscription
+    // Default to no subscription for free tier
     return { hasSubscription: false };
   } catch (error) {
     console.error('Error fetching subscription details:', error);

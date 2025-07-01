@@ -3,7 +3,18 @@ import { getUserMessageCount } from '@/app/actions';
 import { SEARCH_LIMITS } from '@/lib/constants';
 import { User } from '@/lib/db/schema';
 
-export function useUsageData(user: User | null, enabled: boolean = true) {
+// Allow for both auth User and schema User types
+type UserWithOptionalImage = {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  image?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+} | User | null;
+
+export function useUsageData(user: UserWithOptionalImage, enabled: boolean = true) {
   const { data, ...rest } = useQuery({
     queryKey: ['user-usage', user?.id],
     queryFn: () => getUserMessageCount(),
