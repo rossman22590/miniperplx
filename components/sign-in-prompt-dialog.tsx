@@ -97,9 +97,9 @@ const SignInButton = ({ provider, loading, setLoading }: SignInButtonProps) => {
 };
 
 export function SignInPromptDialog({ open, onOpenChange }: SignInPromptDialogProps) {
-  const [githubLoading, setGithubLoading] = useState(false);
+  // const [githubLoading, setGithubLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [twitterLoading, setTwitterLoading] = useState(false);
+  // const [twitterLoading, setTwitterLoading] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -112,9 +112,9 @@ export function SignInPromptDialog({ open, onOpenChange }: SignInPromptDialogPro
 
         {/* Auth Options */}
         <div className="space-y-2 mb-4">
-          <SignInButton provider="github" loading={githubLoading} setLoading={setGithubLoading} />
+          {/* <SignInButton provider="github" loading={githubLoading} setLoading={setGithubLoading} /> */}
           <SignInButton provider="google" loading={googleLoading} setLoading={setGoogleLoading} />
-          <SignInButton provider="twitter" loading={twitterLoading} setLoading={setTwitterLoading} />
+          {/* <SignInButton provider="twitter" loading={twitterLoading} setLoading={setTwitterLoading} /> */}
         </div>
 
         {/* Divider */}
