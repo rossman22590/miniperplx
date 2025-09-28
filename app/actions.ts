@@ -226,7 +226,7 @@ const groupTools = {
   ] as const,
   academic: ['academic_search', 'code_interpreter', 'datetime'] as const,
   youtube: ['youtube_search', 'datetime'] as const,
-  code: ['code_context'] as const,
+  code: ['code_context','code_interpreter', ] as const,
   reddit: ['reddit_search', 'datetime'] as const,
   stocks: ['stock_chart', 'currency_converter', 'datetime'] as const,
   crypto: ['coin_data', 'coin_ohlc', 'coin_data_by_contract', 'datetime'] as const,
