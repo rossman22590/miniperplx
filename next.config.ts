@@ -79,7 +79,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/blog',
-        destination: 'https://blog.scira.ai',
+        destination: 'https://account.myapps.ai',
         permanent: true,
       },
     ];

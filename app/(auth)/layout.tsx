@@ -53,7 +53,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex items-center justify-between h-screen bg-background">
       <div className="hidden lg:flex lg:w-1/2 h-full bg-muted/30 flex-col">
-        <div className="flex-1 flex flex-col justify-between p-12">
+        <div className="flex flex-col justify-between h-full p-12">
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2">
               <SciraLogo className="size-8" />
@@ -61,94 +61,22 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             </Link>
           </div>
 
-          <div className="space-y-8">
-            <div>
+          <div className="flex flex-col justify-center items-center flex-1">
+            <div className="text-center">
               <h2 className="text-3xl font-semibold text-foreground mb-3">AI Search that actually understands you</h2>
-              <p className="text-muted-foreground">Skip the ads. Get real answers. From the latest AI models.</p>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                What people are saying
-              </h3>
-
-              <Carousel
-                className="w-full"
-                opts={{ loop: true }}
-                setApi={setApi}
-                plugins={[
-                  Autoplay({
-                    delay: 4000,
-                    stopOnInteraction: true,
-                    stopOnMouseEnter: true,
-                  }),
-                ]}
-              >
-                <CarouselContent>
-                  {testimonials.map((testimonial, index) => (
-                    <CarouselItem key={index}>
-                      <Link href={testimonial.link} target="_blank" className="block group h-full">
-                        <blockquote className="relative h-full flex flex-col bg-background/50 backdrop-blur-sm border border-border/50 rounded-lg p-6 transition-all duration-200 hover:bg-background/70">
-                          <div className="text-sm text-muted-foreground group-hover:text-foreground transition-colors flex-1 text-balance">
-                            {testimonial.content}
-                          </div>
-                          <footer className="mt-3">
-                            <div className="flex items-center gap-2">
-                              <cite className="text-sm font-medium not-italic text-foreground">
-                                {testimonial.author}
-                              </cite>
-                              <span className="text-xs text-muted-foreground">{testimonial.handle}</span>
-                            </div>
-                          </footer>
-                        </blockquote>
-                      </Link>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                <div className="flex items-center justify-center gap-1 mt-4">
-                  {testimonials.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => api?.scrollTo(index)}
-                      className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                        index === current ? 'bg-foreground' : 'bg-muted-foreground/30'
-                      }`}
-                      aria-label={`Go to testimonial ${index + 1}`}
-                    />
-                  ))}
-                </div>
-              </Carousel>
+              <p className="text-muted-foreground mb-6">Skip the ads. Get real answers. From the latest AI models.</p>
+              <div className="flex justify-center">
+                <img 
+                  src="https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1759032316861-imagencraft-1759032309242.png" 
+                  alt="AI Search Interface" 
+                  className="max-w-sm w-full rounded-xl shadow-xl border border-border/20"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <a href="https://git.new/scira" target="_blank" className="hover:text-foreground transition-colors">
-                Open Source
-              </a>
-              <span>•</span>
-              <span>Live Search</span>
-              <span>•</span>
-              <span>1M+ Searches served</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Featured on{' '}
-              <a
-                href="https://vercel.com/blog/ai-sdk-4-1"
-                target="_blank"
-                className="hover:text-foreground transition-colors"
-              >
-                Vercel
-              </a>{' '}
-              •{' '}
-              <a
-                href="https://peerlist.io/zaidmukaddam/project/scira-ai-20"
-                target="_blank"
-                className="hover:text-foreground transition-colors"
-              >
-                #1 Product of the Week on Peerlist
-              </a>
-            </p>
+          <div className="opacity-0">
+            {/* Spacer to balance the layout */}
           </div>
         </div>
       </div>

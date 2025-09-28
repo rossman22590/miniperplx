@@ -348,7 +348,7 @@ export const LookoutAnnouncementDialog = React.memo(({ open, onOpenChange }: Loo
                 className="w-full sm:flex-1 group shadow-none"
               >
                 <HugeiconsIcon icon={BookOpen01Icon} size={16} color="currentColor" strokeWidth={2} className="mr-2" />
-                Read Blog
+                Manage Account
                 <span className="sm:ml-auto font-mono text-xs hidden sm:inline opacity-60">
                   {isMac ? '⌘' : 'Ctrl'} B
                 </span>
