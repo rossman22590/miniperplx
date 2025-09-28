@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     template: '%s | Datavibes AI',
   },
   description:
-    'AI search with real-time results and Grok 4, Claude, DeepSeek, Qwen from $15/month—fast answers; a smart Perplexity alternative.',
+    'AI search with real-time results and Grok 4, Claude, DeepSeek, Qwen ast answers; a smart Perplexity alternative.',
   openGraph: {
     url: 'https://mydatavibes.com',
     siteName: 'Datavibes AI',
