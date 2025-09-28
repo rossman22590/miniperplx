@@ -113,7 +113,7 @@ export function SignInPromptDialog({ open, onOpenChange }: SignInPromptDialogPro
         {/* Compact Header */}
         <div className="mb-6">
           <h2 className="text-lg font-medium text-foreground mb-1">Sign in to continue</h2>
-          <p className="text-sm text-muted-foreground">Save conversations and sync across devices</p>
+          <p className="text-sm text-muted-foreground">Save conversations and sync across devices.</p>
         </div>
 
         {/* Auth Options */}
