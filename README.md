@@ -4,7 +4,7 @@
 
 A minimalistic AI-powered search engine that helps you find information on the internet.
 
-🔗 **[Try Datavibes at scira.ai](https://scira.ai)**
+🔗 **[Try Datavibes at scira.ai](https://mydatavibes.com)**
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/zaidmukaddam/scira)
 
@@ -132,7 +132,7 @@ A minimalistic AI-powered search engine that helps you find information on the i
    - Enter `Scira` in the "Search engine" field.
 
 5. **Set the search engine URL**:
-   - Enter `https://scira.ai?q=%s` in the "URL with %s in place of query" field.
+   - Enter `https://mydatavibes.com?q=%s` in the "URL with %s in place of query" field.
 
 6. **Set the search engine shortcut**:
    - Enter `sh` in the "Shortcut" field.

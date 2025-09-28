@@ -13,7 +13,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://scira.ai'),
+  metadataBase: new URL('https://mydatavibes.com'),
   title: {
     default: 'Datavibes AI – Faster intelligent search, a Perplexity alternative',
     template: '%s | Datavibes AI',
@@ -21,26 +21,13 @@ export const metadata: Metadata = {
   description:
     'AI search with real-time results and Grok 4, Claude, DeepSeek, Qwen from $15/month—fast answers; a smart Perplexity alternative.',
   openGraph: {
-    url: 'https://scira.ai',
+    url: 'https://mydatavibes.com',
     siteName: 'Datavibes AI',
   },
   keywords: [
-    'scira.ai',
     'perplexity alternative',
     'ai search engine',
     'search engine',
-    'scira ai',
-    'Datavibes AI',
-    'scira AI',
-    'SCIRA.AI',
-    'scira github',
-    'ai search engine',
-    'Scira',
-    'scira',
-    'scira.app',
-    'scira ai',
-    'scira ai app',
-    'scira',
     'MiniPerplx',
     'Datavibes AI',
     'Perplexity alternatives',

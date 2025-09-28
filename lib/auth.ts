@@ -437,6 +437,6 @@ export const auth = betterAuth({
     ]),
     nextCookies(),
   ],
-  trustedOrigins: ['http://localhost:3002', 'https://scira.ai', 'https://www.scira.ai'],
-  allowedOrigins: ['http://localhost:3002', 'https://scira.ai', 'https://www.scira.ai'],
+  trustedOrigins: ['http://localhost:3002', 'https://mydatavibes.com', 'https://www.scira.ai'],
+  allowedOrigins: ['http://localhost:3002', 'https://mydatavibes.com', 'https://www.scira.ai'],
 });

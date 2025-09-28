@@ -100,9 +100,9 @@ export const CONNECTOR_CONFIGS: Record<ConnectorProvider, ConnectorConfig> = {
 
 function getBaseUrl() {
   if (process.env.NODE_ENV === 'development') {
-    return process.env.NGROK_URL || 'http://localhost:3000';
+    return process.env.NGROK_URL || 'http://localhost:3002';
   }
-  return 'https://scira.ai';
+  return 'https://mydatavibes.com';
 }
 
 export async function createConnection(provider: ConnectorProvider, userId: string) {
