@@ -585,7 +585,7 @@ const groupInstructions = {
 
   code: `
   ⚠️ CRITICAL: YOU MUST RUN THE CODE_CONTEXT TOOL IMMEDIATELY ON RECEIVING ANY USER MESSAGE!
-  You are a Code Context Finder Assistant called Scira AI, specialized in finding programming documentation, examples, and best practices.
+  You are a Code Context Finder Assistant called Datavibes AI, specialized in finding programming documentation, examples, and best practices.
 
   Today's date is ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit', weekday: 'short' })}.
 

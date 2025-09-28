@@ -115,7 +115,7 @@ export default function AboutPage() {
               <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
                 <ShieldCheck className="h-4 w-4" />
                 <span className="text-sm font-medium">
-                  Scira is not connected to any cryptocurrency tokens or coins. We are purely an AI search engine.
+                  Datavibes is not connected to any cryptocurrency tokens or coins. We are purely an AI search engine.
                 </span>
               </div>
               <button
@@ -422,7 +422,7 @@ export default function AboutPage() {
                 src="https://openalternative.co/scira/badge.svg?theme=dark&width=200&height=50"
                 width={200}
                 height={50}
-                alt="Scira badge"
+                alt="Datavibes badge"
                 className="mx-auto"
               />
             </a>
@@ -490,7 +490,7 @@ export default function AboutPage() {
               <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                 <Eye className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Scira Lookout</h3>
+              <h3 className="text-lg font-semibold mb-2">Datavibes Lookout</h3>
               <p className="text-muted-foreground">
                 Schedule automated searches to monitor trends and get regular updates on topics that matter to you.
               </p>
@@ -1052,7 +1052,7 @@ export default function AboutPage() {
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></div>
-                  <span className="text-muted-foreground">Scira Lookout</span>
+                  <span className="text-muted-foreground">Datavibes Lookout</span>
                 </li>
               </ul>
 
@@ -1092,7 +1092,7 @@ export default function AboutPage() {
             <ProAccordionItem value="item-1">
               <ProAccordionTrigger>What is Scira?</ProAccordionTrigger>
               <ProAccordionContent>
-                Scira is an open-source AI-powered search engine that uses RAG (Retrieval-Augmented Generation) and
+                Datavibes is an open-source AI-powered search engine that uses RAG (Retrieval-Augmented Generation) and
                 search grounding to provide accurate, up-to-date answers from reliable sources.
               </ProAccordionContent>
             </ProAccordionItem>
@@ -1123,17 +1123,17 @@ export default function AboutPage() {
             </ProAccordionItem>
 
             <ProAccordionItem value="item-5">
-              <ProAccordionTrigger>What AI models does Scira use?</ProAccordionTrigger>
+              <ProAccordionTrigger>What AI models does Datavibes use?</ProAccordionTrigger>
               <ProAccordionContent>
-                Scira uses a range of advanced AI models including Grok, Claude, OpenAI GPT, Gemini, and more to provide
+                Datavibes uses a range of advanced AI models including Grok, Claude, OpenAI GPT, Gemini, and more to provide
                 the best possible answers for different types of queries.
               </ProAccordionContent>
             </ProAccordionItem>
 
             <ProAccordionItem value="item-6">
-              <ProAccordionTrigger>How does Scira ensure information accuracy?</ProAccordionTrigger>
+              <ProAccordionTrigger>How does Datavibes ensure information accuracy?</ProAccordionTrigger>
               <ProAccordionContent>
-                Scira combines RAG technology with search grounding to retrieve information from reliable sources and
+                Datavibes combines RAG technology with search grounding to retrieve information from reliable sources and
                 verify it before providing answers. Each response includes source attribution for transparency.
               </ProAccordionContent>
             </ProAccordionItem>

@@ -15,14 +15,14 @@ import { Providers } from './providers';
 export const metadata: Metadata = {
   metadataBase: new URL('https://scira.ai'),
   title: {
-    default: 'Scira AI – Faster intelligent search, a Perplexity alternative',
-    template: '%s | Scira AI',
+    default: 'Datavibes AI – Faster intelligent search, a Perplexity alternative',
+    template: '%s | Datavibes AI',
   },
   description:
     'AI search with real-time results and Grok 4, Claude, DeepSeek, Qwen from $15/month—fast answers; a smart Perplexity alternative.',
   openGraph: {
     url: 'https://scira.ai',
-    siteName: 'Scira AI',
+    siteName: 'Datavibes AI',
   },
   keywords: [
     'scira.ai',
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     'ai search engine',
     'search engine',
     'scira ai',
-    'Scira AI',
+    'Datavibes AI',
     'scira AI',
     'SCIRA.AI',
     'scira github',
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     'scira ai app',
     'scira',
     'MiniPerplx',
-    'Scira AI',
+    'Datavibes AI',
     'Perplexity alternatives',
     'Perplexity AI alternatives',
     'open source ai search engine',
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
     'ai search',
     'minimal ai search',
     'minimal ai search alternatives',
-    'Scira (Formerly MiniPerplx)',
+    'Datavibes (Formerly MiniPerplx)',
     'AI Search Engine',
     'mplx.run',
     'mplx ai',

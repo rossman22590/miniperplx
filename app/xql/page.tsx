@@ -178,7 +178,7 @@ export default function XQLPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {[
                 {
-                  query: 'Scira AI tweets from last week',
+                  query: 'Datavibes AI tweets from last week',
                   description: 'Popular content with date range',
                 },
                 {
@@ -419,7 +419,7 @@ export default function XQLPage() {
                           <div className="flex items-center gap-2 min-w-0">
                             <SciraLogo className="size-6 text-foreground flex-shrink-0" />
                             <span className="font-semibold text-foreground text-sm sm:text-base">
-                              Scira found {citations.length} Posts
+                              Datavibes found {citations.length} Posts
                             </span>
                           </div>
 

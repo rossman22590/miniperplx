@@ -9,7 +9,7 @@ import { SciraLogo } from '@/components/logos/scira-logo';
 const testimonials = [
   {
     content:
-      '"Scira @sciraai is better than Grok at digging up information from X, its own platform! I asked it 3 different queries to help scrape and find some data points I was interested in about my own account and Scira did much much better with insanely accurate answers!"',
+      '"Datavibes @sciraai is better than Grok at digging up information from X, its own platform! I asked it 3 different queries to help scrape and find some data points I was interested in about my own account and Datavibes did much much better with insanely accurate answers!"',
     author: 'Chris Universe',
     handle: '@chrisuniverseb',
     link: 'https://x.com/chrisuniverseb/status/1943025911043100835',
@@ -57,7 +57,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2">
               <SciraLogo className="size-8" />
-              <span className="text-lg font-medium">Scira AI</span>
+              <span className="text-lg font-medium">Datavibes AI</span>
             </Link>
           </div>
 

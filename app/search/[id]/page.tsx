@@ -37,9 +37,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const id = (await params).id;
   const chat = await fetchChatWithBackoff(id);
   const user = await getUser();
-  // if not chat, return Scira Chat
+  // if not chat, return Datavibes Chat
   if (!chat) {
-    return { title: 'Scira Chat' };
+    return { title: 'Datavibes Chat' };
   }
   let title;
   // if chat is public, return title
@@ -49,10 +49,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // if chat is private, return title
   if (chat.visibility === 'private') {
     if (!user) {
-      title = 'Scira Chat';
+      title = 'Datavibes Chat';
     }
     if (user!.id !== chat.userId) {
-      title = 'Scira Chat';
+      title = 'Datavibes Chat';
     }
     title = chat.title;
   }

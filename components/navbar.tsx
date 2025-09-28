@@ -190,7 +190,7 @@ const Navbar = memo(
                       </div>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" sideOffset={4}>
-                      Pro Subscribed - Unlimited access
+                      🟢 AI Tutor Subscription Active 
                     </TooltipContent>
                   </Tooltip>
                 ) : null}
