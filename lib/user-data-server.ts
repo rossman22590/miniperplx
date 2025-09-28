@@ -77,6 +77,40 @@ export function clearAllUserDataCache(): void {
 
 export async function getComprehensiveUserData(): Promise<ComprehensiveUserData | null> {
   try {
+    // If billing is off, return premium user data immediately
+    if (process.env.BILLING_OFF === 'true') {
+      const session = await auth.api.getSession({
+        headers: await headers(),
+      });
+
+      if (!session?.user?.id) {
+        return null;
+      }
+
+      const userData = await db.query.user.findFirst({
+        where: eq(user.id, session.user.id),
+      });
+
+      if (!userData) {
+        return null;
+      }
+
+      // Return user with premium status when billing is disabled
+      return {
+        id: userData.id,
+        email: userData.email,
+        emailVerified: userData.emailVerified,
+        name: userData.name || userData.email.split('@')[0],
+        image: userData.image,
+        createdAt: userData.createdAt,
+        updatedAt: userData.updatedAt,
+        isProUser: true, // Always premium when billing is off
+        proSource: 'system' as any, // Special source indicating system override
+        subscriptionStatus: 'active', // Always active
+        paymentHistory: [],
+      };
+    }
+
     // Get session once
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -222,6 +256,14 @@ export async function getComprehensiveUserData(): Promise<ComprehensiveUserData 
 
 // Helper functions for backward compatibility and specific use cases
 export async function isUserPro(): Promise<boolean> {
+  // If billing is off, everyone is premium
+  if (process.env.BILLING_OFF === 'true') {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+    return !!session?.user?.id; // Premium if authenticated
+  }
+  
   const userData = await getComprehensiveUserData();
   return userData?.isProUser || false;
 }

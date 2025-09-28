@@ -543,6 +543,42 @@ function UsageSection({ user }: any) {
     enabled: !!user,
   });
 
+  // Add search limits query
+  const {
+    data: searchLimits,
+    isLoading: searchLimitsLoading,
+    error: searchLimitsError,
+    refetch: refetchSearchLimits,
+  } = useQuery({
+    queryKey: ['searchLimits', user?.id],
+    queryFn: async () => {
+      try {
+        if (!user?.id) return null;
+        
+        const response = await fetch('/api/search-stats');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Transform the API response to match our expected format
+        return {
+          used: data.searchesUsed || 0,
+          limit: 100, // Daily limit is always 100
+          remaining: data.searchesRemaining || 100,
+          resetTime: data.resetTime ? new Date(data.resetTime) : new Date()
+        };
+      } catch (error) {
+        console.error('Failed to fetch search stats:', error);
+        return null;
+      }
+    },
+    enabled: !!user?.id,
+    staleTime: 1000 * 30, // 30 seconds
+    retry: 1, // Only retry once
+  });
+
   const {
     data: historicalUsageData,
     isLoading: historicalLoading,
@@ -604,7 +640,7 @@ function UsageSection({ user }: any) {
   const handleRefreshUsage = async () => {
     try {
       setIsRefreshing(true);
-      await Promise.all([refetchUsageData(), refetchHistoricalData()]);
+      await Promise.all([refetchUsageData(), refetchHistoricalData(), refetchSearchLimits()]);
       toast.success('Usage data refreshed');
     } catch (error) {
       toast.error('Failed to refresh usage data');
@@ -615,6 +651,8 @@ function UsageSection({ user }: any) {
 
   const usagePercentage = isProUser
     ? 0
+    : searchLimits && typeof searchLimits.used !== 'undefined' && typeof searchLimits.limit !== 'undefined'
+    ? Math.min((searchLimits.used / searchLimits.limit) * 100, 100)
     : Math.min(((searchCount?.count || 0) / SEARCH_LIMITS.DAILY_SEARCH_LIMIT) * 100, 100);
 
   return (
@@ -642,12 +680,20 @@ function UsageSection({ user }: any) {
             <span className={cn('text-muted-foreground', isMobile ? 'text-[11px]' : 'text-xs')}>Today</span>
             <MagnifyingGlassIcon className={isMobile ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
           </div>
-          {usageLoading ? (
+          {searchLimitsLoading ? (
             <Skeleton className={cn('font-semibold', isMobile ? 'text-base h-4' : 'text-lg h-5')} />
           ) : (
-            <div className={cn('font-semibold', isMobile ? 'text-base' : 'text-lg')}>{searchCount?.count || 0}</div>
+            <div className={cn('font-semibold', isMobile ? 'text-base' : 'text-lg')}>
+              {searchLimits && typeof searchLimits.used !== 'undefined' && typeof searchLimits.limit !== 'undefined' 
+                ? `${searchLimits.used}/${searchLimits.limit}` 
+                : `${searchCount?.count || 0}/100`}
+            </div>
           )}
-          <p className="text-[10px] text-muted-foreground">Regular searches</p>
+          <p className="text-[10px] text-muted-foreground">
+            {searchLimits && typeof searchLimits.remaining !== 'undefined' 
+              ? `${searchLimits.remaining} left` 
+              : `${Math.max(0, 100 - (searchCount?.count || 0))} left`}
+          </p>
         </div>
 
         <div className={cn('bg-muted/50 rounded-lg space-y-1', isMobile ? 'p-2.5' : 'p-3')}>
@@ -669,7 +715,7 @@ function UsageSection({ user }: any) {
       {!isProUser && (
         <div className={isMobile ? 'space-y-2' : 'space-y-3'}>
           <div className={cn('bg-muted/30 rounded-lg space-y-2', isMobile ? 'p-2.5' : 'p-3')}>
-            {usageLoading ? (
+            {searchLimitsLoading ? (
               <>
                 <div className="flex justify-between text-xs">
                   <Skeleton className="h-3 w-16" />
@@ -686,10 +732,21 @@ function UsageSection({ user }: any) {
                 <Progress value={usagePercentage} className="h-1.5 [&>div]:transition-none" />
                 <div className="flex justify-between text-[10px] text-muted-foreground">
                   <span>
-                    {searchCount?.count || 0} / {SEARCH_LIMITS.DAILY_SEARCH_LIMIT}
+                    {searchLimits && typeof searchLimits.used !== 'undefined' && typeof searchLimits.limit !== 'undefined'
+                      ? `${searchLimits.used} / ${searchLimits.limit}` 
+                      : `${searchCount?.count || 0} / ${SEARCH_LIMITS.DAILY_SEARCH_LIMIT}`}
                   </span>
-                  <span>{Math.max(0, SEARCH_LIMITS.DAILY_SEARCH_LIMIT - (searchCount?.count || 0))} left</span>
+                  <span>
+                    {searchLimits && typeof searchLimits.remaining !== 'undefined' 
+                      ? `${searchLimits.remaining} left` 
+                      : `${Math.max(0, SEARCH_LIMITS.DAILY_SEARCH_LIMIT - (searchCount?.count || 0))} left`}
+                  </span>
                 </div>
+                {searchLimits?.resetTime && (
+                  <div className="text-[9px] text-muted-foreground pt-1">
+                    Resets {searchLimits.resetTime.toLocaleTimeString()} today
+                  </div>
+                )}
               </>
             )}
           </div>

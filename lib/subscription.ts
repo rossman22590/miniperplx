@@ -249,6 +249,14 @@ export async function getSubscriptionDetails(): Promise<SubscriptionDetailsResul
 // Simple helper to check if user has an active subscription or successful payment
 export async function isUserSubscribed(): Promise<boolean> {
   try {
+    // If billing is off, everyone is subscribed
+    if (process.env.BILLING_OFF === 'true') {
+      const session = await auth.api.getSession({
+        headers: await headers(),
+      });
+      return !!session?.user?.id; // Subscribed if authenticated
+    }
+
     const session = await auth.api.getSession({
       headers: await headers(),
     });
@@ -268,6 +276,14 @@ export async function isUserSubscribed(): Promise<boolean> {
 
 // Fast pro user status check using cache
 export async function isUserProCached(): Promise<boolean> {
+  // If billing is off, everyone is premium
+  if (process.env.BILLING_OFF === 'true') {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+    return !!session?.user?.id; // Premium if authenticated
+  }
+
   const session = await auth.api.getSession({
     headers: await headers(),
   });

@@ -207,7 +207,7 @@ export default function AboutPage() {
               <div className="relative">
                 <SciraLogo className="size-8 transition-transform group-hover:scale-110" />
               </div>
-              <span className="text-xl font-bold tracking-tight">Scira</span>
+              <span className="text-xl font-bold tracking-tight">Search</span>
             </Link>
 
             {/* Desktop Navigation */}

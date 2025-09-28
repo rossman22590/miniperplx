@@ -25,6 +25,7 @@ import Messages from '@/components/messages';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import FormComponent from '@/components/ui/form-component';
+import { SearchLimitIndicator } from '@/components/search-limit-indicator';
 
 // Hook imports
 import { useAutoResume } from '@/hooks/use-auto-resume';
@@ -788,6 +789,12 @@ const ChatInterface = memo(
                     : 'fixed bottom-0 left-0 right-0 z-20 !pb-6 mt-1 mx-4 sm:mx-2 p-0',
                 )}
               >
+                {/* Search Limit Indicator for authenticated users */}
+                {user && (
+                  <div className="mb-3">
+                    <SearchLimitIndicator />
+                  </div>
+                )}
                 <FormComponent
                   chatId={chatId}
                   user={user!}

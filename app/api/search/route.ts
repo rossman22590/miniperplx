@@ -17,6 +17,7 @@ import {
   JsonToSseTransformStream,
 } from 'ai';
 import { createMemoryTools } from '@/lib/tools/supermemory';
+import { checkSearchLimit, incrementSearchCount } from '@/lib/search-limits';
 import {
   scira,
   requiresAuthentication,
@@ -185,6 +186,26 @@ export async function POST(req: Request) {
   const authRequiredModels = models.filter((m) => m.requiresAuth).map((m) => m.value);
   if (authRequiredModels.includes(model) && !user) {
     return new ChatSDKError('unauthorized:model', `Authentication required to access ${model}`).toResponse();
+  }
+
+  // Check search limits for all authenticated users (including premium)
+  if (user) {
+    const limitCheck = await checkSearchLimit(user.id);
+    if (!limitCheck.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: 'Daily search limit exceeded',
+          message: `You've reached your daily limit of 100 searches. Resets at ${limitCheck.resetTime.toLocaleString()}`,
+          resetTime: limitCheck.resetTime,
+          remaining: limitCheck.remaining,
+          type: 'SEARCH_LIMIT_EXCEEDED'
+        }),
+        { 
+          status: 429,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
   }
 
   // For authenticated users, do critical checks in parallel
@@ -694,6 +715,14 @@ export async function POST(req: Request) {
       }
     },
   });
+  // Increment search count for authenticated users after successful stream creation
+  if (user) {
+    // Increment in background - don't block the response
+    incrementSearchCount(user.id).catch((error) => {
+      console.error('Failed to increment search count:', error);
+    });
+  }
+
   // const streamContext = getStreamContext();
 
   // if (streamContext) {

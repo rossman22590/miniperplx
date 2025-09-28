@@ -95,7 +95,7 @@ export default function XQLPage() {
         )}
       >
         <div className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 text-2xl sm:text-3xl md:text-5xl font-be-vietnam-pro -tracking-normal font-medium">
-          <span className="text-foreground">Scira</span>
+          <span className="text-foreground">Search</span>
           <div className="flex items-center relative">
             <XLogoIcon className="size-6 sm:size-8 md:size-12 text-foreground -mr-1 sm:-mr-2 font-medium" />
             <h1 className="text-foreground">QL</h1>

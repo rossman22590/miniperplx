@@ -30,6 +30,11 @@ import { ChatMessage } from '@/lib/types';
 // Helper function to check if a user is pro by userId
 async function checkUserIsProById(userId: string): Promise<boolean> {
   try {
+    // If billing is off, everyone is premium
+    if (process.env.BILLING_OFF === 'true') {
+      return true;
+    }
+
     // Check for active Polar subscription
     const polarSubscriptions = await db.select().from(subscription).where(eq(subscription.userId, userId));
 

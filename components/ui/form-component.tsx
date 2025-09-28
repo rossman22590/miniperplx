@@ -1062,7 +1062,7 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
                         </>
                       ) : (
                         <div className="flex items-center gap-3 flex-wrap">
-                          <span className="text-xl sm:text-2xl font-be-vietnam-pro">Scira</span>
+                          <span className="text-xl sm:text-2xl font-be-vietnam-pro">Search</span>
                           <ProBadge className="!text-white !bg-white/20 !ring-white/30 font-extralight" />
                         </div>
                       )}

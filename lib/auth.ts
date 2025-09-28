@@ -44,12 +44,12 @@ function safeParseDate(value: string | Date | null | undefined): Date | null {
 }
 
 const polarClient = new Polar({
-  accessToken: process.env.POLAR_ACCESS_TOKEN,
+  accessToken: process.env.POLAR_ACCESS_TOKEN || 'dummy_token',
   ...(process.env.NODE_ENV === 'production' ? {} : { server: 'sandbox' }),
 });
 
 export const dodoPayments = new DodoPayments({
-  bearerToken: process.env.DODO_PAYMENTS_API_KEY!,
+  bearerToken: process.env.DODO_PAYMENTS_API_KEY || 'dummy_token',
   ...(process.env.NODE_ENV === 'production' ? { environment: 'live_mode' } : { environment: 'test_mode' }),
 });
 
@@ -106,30 +106,31 @@ export const auth = betterAuth({
     autoNamespace: true,
   },
   plugins: [
-    dodopayments({
-      client: dodoPayments,
-      createCustomerOnSignUp: true,
-      use: [
-        dodocheckout({
-          products: [
-            {
-              productId:
-                process.env.NEXT_PUBLIC_PREMIUM_TIER ||
-                (() => {
-                  throw new Error('NEXT_PUBLIC_PREMIUM_TIER environment variable is required');
-                })(),
-              slug:
-                process.env.NEXT_PUBLIC_PREMIUM_SLUG ||
-                (() => {
-                  throw new Error('NEXT_PUBLIC_PREMIUM_SLUG environment variable is required');
-                })(),
-            },
-          ],
-          successUrl: '/success',
-          authenticatedUsersOnly: true,
-        }),
-        dodoportal(),
-        dodowebhooks({
+    ...(process.env.BILLING_OFF === 'true' ? [] : [
+      dodopayments({
+        client: dodoPayments,
+        createCustomerOnSignUp: true,
+        use: [
+          dodocheckout({
+            products: [
+              {
+                productId:
+                  process.env.NEXT_PUBLIC_PREMIUM_TIER ||
+                  (() => {
+                    throw new Error('NEXT_PUBLIC_PREMIUM_TIER environment variable is required');
+                  })(),
+                slug:
+                  process.env.NEXT_PUBLIC_PREMIUM_SLUG ||
+                  (() => {
+                    throw new Error('NEXT_PUBLIC_PREMIUM_SLUG environment variable is required');
+                  })(),
+              },
+            ],
+            successUrl: '/success',
+            authenticatedUsersOnly: true,
+          }),
+          dodoportal(),
+          dodowebhooks({
           webhookKey: process.env.DODO_PAYMENTS_WEBHOOK_SECRET!,
           onPayload: async (payload) => {
             const webhookPayload = payload as any;
@@ -433,8 +434,9 @@ export const auth = betterAuth({
         }),
       ],
     }),
+    ]),
     nextCookies(),
   ],
-  trustedOrigins: ['http://localhost:3000', 'https://scira.ai', 'https://www.scira.ai'],
-  allowedOrigins: ['http://localhost:3000', 'https://scira.ai', 'https://www.scira.ai'],
+  trustedOrigins: ['http://localhost:3002', 'https://scira.ai', 'https://www.scira.ai'],
+  allowedOrigins: ['http://localhost:3002', 'https://scira.ai', 'https://www.scira.ai'],
 });
