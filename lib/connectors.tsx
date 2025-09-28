@@ -100,7 +100,7 @@ export const CONNECTOR_CONFIGS: Record<ConnectorProvider, ConnectorConfig> = {
 
 function getBaseUrl() {
   if (process.env.NODE_ENV === 'development') {
-    return process.env.NGROK_URL || 'http://localhost:3002';
+    return process.env.NGROK_URL || 'https://mydatavibes.com';
   }
   return 'https://mydatavibes.com';
 }

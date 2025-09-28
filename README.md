@@ -157,7 +157,7 @@ The application can be run using Docker in two ways:
    ```bash
    docker compose up
    ```
-4. The application will be available at `http://localhost:3002`
+4. The application will be available at `https://mydatavibes.com`
 
 ##### Using Docker Directly
 
@@ -190,7 +190,7 @@ To run the application locally without Docker:
    ```bash
    pnpm dev
    ```
-5. Open `http://localhost:3002` in your browser
+5. Open `https://mydatavibes.com` in your browser
 
 # License
 
