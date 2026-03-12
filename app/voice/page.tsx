@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowUp, ChevronRight, Mic, MicOff } from "lucide-react";
+import { ArrowUp, ChevronRight, Mic, MicOff, Square } from "lucide-react";
 import { Orb } from "@/components/ui/orb";
 import { Button } from "@/components/ui/button";
 import { VoicePicker } from "@/components/ui/voice-picker";
@@ -134,6 +134,7 @@ export default function VoicePage() {
     stats,
     connect,
     disconnect,
+    interrupt,
     setVoice,
     inputVolumeRef,
     outputVolumeRef,
@@ -601,6 +602,17 @@ Then: Continue the conversation naturally
                     }
                     className="shadow-none border"
                   />
+                  {isConnected && (agentState === "talking" || agentState === "thinking") && (
+                    <button
+                      type="button"
+                      onClick={interrupt}
+                      className="flex items-center gap-1 rounded-sm border p-2 text-[11px] transition-colors bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                      aria-label="Stop current response"
+                    >
+                      <Square className="size-4 fill-current" />
+                      <span className="hidden xs:inline">Stop</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setMuted(!isMuted)}

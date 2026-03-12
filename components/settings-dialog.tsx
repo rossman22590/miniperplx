@@ -1256,11 +1256,13 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
     }
   };
 
-  const polarOrders = billingOrders;
+  const polarOrders = billingOrders as { result?: { items?: any[] } } | null;
   const polarOrdersLoading = billingOrdersLoading;
-  const dodoSubscriptions = billingSubscriptions;
+  const dodoSubscriptions = billingSubscriptions as { items?: any[] } | any[] | null;
   const dodoSubscriptionsLoading = billingSubscriptionsLoading;
   const dodoProStatus: { isProUser?: boolean; expiresAt?: string | Date } | null = user?.dodoProStatus ?? null;
+  const dodoSubscriptionItems = Array.isArray(dodoSubscriptions) ? dodoSubscriptions : dodoSubscriptions?.items || [];
+  const polarOrderItems = polarOrders?.result?.items || [];
 
   // Check for active status from either source
   const hasActiveSubscription =
@@ -1450,12 +1452,9 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
         ) : (
           <div className="space-y-2">
             {/* Show Dodo subscriptions */}
-            {dodoSubscriptions &&
-              (Array.isArray(dodoSubscriptions) ? dodoSubscriptions : dodoSubscriptions.items || []).length > 0 && (
+            {dodoSubscriptionItems.length > 0 && (
                 <>
-                  {(Array.isArray(dodoSubscriptions) ? dodoSubscriptions : dodoSubscriptions.items || [])
-                    .slice(0, 3)
-                    .map((subscription) => (
+                  {dodoSubscriptionItems.slice(0, 3).map((subscription) => (
                       <div key={subscription.id} className={cn('bg-muted/30 rounded-lg', isMobile ? 'p-2.5' : 'p-3')}>
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0">
@@ -1486,9 +1485,9 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
               )}
 
             {/* Show Polar orders */}
-            {polarOrders?.result?.items && polarOrders.result.items.length > 0 && (
+            {polarOrderItems.length > 0 && (
               <>
-                {polarOrders.result.items.slice(0, 3).map((order: any) => (
+                {polarOrderItems.slice(0, 3).map((order: any) => (
                   <div key={order.id} className={cn('bg-muted/30 rounded-lg', isMobile ? 'p-2.5' : 'p-3')}>
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
@@ -1519,11 +1518,7 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
             )}
 
             {/* Show message if no billing history */}
-            {(!dodoSubscriptions ||
-              (Array.isArray(dodoSubscriptions)
-                ? dodoSubscriptions.length === 0
-                : !dodoSubscriptions.items || dodoSubscriptions.items.length === 0)) &&
-              (!polarOrders?.result?.items || polarOrders.result.items.length === 0) && (
+            {dodoSubscriptionItems.length === 0 && polarOrderItems.length === 0 && (
                 <div
                   className={cn(
                     'border rounded-lg text-center bg-muted/20 flex items-center justify-center',

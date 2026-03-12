@@ -1517,6 +1517,11 @@ interface FormComponentProps {
   onOpenSettings?: (tab?: string) => void;
   selectedConnectors?: ConnectorProvider[];
   setSelectedConnectors?: React.Dispatch<React.SetStateAction<ConnectorProvider[]>>;
+  usageData?: {
+    messageCount: number;
+    extremeSearchCount: number;
+    error?: string | null;
+  };
 }
 
 interface GroupSelectorProps {
@@ -2034,6 +2039,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
   onOpenSettings,
   selectedConnectors = [],
   setSelectedConnectors,
+  usageData,
 }) => {
   const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
   const isMounted = useRef(true);

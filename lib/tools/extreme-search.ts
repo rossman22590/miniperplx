@@ -256,6 +256,23 @@ enum SearchCategory {
   FINANCIAL_REPORT = 'financial report',
 }
 
+type ExaSearchCategory = 'news' | 'company' | 'research paper' | 'pdf' | 'tweet' | 'personal site' | 'financial report' | 'people';
+
+function toExaSearchCategory(category?: SearchCategory): ExaSearchCategory | undefined {
+  switch (category) {
+    case SearchCategory.NEWS:
+      return 'news';
+    case SearchCategory.COMPANY:
+      return 'company';
+    case SearchCategory.RESEARCH_PAPER:
+      return 'research paper';
+    case SearchCategory.FINANCIAL_REPORT:
+      return 'financial report';
+    default:
+      return undefined;
+  }
+}
+
 // Search provider strategy interface
 interface SearchProviderStrategy {
   search(query: string, category?: SearchCategory, include_domains?: string[]): Promise<SearchResult[]>;
@@ -268,12 +285,13 @@ class ExaSearchStrategy implements SearchProviderStrategy {
   async search(query: string, category?: SearchCategory, include_domains?: string[]): Promise<SearchResult[]> {
     console.log(`[Exa] searchWeb called with query: "${query}", category: ${category}`);
     try {
+      const exaCategory = toExaSearchCategory(category);
       const { results } = await this.exa.search(query, {
         numResults: 8,
         type: 'fast',
-        ...(category
+        ...(exaCategory
           ? {
-              category: category as SearchCategory,
+              category: exaCategory,
             }
           : {}),
         ...(include_domains
