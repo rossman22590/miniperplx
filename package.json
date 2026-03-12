@@ -100,7 +100,7 @@
     "luxon": "^3.7.1",
     "marked-react": "^3.0.1",
     "motion": "^12.23.21",
-    "next": "15.6.0-canary.32",
+    "next": "15.6.0-canary.60",
     "next-themes": "0.4.6",
     "nuqs": "^2.6.0",
     "parallel-web": "^0.1.1",
