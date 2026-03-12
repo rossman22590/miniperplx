@@ -1,68 +1,147 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { tavily } from '@tavily/core';
-import { serverEnv } from '@/env/server';
+import Parallel from 'parallel-web';
+import { UIMessageStreamWriter } from 'ai';
+import { ChatMessage } from '@/lib/types';
 
-export const redditSearchTool = tool({
-  description: 'Search Reddit content using Tavily API.',
+const client = new Parallel({ apiKey: process.env.PARALLEL_API_KEY });
+
+export function redditSearchTool(dataStream?: UIMessageStreamWriter<ChatMessage>) {
+  return tool({
+  description: 'Search Reddit content using the Parallel API with multiple queries.',
   inputSchema: z.object({
-    query: z.string().describe('The exact search query from the user.').max(200),
-    maxResults: z.number().describe('Maximum number of results to return. Default is 20.'),
-    timeRange: z.enum(['day', 'week', 'month', 'year']).describe('Time range for Reddit search.'),
+    queries: z
+      .array(z.string().max(200))
+      .describe('Array of search queries to execute on Reddit. Minimum 1, recommended 3-5.')
+      .min(1)
+      .max(5),
+    maxResults: z.array(z.number()).optional().describe('Array of maximum results per query. Default is 20 per query.'),
+    timeRange: z
+      .array(z.enum(['day', 'week', 'month', 'year']))
+      .optional()
+      .describe('Deprecated: no longer used, kept for backward compatibility.'),
   }),
   execute: async ({
-    query,
-    maxResults = 20,
-    timeRange = 'week',
+    queries,
+    maxResults,
+    timeRange,
   }: {
-    query: string;
-    maxResults?: number;
-    timeRange?: 'day' | 'week' | 'month' | 'year';
+    queries: string[];
+    maxResults?: number[];
+    timeRange?: ('day' | 'week' | 'month' | 'year')[];
   }) => {
-    const apiKey = serverEnv.TAVILY_API_KEY;
-    const tvly = tavily({ apiKey });
-
-    console.log('Reddit search query:', query);
+    console.log('Reddit search queries:', queries);
     console.log('Max results:', maxResults);
-    console.log('Time range:', timeRange);
+    console.log('Time ranges (deprecated):', timeRange);
 
-    try {
-      const data = await tvly.search(query, {
-        maxResults: maxResults < 20 ? 20 : maxResults,
-        timeRange: timeRange,
-        includeRawContent: 'text',
-        searchDepth: 'advanced',
-        chunksPerSource: 5,
-        topic: 'general',
-        includeDomains: ['reddit.com'],
-      });
+    const searchPromises = queries.map(async (query, index) => {
+      const currentMaxResults = maxResults?.[index] || maxResults?.[0] || 20;
 
-      console.log('data', data);
+      try {
+        // Send start notification
+        dataStream?.write({
+          type: 'data-query_completion',
+          data: {
+            query,
+            index,
+            total: queries.length,
+            status: 'started',
+            resultsCount: 0,
+            imagesCount: 0,
+          },
+        });
 
-      const processedResults = data.results.map((result) => {
-        const isRedditPost = result.url.includes('/comments/');
-        const subreddit = isRedditPost ? result.url.match(/reddit\.com\/r\/([^/]+)/)?.[1] || 'unknown' : 'unknown';
+        const data = await client.beta.search({
+          objective: query,
+          mode: 'one-shot',
+          max_results: currentMaxResults < 10 ? 10 : currentMaxResults,
+          excerpts: {
+            max_chars_per_result: 10000,
+          },
+          source_policy: {
+            include_domains: ['reddit.com'],
+          },
+          fetch_policy: {
+            max_age_seconds: 6000,
+            timeout_seconds: 120,
+          },
+        });
+
+        const processedResults = data.results.map((result) => {
+          const subredditMatch = typeof result.url === 'string' ? result.url.match(/reddit\.com\/r\/([^/]+)/i) : null;
+          const subreddit = subredditMatch ? subredditMatch[1] : 'unknown';
+          const isRedditPost =
+            typeof result.url === 'string' ? /reddit\.com\/r\/[^/]+\/comments\//i.test(result.url) : false;
+
+          const rawExcerpts = result.excerpts as unknown;
+          let excerptsArray: string[] = [];
+
+          if (Array.isArray(rawExcerpts)) {
+            excerptsArray = (rawExcerpts as unknown[]).filter(
+              (excerpt): excerpt is string => typeof excerpt === 'string' && excerpt.length > 0,
+            );
+          } else if (typeof rawExcerpts === 'string' && rawExcerpts.length > 0) {
+            excerptsArray = [rawExcerpts];
+          }
+
+          return {
+            url: result.url,
+            title: result.title ?? result.url,
+            content: excerptsArray.join('\n\n'),
+            published_date: result.publish_date ?? undefined,
+            subreddit,
+            isRedditPost,
+            comments: excerptsArray,
+          };
+        });
+
+        const resultsCount = processedResults.length;
+
+        // Send completion notification
+        dataStream?.write({
+          type: 'data-query_completion',
+          data: {
+            query,
+            index,
+            total: queries.length,
+            status: 'completed',
+            resultsCount: resultsCount,
+            imagesCount: 0,
+          },
+        });
 
         return {
-          url: result.url,
-          title: result.title,
-          content: result.content || '',
-          score: result.score,
-          published_date: result.publishedDate,
-          subreddit,
-          isRedditPost,
-          comments: result.content ? [result.content] : [],
+          query,
+          results: processedResults,
         };
-      });
+      } catch (error) {
+        console.error(`Reddit search error for query "${query}":`, error);
 
-      return {
-        query,
-        results: processedResults,
-        timeRange,
-      };
-    } catch (error) {
-      console.error('Reddit search error:', error);
-      throw error;
-    }
+        // Send error notification
+        dataStream?.write({
+          type: 'data-query_completion',
+          data: {
+            query,
+            index,
+            total: queries.length,
+            status: 'error',
+            resultsCount: 0,
+            imagesCount: 0,
+          },
+        });
+
+        return {
+          query,
+          results: [],
+        };
+      }
+    });
+
+    const searches = await Promise.all(searchPromises);
+
+    return {
+      searches,
+    };
   },
-});
+  });
+}

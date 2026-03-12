@@ -109,16 +109,16 @@ export const messageMetadataSchema = z.object({
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 
 type weatherTool = InferUITool<typeof weatherTool>;
-type academicSearchTool = InferUITool<typeof academicSearchTool>;
+type academicSearchTool = InferUITool<ReturnType<typeof academicSearchTool>>;
 type codeInterpreterTool = InferUITool<typeof codeInterpreterTool>;
 type coinDataTool = InferUITool<typeof coinDataTool>;
 type coinOhlcTool = InferUITool<typeof coinOhlcTool>;
 type currencyConverterTool = InferUITool<typeof currencyConverterTool>;
-type redditSearchTool = InferUITool<typeof redditSearchTool>;
+type redditSearchTool = InferUITool<ReturnType<typeof redditSearchTool>>;
 type retrieveTool = InferUITool<typeof retrieveTool>;
 type trendingMoviesTool = InferUITool<typeof trendingMoviesTool>;
 type textTranslateTool = InferUITool<typeof textTranslateTool>;
-type xSearchTool = InferUITool<typeof xSearchTool>;
+type xSearchTool = InferUITool<ReturnType<typeof xSearchTool>>;
 type stockChartTool = InferUITool<typeof stockChartTool>;
 type greetingTool = InferUITool<ReturnType<typeof greetingTool>>;
 type flightTrackerTool = InferUITool<typeof flightTrackerTool>;
@@ -192,6 +192,7 @@ export type CustomUIDataTypes = {
     imagesCount: number;
   };
   extreme_search: DataExtremeSearchPart['data'];
+  chat_title: { title: string };
 };
 
 export type ChatMessage = UIMessage<MessageMetadata, CustomUIDataTypes, ChatTools>;

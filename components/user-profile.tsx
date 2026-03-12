@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, memo, useRef, useEffect } from 'react';
+import { useState, memo, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSession, signOut } from '@/lib/auth-client';
-import { redirect } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   SignOutIcon,
@@ -21,18 +20,14 @@ import {
   InfoIcon,
   FileTextIcon,
   ShieldIcon,
-  GithubLogoIcon,
-  BugIcon,
   SunIcon,
   GearIcon,
-  CodeIcon,
-  BookIcon,
   XLogoIcon,
-  InstagramLogoIcon,
 } from '@phosphor-icons/react';
-import { HugeiconsIcon } from '@hugeicons/react';
+import { HugeiconsIcon } from '@/components/ui/hugeicons';
 import { BinocularsIcon } from '@hugeicons/core-free-icons';
 import { cn } from '@/lib/utils';
+import { useSyncedPreferences } from '@/hooks/use-synced-preferences';
 import { ThemeSwitcher } from './theme-switcher';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -40,14 +35,7 @@ import Link from 'next/link';
 import { User } from '@/lib/db/schema';
 import { SettingsDialog } from './settings-dialog';
 import { SettingsIcon, type SettingsIconHandle } from '@/components/ui/settings';
-
-const VercelIcon = ({ size = 16 }: { size: number }) => {
-  return (
-    <svg height={size} strokeLinejoin="round" viewBox="0 0 16 16" width={size} style={{ color: 'currentcolor' }}>
-      <path fillRule="evenodd" clipRule="evenodd" d="M8 1L16 15H0L8 1Z" fill="currentColor"></path>
-    </svg>
-  );
-};
+import { SignInPromptDialog } from '@/components/sign-in-prompt-dialog';
 
 // Navigation Menu Component - contains all the general navigation items
 const NavigationMenu = memo(() => {
@@ -71,7 +59,7 @@ const NavigationMenu = memo(() => {
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
-            <div className="flex items-center justify-center hover:bg-accent hover:text-accent-foreground rounded-md transition-colors cursor-pointer !size-6 !p-0 !m-0">
+            <div className="flex items-center justify-center hover:bg-accent hover:text-accent-foreground rounded-md transition-colors cursor-pointer size-6! p-0! m-0!">
               <SettingsIcon ref={settingsIconRef} size={18} />
             </div>
           </DropdownMenuTrigger>
@@ -91,7 +79,50 @@ const NavigationMenu = memo(() => {
           </DropdownMenuItem>
         )}
 
+        <DropdownMenuItem className="cursor-pointer" asChild>
+          <Link href="/settings" className="w-full flex items-center gap-2">
+            <GearIcon size={16} />
+            <span>Settings</span>
+          </Link>
+        </DropdownMenuItem>
 
+        <DropdownMenuItem className="cursor-pointer" asChild>
+          <Link href="/xql" className="w-full flex items-center gap-2">
+            <XLogoIcon size={16} />
+            <span>XQL</span>
+          </Link>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem className="cursor-pointer py-1 hover:bg-transparent!">
+          <div className="flex items-center justify-between w-full px-0" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2">
+              <SunIcon size={16} />
+              <span className="text-sm">Theme</span>
+            </div>
+            <ThemeSwitcher />
+          </div>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+
+        {/* About and Information */}
+        <DropdownMenuItem className="cursor-pointer" asChild>
+          <Link href="/about" className="w-full flex items-center gap-2">
+            <InfoIcon size={16} />
+            <span>About</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-pointer" asChild>
+          <Link href="/terms" className="w-full flex items-center gap-2">
+            <FileTextIcon size={16} />
+            <span>Terms</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-pointer" asChild>
+          <Link href="/privacy-policy" className="w-full flex items-center gap-2">
+            <ShieldIcon size={16} />
+            <span>Privacy</span>
+          </Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -126,7 +157,9 @@ const UserProfile = memo(
   }) => {
     const [signingOut, setSigningOut] = useState(false);
     const [signingIn, setSigningIn] = useState(false);
+    const [signInDialogOpen, setSignInDialogOpen] = useState(false);
     const [showEmail, setShowEmail] = useState(false);
+    const [blurPersonalInfo] = useSyncedPreferences<boolean>('scira-blur-personal-info', false);
     const { data: session, isPending } = useSession();
     const router = useRouter();
 
@@ -182,16 +215,16 @@ const UserProfile = memo(
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={cn('!p-0 !m-0', signingOut && 'animate-pulse', className)}
+                    className={cn('p-0! m-0!', signingOut && 'animate-pulse', className)}
                     asChild
                   >
-                    <Avatar className="size-6 rounded-full border border-neutral-200 dark:border-neutral-700 !p-0 !m-0">
+                    <Avatar className="size-6 rounded-full border border-neutral-200 dark:border-neutral-700 p-0! m-0!">
                       <AvatarImage
                         src={currentUser?.image ?? ''}
                         alt={currentUser?.name ?? ''}
-                        className="rounded-md !p-0 !m-0 size-6"
+                        className="rounded-md p-0! m-0! size-6"
                       />
-                      <AvatarFallback className="rounded-md text-sm !p-0 !m-0 size-6">
+                      <AvatarFallback className="rounded-md text-sm p-0! m-0! size-6">
                         {currentUser?.name?.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
@@ -205,21 +238,27 @@ const UserProfile = memo(
             <DropdownMenuContent className="w-[240px] z-[110] mr-5">
               <div className="p-3">
                 <div className="flex items-center gap-2">
-                  <Avatar className="size-8 shrink-0 rounded-md border border-neutral-200 dark:border-neutral-700">
+                  <Avatar className="size-8 shrink-0 rounded-md border border-neutral-200 dark:border-neutral-700 overflow-hidden mask-[radial-gradient(white,black)] [-webkit-mask-image:-webkit-radial-gradient(white,black)]">
                     <AvatarImage
                       src={currentUser?.image ?? ''}
                       alt={currentUser?.name ?? ''}
-                      className="rounded-md p-0 m-0 size-8"
+                      className={cn('p-0 m-0 size-8', blurPersonalInfo && 'blur-sm')}
                     />
-                    <AvatarFallback className="rounded-md p-0 m-0 size-8">
+                    <AvatarFallback className={cn('p-0 m-0 size-8', blurPersonalInfo && 'blur-sm')}>
                       {currentUser?.name?.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col min-w-0">
-                    <p className="font-medium text-sm leading-none truncate">{currentUser?.name}</p>
+                    <p className={cn('font-medium text-sm leading-none truncate', blurPersonalInfo && 'blur-sm')}>
+                      {currentUser?.name}
+                    </p>
                     <div className="flex items-center mt-0.5 gap-1">
                       <div
-                        className={`text-xs text-muted-foreground ${showEmail ? '' : 'max-w-[160px] truncate'}`}
+                        className={cn(
+                          'text-xs text-muted-foreground',
+                          showEmail ? '' : 'max-w-[160px] truncate',
+                          blurPersonalInfo && 'blur-sm',
+                        )}
                         title={currentUser?.email || ''}
                       >
                         {formatEmail(currentUser?.email)}
@@ -241,7 +280,7 @@ const UserProfile = memo(
                 </div>
               </div>
 
-              <DropdownMenuItem className="cursor-pointer" onClick={() => setSettingsOpen?.(true)}>
+              <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/settings')}>
                 <div className="w-full flex items-center gap-2">
                   <GearIcon size={16} />
                   <span>Settings</span>
@@ -290,20 +329,28 @@ const UserProfile = memo(
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="secondary"
+                variant="default"
                 size="sm"
-                className={cn('px-3 py-1.5 text-sm', signingIn && 'animate-pulse', className)}
+                className={cn(
+                  'h-7 px-2.5 text-xs rounded-md shadow-sm group',
+                  'hover:scale-[1.02] active:scale-[0.98] transition-transform',
+                  signingIn && 'animate-pulse',
+                  className,
+                )}
                 onClick={() => {
                   setSigningIn(true);
-                  redirect('/sign-in');
+                  setSignInDialogOpen(true);
                 }}
               >
-                <SignInIcon className="size-4 mr-1.5" />
-                Sign In
+                <SignInIcon className="size-3.5 mr-1.5" />
+                <span>Sign in</span>
+                <span className="ml-1.5 hidden sm:inline text-[9px] px-1.5 py-0.5 rounded-full bg-primary-foreground/15 text-primary-foreground/90">
+                  Free
+                </span>
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" sideOffset={4}>
-              Sign in to save your progress
+              Sign in to save progress and sync across devices
             </TooltipContent>
           </Tooltip>
         )}
@@ -322,6 +369,14 @@ const UserProfile = memo(
             initialTab={settingsInitialTab}
           />
         )}
+
+        <SignInPromptDialog
+          open={signInDialogOpen}
+          onOpenChange={(open) => {
+            setSignInDialogOpen(open);
+            if (!open) setSigningIn(false);
+          }}
+        />
       </>
     );
   },

@@ -265,7 +265,7 @@ export const LookoutAnnouncementDialog = React.memo(({ open, onOpenChange }: Loo
         onOpenChange(false);
       } else if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'B')) {
         e.preventDefault();
-        router.push('/blog');
+        router.push('/settings');
         onOpenChange(false);
       }
     };
@@ -342,7 +342,7 @@ export const LookoutAnnouncementDialog = React.memo(({ open, onOpenChange }: Loo
               <Button
                 variant="outline"
                 onClick={() => {
-                  router.push('/blog');
+                  router.push('/settings');
                   onOpenChange(false);
                 }}
                 className="w-full sm:flex-1 group shadow-none"

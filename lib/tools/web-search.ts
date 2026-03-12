@@ -136,81 +136,99 @@ class ParallelSearchStrategy implements SearchStrategy {
       });
     });
 
-    const maxResults_total = Math.max(...options.maxResults, 15);
-
     try {
-      const batchResponse = await this.parallel.beta.search({
-        objective: limitedQueries[0],
-        search_queries: limitedQueries,
-        processor: options.quality.includes('best') ? 'pro' : 'base',
-        max_results: maxResults_total,
-        max_chars_per_result: 1000,
-      });
+      const perQueryPromises = limitedQueries.map(async (query, index) => {
+        const currentQuality = options.quality[index] || options.quality[0] || 'default';
+        const currentMaxResults = options.maxResults[index] || options.maxResults[0] || 10;
 
-      // Get images for all queries in parallel using Firecrawl
-      const imagePromises = limitedQueries.map(async (query) => {
         try {
-          const result = await this.firecrawl.search(query, {
-            sources: ['images'],
-            limit: 3,
+          // Run Parallel AI search and Firecrawl images concurrently per query
+          const [singleResponse, firecrawlImages] = await Promise.all([
+            this.parallel.beta.search({
+              objective: query,
+              mode: currentQuality === 'best' ? 'agentic' : 'one-shot',
+              max_results: Math.max(currentMaxResults, 10),
+              excerpts: {
+                max_chars_per_result: 5000,
+              },
+              fetch_policy: {
+                max_age_seconds: 3600,
+                timeout_seconds: 120,
+              },
+            }),
+            this.firecrawl
+              .search(query, {
+                sources: ['images'],
+                limit: 3,
+                scrapeOptions: {
+                  storeInCache: true,
+                },
+              })
+              .catch((error) => {
+                console.error(`Firecrawl error for query "${query}":`, error);
+                return { images: [] } as Partial<Document> as any;
+              }),
+          ]);
+
+          const results = (singleResponse?.results || []).map((result: any) => ({
+            url: result.url,
+            title: cleanTitle(result.title || ''),
+            content: Array.isArray(result.excerpts)
+              ? result.excerpts.join(' ').substring(0, 1000)
+              : (result.content || '').substring(0, 1000),
+            published_date: undefined,
+            author: undefined,
+          }));
+
+          const images = ((firecrawlImages as any)?.images || [])
+            .filter(isSearchResultImages)
+            .map((item: any) => ({
+              url: getImageUrl(item) || '',
+              description: cleanTitle(item.title || ''),
+            }))
+            .filter((item: any) => item.url);
+
+          // Send completion notification
+          options.dataStream?.write({
+            type: 'data-query_completion',
+            data: {
+              query,
+              index,
+              total: limitedQueries.length,
+              status: 'completed',
+              resultsCount: results.length,
+              imagesCount: images.length,
+            },
           });
-          return (
-            result?.images
-              ?.filter(isSearchResultImages)
-              .map((item) => ({
-                url: getImageUrl(item) || '',
-                description: cleanTitle(item.title || ''),
-              }))
-              .filter((item) => item.url) || []
-          );
+
+          return {
+            query,
+            results: deduplicateByDomainAndUrl(results),
+            images: deduplicateByDomainAndUrl(images),
+          };
         } catch (error) {
-          console.error(`Firecrawl error for query "${query}":`, error);
-          return [];
+          console.error(`Parallel AI search error for query "${query}":`, error);
+
+          options.dataStream?.write({
+            type: 'data-query_completion',
+            data: {
+              query,
+              index,
+              total: limitedQueries.length,
+              status: 'error',
+              resultsCount: 0,
+              imagesCount: 0,
+            },
+          });
+
+          return { query, results: [], images: [] };
         }
       });
 
-      const allImagesResults = await Promise.all(imagePromises);
-
-      // Process results and distribute them across queries
-      const searchResults = limitedQueries.map((query, index) => {
-        // For batch response, results are combined - we'll split them evenly
-        const startIdx = Math.floor((index / limitedQueries.length) * batchResponse.results.length || 0);
-        const endIdx = Math.floor(((index + 1) / limitedQueries.length) * batchResponse.results.length || 0);
-        const queryResults = batchResponse.results.slice(startIdx, endIdx) || [];
-
-        const results = queryResults.map((result) => ({
-          url: result.url,
-          title: cleanTitle(result.title || ''),
-          content: result.excerpts.join(' ').substring(0, 1000),
-          published_date: undefined,
-          author: undefined,
-        }));
-
-        const queryImages = allImagesResults[index] || [];
-
-        // Send completion notification
-        options.dataStream?.write({
-          type: 'data-query_completion',
-          data: {
-            query,
-            index,
-            total: limitedQueries.length,
-            status: 'completed',
-            resultsCount: results.length,
-            imagesCount: queryImages.length,
-          },
-        });
-
-        return {
-          query,
-          results: deduplicateByDomainAndUrl(results),
-          images: deduplicateByDomainAndUrl(queryImages),
-        };
-      });
-
+      const searchResults = await Promise.all(perQueryPromises);
       return { searches: searchResults };
     } catch (error) {
-      console.error('Parallel AI batch search error:', error);
+      console.error('Parallel AI batch orchestration error:', error);
 
       // Send error notifications for all queries
       limitedQueries.forEach((query, index) => {
@@ -228,11 +246,7 @@ class ParallelSearchStrategy implements SearchStrategy {
       });
 
       return {
-        searches: limitedQueries.map((query) => ({
-          query,
-          results: [],
-          images: [],
-        })),
+        searches: limitedQueries.map((query) => ({ query, results: [], images: [] })),
       };
     }
   }
@@ -521,18 +535,11 @@ class ExaSearchStrategy implements SearchStrategy {
           },
         });
 
-        const searchOptions: any = {
-          text: true,
-          type: currentQuality === 'best' ? 'hybrid' : 'auto',
+        const data = await this.exa.search(query, {
+          type: currentQuality === 'best' ? 'deep' : 'auto',
           numResults: currentMaxResults < 10 ? 10 : currentMaxResults,
-          livecrawl: 'preferred',
-          useAutoprompt: true,
-          category: currentTopic === 'news' ? 'news' : '',
-        };
-
-        // Domain include/exclude behavior removed
-
-        const data = await this.exa.searchAndContents(query, searchOptions);
+          category: currentTopic === 'news' ? 'news' : undefined,
+        });
 
         // Collect all images first
         const collectedImages: { url: string; description: string }[] = [];
@@ -624,43 +631,56 @@ const createSearchStrategy = (
 
 export function webSearchTool(
   dataStream?: UIMessageStreamWriter<ChatMessage> | undefined,
-  searchProvider: 'exa' | 'parallel' | 'tavily' | 'firecrawl' = 'parallel',
+  searchProvider: 'exa' | 'parallel' | 'tavily' | 'firecrawl' = 'exa',
 ) {
   return tool({
-    description: `This is the default tool of the app to be used to search the web for information with multiple queries, max results, search depth, topics, and quality.
+    description: `This is the default tool of the app to be used to search the web for information with multiple queries(5-10), max results(15-20), topics, and quality.
     Very important Rules:
+    ...${searchProvider === 'parallel' ? 'The First Query should be the objective and the rest of the queries should be related to the objective' : ''}...
     - The queries should always be in the same language as the user's message.
-    - And count of the queries should be 3-5.
+    - And count of the queries should be 5-10 always!
+    - Assert to max number of results for each query to be 15-20.
+    - Your knowledge base is zero, so you must gather as much information as possible from the tools you have.
+    - **Prohibition**: NEVER use the retrieve tool after running web_search tool
     - Do not use the best quality unless absolutly required since it is time expensive.
+    - ⚠️ CRITICAL: ALWAYS include date/time context in search queries:
+      - For current events: "latest", "${new Date().getFullYear()}", "today", "current", "recent"
+      - For historical info: specific years or date ranges
+      - For time-sensitive topics: "newest", "updated", "${new Date().getFullYear()}"
+      - **NO TEMPORAL ASSUMPTIONS**: Never assume time periods - always be explicit about dates/years
+      - Examples: "latest AI news ${new Date().getFullYear()}", "current stock prices today", "recent developments in ${new Date().getFullYear()}"
     `,
     inputSchema: z.object({
-      queries: z.array(
-        z.string().describe('Array of 3-5 search queries to look up on the web. Default is 5. Minimum is 3.'),
-      ),
-      maxResults: z.array(
-        z
-          .number()
-          .optional()
-          .describe(
-            'Array of maximum number of results to return per query. Default is 10. Minimum is 8. Maximum is 15.',
-          ),
-      ),
-      topics: z.array(
-        z
-          .enum(['general', 'news'])
-          .optional()
-          .describe(
-            'Array of topic types to search for. Default is general. Other options are news and finance. No other options are available.',
-          ),
-      ),
-      quality: z.array(
-        z
-          .enum(['default', 'best'])
-          .optional()
-          .describe(
-            'Array of quality levels for the search. Default is default. Other option is best. DO NOT use best unless necessary.',
-          ),
-      ),
+      queries: z
+        .array(z.string().describe('Array of 3-5 search queries to look up on the web. Default is 5. Minimum is 3.'))
+        .min(3),
+      maxResults: z
+        .array(
+          z
+            .number()
+            .describe(
+              'Array of maximum number of results to return per query. Default is 10. Minimum is 10. Maximum is 15.',
+            ),
+        )
+        .optional(),
+      topics: z
+        .array(
+          z
+            .enum(['general', 'news'])
+            .describe(
+              'Array of topic types to search for. Default is general. Other options are news and finance. No other options are available.',
+            ),
+        )
+        .optional(),
+      quality: z
+        .array(
+          z
+            .enum(['default', 'best'])
+            .describe(
+              'Array of quality levels for the search. Default is default. Other option is best. DO NOT use best unless necessary.',
+            ),
+        )
+        .optional(),
     }),
     execute: async ({
       queries,
@@ -669,9 +689,9 @@ export function webSearchTool(
       quality,
     }: {
       queries: string[];
-      maxResults: (number | undefined)[];
-      topics: ('general' | 'news' | undefined)[];
-      quality: ('default' | 'best' | undefined)[];
+      maxResults?: (number | undefined)[];
+      topics?: ('general' | 'news' | undefined)[];
+      quality?: ('default' | 'best' | undefined)[];
     }) => {
       // Initialize all clients
       const clients = {

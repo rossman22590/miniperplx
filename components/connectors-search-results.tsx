@@ -3,7 +3,7 @@
 import React from 'react';
 import {
   FileText,
-  Image,
+  Image as ImageIcon,
   ExternalLink,
   ChevronDown,
   ArrowUpRight,
@@ -107,7 +107,7 @@ const DocumentCard: React.FC<{ document: Document; onClick?: () => void }> = ({ 
       lowerType.includes('gif') ||
       lowerType.includes('webp')
     ) {
-      return <Image className="h-4 w-4" />;
+      return <ImageIcon className="h-4 w-4" />;
     }
 
     // PDFs
@@ -310,12 +310,7 @@ const DocumentsSheet: React.FC<{
           <div className="flex-1 overflow-y-auto bg-background">
             <div className="p-6 space-y-4">
               {documents.map((document) => (
-                <a
-                  key={document.documentId}
-                  href={document.url || '#'}
-                  target="_blank"
-                  className="block"
-                >
+                <a key={document.documentId} href={document.url || '#'} target="_blank" className="block">
                   <DocumentCard document={document} />
                 </a>
               ))}

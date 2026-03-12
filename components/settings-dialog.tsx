@@ -3,6 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useSyncedPreferences } from '@/hooks/use-synced-preferences';
 import {
   getUserMessageCount,
   getSubDetails,
@@ -42,18 +44,29 @@ import {
 
 import { ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
-import { getAllMemories, searchMemories, deleteMemory, MemoryItem } from '@/lib/memory-actions';
-import { Loader2, Search } from 'lucide-react';
+import { getAllMemories, deleteMemory, MemoryItem } from '@/lib/memory-actions';
+import { Loader2, GripVertical } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  rectSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { getSearchGroups, type SearchGroupId } from '@/lib/utils';
+import { models } from '@/ai/providers';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { useIsProUser } from '@/contexts/user-context';
 import { SciraLogo } from './logos/scira-logo';
 import Image from 'next/image';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { HugeiconsIcon } from '@hugeicons/react';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+import { HugeiconsIcon } from '@/components/ui/hugeicons';
 import {
   Crown02Icon,
   UserAccountIcon,
@@ -63,17 +76,10 @@ import {
   GlobalSearchIcon,
   ConnectIcon,
   InformationCircleIcon,
+  Rocket01Icon,
 } from '@hugeicons/core-free-icons';
-import {
-  ContributionGraph,
-  ContributionGraphCalendar,
-  ContributionGraphBlock,
-  ContributionGraphFooter,
-  ContributionGraphLegend,
-  ContributionGraphTotalCount,
-  type Activity,
-} from '@/components/ui/kibo-ui/contribution-graph';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import { LineChart, Line, Area, AreaChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { CONNECTOR_CONFIGS, CONNECTOR_ICONS, type ConnectorProvider } from '@/lib/connectors';
 
 interface SettingsDialogProps {
@@ -89,7 +95,7 @@ interface SettingsDialogProps {
 }
 
 // Component for Profile Information
-function ProfileSection({ user, subscriptionData, isProUser, isProStatusLoading }: any) {
+export function ProfileSection({ user, subscriptionData, isProUser, isProStatusLoading }: any) {
   const { isProUser: fastProStatus, isLoading: fastProLoading } = useIsProUser();
   const isMobile = useMediaQuery('(max-width: 768px)');
 
@@ -122,8 +128,8 @@ function ProfileSection({ user, subscriptionData, isProUser, isProStatusLoading 
               <span
                 className={cn(
                   'font-baumans! px-2 pt-1 pb-2 inline-flex leading-5 mt-2 items-center rounded-lg shadow-sm border-transparent ring-1 ring-ring/35 ring-offset-1 ring-offset-background',
-                  'bg-gradient-to-br from-secondary/25 via-primary/20 to-accent/25 text-foreground',
-                  'dark:bg-gradient-to-br dark:from-primary dark:via-secondary dark:to-primary dark:text-foreground',
+                  'bg-linear-to-br from-secondary/25 via-primary/20 to-accent/25 text-foreground',
+                  'dark:bg-linear-to-br dark:from-primary dark:via-secondary dark:to-primary dark:text-foreground',
                 )}
               >
                 pro user
@@ -175,23 +181,23 @@ const TavilyIcon = ({ className }: { className?: string }) => (
 );
 
 const FirecrawlIcon = ({ className }: { className?: string }) => (
-  <span className={cn('text-base sm:text-lg !mb-3 !pr-1', className)}>🔥</span>
+  <span className={cn('text-base sm:text-lg mb-3! pr-1!', className)}>🔥</span>
 );
 
 // Search Provider Options
 const searchProviders = [
   {
-    value: 'firecrawl',
-    label: 'Firecrawl',
-    description: 'Web, news, and image search with content scraping capabilities',
-    icon: FirecrawlIcon,
-    default: true,
-  },
-  {
     value: 'exa',
     label: 'Exa',
     description: 'Enhanced and faster web search with images and advanced filtering',
     icon: ExaIcon,
+    default: true,
+  },
+  {
+    value: 'firecrawl',
+    label: 'Firecrawl',
+    description: 'Web, news, and image search with content scraping capabilities',
+    icon: FirecrawlIcon,
     default: false,
   },
   {
@@ -210,6 +216,24 @@ const searchProviders = [
   },
 ] as const;
 
+// Extreme Search Provider list
+const extremeSearchProviders = [
+  {
+    value: 'exa',
+    label: 'Exa',
+    description: 'Neural search engine optimized for high-quality content',
+    icon: ExaIcon,
+    default: true,
+  },
+  {
+    value: 'parallel',
+    label: 'Parallel',
+    description: 'AI-powered extraction with enhanced speed and quality',
+    icon: ParallelIcon,
+    default: false,
+  },
+] as const;
+
 // Search Provider Selector Component
 function SearchProviderSelector({
   value,
@@ -223,69 +247,95 @@ function SearchProviderSelector({
   className?: string;
 }) {
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const currentProvider = searchProviders.find((provider) => provider.value === value);
 
   return (
-    <div className="w-full">
-      <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-        <SelectTrigger
-          className={cn(
-            'w-full h-auto min-h-18 sm:min-h-14 p-4',
-            'border border-input bg-background',
-            'transition-all duration-200',
-            'focus:outline-none focus:ring-0 focus:ring-offset-0',
-            disabled && 'opacity-50 cursor-not-allowed',
-            className,
-          )}
-        >
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            {currentProvider && (
-              <>
-                <currentProvider.icon className="text-muted-foreground size-4 flex-shrink-0" />
-                <div className="text-left flex-1 min-w-0">
-                  <div className="font-medium text-sm flex items-center gap-2 mb-0.5">
-                    {currentProvider.label}
-                    {currentProvider.default && (
-                      <Badge variant="secondary" className="text-[9px] px-1 py-0.5 bg-primary/10 text-primary border-0">
-                        Default
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="text-xs text-muted-foreground leading-tight line-clamp-2 text-wrap">
-                    {currentProvider.description}
-                  </div>
-                </div>
-              </>
+    <div className={cn('w-full', className)}>
+      <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
+        {searchProviders.map((provider) => (
+          <button
+            key={provider.value}
+            onClick={() => onValueChange(provider.value as any)}
+            disabled={disabled}
+            className={cn(
+              'flex flex-col items-start p-4 rounded-lg border transition-all duration-200',
+              'hover:bg-accent/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              value === provider.value
+                ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                : 'border-border bg-background hover:border-border/80',
             )}
-          </div>
-        </SelectTrigger>
-        <SelectContent className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-32px)]">
-          {searchProviders.map((provider) => (
-            <SelectItem key={provider.value} value={provider.value}>
-              <div className="flex items-center gap-2.5">
-                <provider.icon className="text-muted-foreground size-4 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <div className="font-medium text-sm flex items-center gap-2">
-                    {provider.label}
-                    {provider.default && (
-                      <Badge variant="secondary" className="text-[9px] px-1 py-0.5 bg-primary/10 text-primary border-0">
-                        Default
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="text-xs text-muted-foreground">{provider.description}</div>
-                </div>
+          >
+            <div className="flex items-center gap-2.5 w-full mb-2">
+              <provider.icon className="text-muted-foreground size-4 shrink-0" />
+              <div className="font-medium text-sm flex items-center gap-2">
+                {provider.label}
+                {provider.default && (
+                  <Badge variant="secondary" className="text-[9px] px-1 py-0.5 bg-primary/10 text-primary border-0">
+                    Default
+                  </Badge>
+                )}
               </div>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+            </div>
+            <div className="text-xs text-muted-foreground leading-relaxed text-left">{provider.description}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Extreme Search Provider Selector Component
+function ExtremeSearchProviderSelector({
+  value,
+  onValueChange,
+  disabled,
+  className,
+}: {
+  value: string;
+  onValueChange: (value: 'exa' | 'parallel') => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const isMobile = useMediaQuery('(max-width: 768px)');
+
+  return (
+    <div className={cn('w-full', className)}>
+      <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
+        {extremeSearchProviders.map((provider) => (
+          <button
+            key={provider.value}
+            onClick={() => onValueChange(provider.value as any)}
+            disabled={disabled}
+            className={cn(
+              'flex flex-col items-start p-4 rounded-lg border transition-all duration-200',
+              'hover:bg-accent/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              value === provider.value
+                ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                : 'border-border bg-background hover:border-border/80',
+            )}
+          >
+            <div className="flex items-center gap-2.5 w-full mb-2">
+              <provider.icon className="text-muted-foreground size-4 shrink-0" />
+              <div className="font-medium text-sm flex items-center gap-2">
+                {provider.label}
+                {provider.default && (
+                  <Badge variant="secondary" className="text-[9px] px-1 py-0.5 bg-primary/10 text-primary border-0">
+                    Default
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground leading-relaxed text-left">{provider.description}</div>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
 
 // Component for Combined Preferences (Search + Custom Instructions)
-function PreferencesSection({
+export function PreferencesSection({
   user,
   isCustomInstructionsEnabled,
   setIsCustomInstructionsEnabled,
@@ -295,13 +345,50 @@ function PreferencesSection({
   setIsCustomInstructionsEnabled?: (value: boolean | ((val: boolean) => boolean)) => void;
 }) {
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const [searchProvider, setSearchProvider] = useLocalStorage<'exa' | 'parallel' | 'tavily' | 'firecrawl'>(
+  const [searchProvider, setSearchProvider] = useSyncedPreferences<'exa' | 'parallel' | 'tavily' | 'firecrawl'>(
     'scira-search-provider',
-    'firecrawl',
+    'exa',
+  );
+
+  const [extremeSearchProvider, setExtremeSearchProvider] = useSyncedPreferences<'exa' | 'parallel'>(
+    'scira-extreme-search-provider',
+    'exa',
+  );
+
+  const [locationMetadataEnabled, setLocationMetadataEnabled] = useSyncedPreferences<boolean>(
+    'scira-location-metadata-enabled',
+    false,
   );
 
   const [content, setContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Reorder state: groups and models
+  const dynamicGroups = useMemo(() => getSearchGroups(searchProvider), [searchProvider]);
+  const [groupOrder, setGroupOrder] = useSyncedPreferences<SearchGroupId[]>(
+    'scira-group-order',
+    dynamicGroups.map((g) => g.id),
+  );
+  const mergedGroupOrder = useMemo(() => {
+    const currentIds = dynamicGroups.map((g) => g.id);
+    const filteredExisting = groupOrder.filter((id) => currentIds.includes(id));
+    const missing = currentIds.filter((id) => !filteredExisting.includes(id));
+    return [...filteredExisting, ...missing] as SearchGroupId[];
+  }, [dynamicGroups, groupOrder]);
+
+  const allModelIds = useMemo(() => models.map((m) => m.value), []);
+  const [globalModelOrder, setGlobalModelOrder] = useSyncedPreferences<string[]>(
+    'scira-model-order-global',
+    allModelIds,
+  );
+  const mergedModelOrder = useMemo(() => {
+    const validSet = new Set(allModelIds);
+    const base = (globalModelOrder && globalModelOrder.length > 0 ? globalModelOrder : []).filter((id) =>
+      validSet.has(id),
+    );
+    const missing = allModelIds.filter((id) => !base.includes(id));
+    return [...base, ...missing];
+  }, [globalModelOrder, allModelIds]);
 
   const enabled = isCustomInstructionsEnabled ?? true;
   const setEnabled = setIsCustomInstructionsEnabled ?? (() => {});
@@ -319,6 +406,11 @@ function PreferencesSection({
               : 'Firecrawl'
       }`,
     );
+  };
+
+  const handleExtremeSearchProviderChange = (newProvider: 'exa' | 'parallel') => {
+    setExtremeSearchProvider(newProvider);
+    toast.success(`Extreme search provider changed to ${newProvider === 'exa' ? 'Exa' : 'Parallel AI'}`);
   };
 
   // Custom Instructions queries and handlers
@@ -378,146 +470,380 @@ function PreferencesSection({
     }
   };
 
+  const [preferencesTab, setPreferencesTab] = useState<'general' | 'ordering'>('general');
+
   return (
-    <div className={cn('space-y-6', isMobile ? 'space-y-4' : 'space-y-6')}>
-      <div>
-        <h3 className={cn('font-semibold mb-1.5', isMobile ? 'text-sm' : 'text-base')}>Preferences</h3>
-        <p className={cn('text-muted-foreground', isMobile ? 'text-xs leading-relaxed' : 'text-xs')}>
-          Configure your search provider and customize how the AI responds to your questions.
-        </p>
-      </div>
+    <div className={cn('space-y-4', isMobile ? 'space-y-3' : 'space-y-4')}>
+      <Tabs value={preferencesTab} onValueChange={(v) => setPreferencesTab(v as 'general' | 'ordering')}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="ordering">Ordering</TabsTrigger>
+        </TabsList>
 
-      {/* Search Provider Section */}
-      <div className="space-y-3">
-        <div className="space-y-2.5">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-primary/10">
-              <HugeiconsIcon icon={GlobalSearchIcon} className="h-3.5 w-3.5 text-primary" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm">Search Provider</h4>
-              <p className="text-xs text-muted-foreground">Choose your preferred search engine</p>
-            </div>
-          </div>
-
-          <div className="space-y-2.5">
-            <SearchProviderSelector value={searchProvider} onValueChange={handleSearchProviderChange} />
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Select your preferred search provider for web searches. Changes take effect immediately and will be used
-              for all future searches.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Custom Instructions Section */}
-      <div className="space-y-3">
-        <div className="space-y-2.5">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-primary/10">
-              <RobotIcon className="h-3.5 w-3.5 text-primary" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm">Custom Instructions</h4>
-              <p className="text-xs text-muted-foreground">Customize how the AI responds to you</p>
-            </div>
-          </div>
-
+        <TabsContent value="general" className="space-y-6 mt-4">
+          {/* Custom Instructions Section */}
           <div className="space-y-3">
-            <div className="flex items-start justify-between p-3 rounded-lg border bg-card">
-              <div className="flex-1 mr-3">
-                <Label htmlFor="enable-instructions" className="text-sm font-medium">
-                  Enable Custom Instructions
-                </Label>
-                <p className="text-xs text-muted-foreground mt-0.5">Toggle to enable or disable custom instructions</p>
-              </div>
-              <Switch id="enable-instructions" checked={enabled} onCheckedChange={setEnabled} />
-            </div>
-
-            <div className={cn('space-y-3', !enabled && 'opacity-50')}>
-              <div>
-                <Label htmlFor="instructions" className="text-sm font-medium">
-                  Instructions
-                </Label>
-                <p className="text-xs text-muted-foreground mt-0.5 mb-2">Guide how the AI responds to your questions</p>
-                {customInstructionsLoading ? (
-                  <Skeleton className="h-28 w-full" />
-                ) : (
-                  <Textarea
-                    id="instructions"
-                    placeholder="Enter your custom instructions here... For example: 'Always provide code examples when explaining programming concepts' or 'Keep responses concise and focused on practical applications'"
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className="min-h-[100px] resize-y text-sm"
-                    style={{ maxHeight: '25dvh' }}
-                    onFocus={(e) => {
-                      // Keep the focused textarea within the drawer's scroll container without jumping the whole viewport
-                      try {
-                        e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-                      } catch {}
-                    }}
-                    disabled={isSaving || !enabled}
-                  />
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving || !content.trim() || customInstructionsLoading || !enabled}
-                  size="sm"
-                  className="flex-1 h-8"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <FloppyDiskIcon className="w-3 h-3 mr-1.5" />
-                      Save Instructions
-                    </>
-                  )}
-                </Button>
-                {customInstructions && (
-                  <Button
-                    variant="outline"
-                    onClick={handleDelete}
-                    disabled={isSaving || customInstructionsLoading || !enabled}
-                    size="sm"
-                    className="h-8 px-2.5"
-                  >
-                    <TrashIcon className="w-3 h-3" />
-                  </Button>
-                )}
-              </div>
-
-              {customInstructionsLoading ? (
-                <div className="p-2.5 bg-muted/30 rounded-lg">
-                  <Skeleton className="h-3 w-28" />
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <RobotIcon className="h-3.5 w-3.5 text-primary" />
                 </div>
-              ) : customInstructions ? (
-                <div className="p-2.5 bg-muted/30 rounded-lg">
-                  <p className="text-xs text-muted-foreground">
-                    Last updated: {new Date(customInstructions.updatedAt).toLocaleDateString()}
-                  </p>
+                <div>
+                  <h4 className="font-semibold text-sm">Custom Instructions</h4>
+                  <p className="text-xs text-muted-foreground">Customize how the AI responds to you</p>
                 </div>
-              ) : null}
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-start justify-between p-3 rounded-lg border bg-card">
+                  <div className="flex-1 mr-3">
+                    <Label htmlFor="enable-instructions" className="text-sm font-medium">
+                      Enable Custom Instructions
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Toggle to enable or disable custom instructions
+                    </p>
+                  </div>
+                  <Switch id="enable-instructions" checked={enabled} onCheckedChange={setEnabled} />
+                </div>
+
+                <div className={cn('space-y-3', !enabled && 'opacity-50')}>
+                  <div>
+                    <Label htmlFor="instructions" className="text-sm font-medium">
+                      Instructions
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                      Guide how the AI responds to your questions
+                    </p>
+                    {customInstructionsLoading ? (
+                      <Skeleton className="h-28 w-full" />
+                    ) : (
+                      <Textarea
+                        id="instructions"
+                        placeholder="Enter your custom instructions here... For example: 'Always provide code examples when explaining programming concepts' or 'Keep responses concise and focused on practical applications'"
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        className="min-h-[100px] resize-y text-sm"
+                        style={{ maxHeight: '25dvh' }}
+                        onFocus={(e) => {
+                          // Keep the focused textarea within the drawer's scroll container without jumping the whole viewport
+                          try {
+                            e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                          } catch {}
+                        }}
+                        disabled={isSaving || !enabled}
+                      />
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSave}
+                      disabled={isSaving || !content.trim() || customInstructionsLoading || !enabled}
+                      size="sm"
+                      className="flex-1 h-8"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <FloppyDiskIcon className="w-3 h-3 mr-1.5" />
+                          Save Instructions
+                        </>
+                      )}
+                    </Button>
+                    {customInstructions && (
+                      <Button
+                        variant="outline"
+                        onClick={handleDelete}
+                        disabled={isSaving || customInstructionsLoading || !enabled}
+                        size="sm"
+                        className="h-8 px-2.5"
+                      >
+                        <TrashIcon className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+
+                  {customInstructionsLoading ? (
+                    <div className="p-2.5 bg-muted/30 rounded-lg">
+                      <Skeleton className="h-3 w-28" />
+                    </div>
+                  ) : customInstructions ? (
+                    <div className="p-2.5 bg-muted/30 rounded-lg">
+                      <p className="text-xs text-muted-foreground">
+                        Last updated: {new Date(customInstructions.updatedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+
+          {/* Location Metadata Section */}
+          <div className="space-y-3">
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <HugeiconsIcon icon={InformationCircleIcon} className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm">Location Metadata</h4>
+                  <p className="text-xs text-muted-foreground">Include location data in system prompts</p>
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                <div className="flex items-start justify-between p-3 rounded-lg border bg-card">
+                  <div className="flex-1 mr-3">
+                    <Label htmlFor="location-metadata" className="text-sm font-medium">
+                      Enable Location Metadata
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      When enabled, your approximate location (latitude and longitude) will be included in the system
+                      prompt to help provide location-aware responses. This is disabled by default for privacy.
+                    </p>
+                  </div>
+                  <Switch
+                    id="location-metadata"
+                    checked={locationMetadataEnabled}
+                    onCheckedChange={setLocationMetadataEnabled}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Search Provider Section */}
+          <div className="space-y-3">
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <HugeiconsIcon icon={GlobalSearchIcon} className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm">Search Provider</h4>
+                  <p className="text-xs text-muted-foreground">Choose your preferred search engine</p>
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                <SearchProviderSelector value={searchProvider} onValueChange={handleSearchProviderChange} />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Select your preferred search provider for web searches. Changes take effect immediately and will be
+                  used for all future searches.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Extreme Search Provider Section */}
+          <div className="space-y-3">
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <HugeiconsIcon icon={Rocket01Icon} className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm">Extreme Search Provider</h4>
+                  <p className="text-xs text-muted-foreground">Choose your content extraction engine</p>
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                <ExtremeSearchProviderSelector
+                  value={extremeSearchProvider}
+                  onValueChange={handleExtremeSearchProviderChange}
+                />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Select your preferred provider for extreme search content extraction. This determines how web content
+                  is fetched and processed during deep research.
+                </p>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="ordering" className="space-y-6 mt-4">
+          {/* Reorder Search Groups */}
+          <div className="space-y-3">
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <HugeiconsIcon icon={Settings02Icon} className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm">Reorder Search Modes</h4>
+                  <p className="text-xs text-muted-foreground">Drag to set your preferred order</p>
+                </div>
+              </div>
+
+              <ReorderList
+                items={mergedGroupOrder.filter((id) => dynamicGroups.some((g) => g.id === id))}
+                renderItem={(id) => {
+                  const group = dynamicGroups.find((g) => g.id === id)!;
+                  return (
+                    <div className="flex items-center justify-between p-3 rounded-md border bg-card">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <HugeiconsIcon icon={group.icon} size={16} color="currentColor" />
+                        <span className="text-sm font-medium truncate">{group.name}</span>
+                      </div>
+                      {'requirePro' in group && group.requirePro && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          PRO
+                        </Badge>
+                      )}
+                    </div>
+                  );
+                }}
+                onReorder={(ids) => setGroupOrder(ids as SearchGroupId[])}
+              />
+            </div>
+          </div>
+
+          {/* Reorder Models (Pro users only) - simplified single list */}
+          {user?.isProUser && (
+            <div className="space-y-3">
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    <HugeiconsIcon icon={Settings02Icon} className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-sm">Reorder Models</h4>
+                    <p className="text-xs text-muted-foreground">Drag to set your preferred model order</p>
+                  </div>
+                </div>
+
+                {(() => {
+                  const visible = mergedModelOrder.filter((id) => models.some((m) => m.value === id));
+                  return (
+                    <ReorderList
+                      items={visible as string[]}
+                      renderItem={(id: string) => {
+                        const m = models.find((x) => x.value === id)!;
+                        return (
+                          <div className="flex flex-col p-3 rounded-md border bg-card">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="text-sm font-medium truncate">{m.label}</div>
+                              {m.pro && (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  PRO
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground line-clamp-2">{m.description}</div>
+                          </div>
+                        );
+                      }}
+                      onReorder={(ids) => setGlobalModelOrder(ids as string[])}
+                    />
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
 
+// Generic sortable item component
+const SortableItem = memo(function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  } as React.CSSProperties;
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 select-none">
+      <button
+        {...attributes}
+        {...listeners}
+        className="h-6 w-6 flex items-center justify-center rounded hover:bg-accent text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
+        aria-label="Drag"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  );
+});
+
+const ReorderList = memo(function ReorderList<T extends string>({
+  items,
+  renderItem,
+  onReorder,
+}: {
+  items: T[];
+  renderItem: (id: T) => React.ReactNode;
+  onReorder: (ids: T[]) => void;
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        delay: 120,
+        tolerance: 5,
+      },
+    }),
+  );
+
+  const handleDragEnd = useCallback(
+    (event: any) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const oldIndex = items.indexOf(active.id);
+      const newIndex = items.indexOf(over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+      onReorder(arrayMove(items, oldIndex, newIndex));
+    },
+    [items, onReorder],
+  );
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={items} strategy={rectSortingStrategy}>
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {items.map((id) => (
+            <SortableItem key={id} id={id}>
+              {renderItem(id)}
+            </SortableItem>
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
+  );
+});
+
 // Component for Usage Information
-function UsageSection({ user }: any) {
+type TimePeriod = '7d' | '30d' | '12m';
+
+export function UsageSection({ user }: any) {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('7d');
 
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const isTablet = useMediaQuery('(min-width: 769px) and (max-width: 1024px)');
   const isProUser = user?.isProUser;
+
+  // Convert time period to days
+  const daysWindow = useMemo(() => {
+    switch (timePeriod) {
+      case '7d':
+        return 7;
+      case '30d':
+        return 30;
+      case '12m':
+        return 365; // 12 months
+      default:
+        return 7;
+    }
+  }, [timePeriod]);
 
   const {
     data: usageData,
@@ -543,49 +869,13 @@ function UsageSection({ user }: any) {
     enabled: !!user,
   });
 
-  // Add search limits query
-  const {
-    data: searchLimits,
-    isLoading: searchLimitsLoading,
-    error: searchLimitsError,
-    refetch: refetchSearchLimits,
-  } = useQuery({
-    queryKey: ['searchLimits', user?.id],
-    queryFn: async () => {
-      try {
-        if (!user?.id) return null;
-        
-        const response = await fetch('/api/search-stats');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        // Transform the API response to match our expected format
-        return {
-          used: data.searchesUsed || 0,
-          limit: 100, // Daily limit is always 100
-          remaining: data.searchesRemaining || 100,
-          resetTime: data.resetTime ? new Date(data.resetTime) : new Date()
-        };
-      } catch (error) {
-        console.error('Failed to fetch search stats:', error);
-        return null;
-      }
-    },
-    enabled: !!user?.id,
-    staleTime: 1000 * 30, // 30 seconds
-    retry: 1, // Only retry once
-  });
-
   const {
     data: historicalUsageData,
     isLoading: historicalLoading,
     refetch: refetchHistoricalData,
   } = useQuery({
-    queryKey: ['historicalUsage', user?.id, 9],
-    queryFn: () => getHistoricalUsage(user, 9),
+    queryKey: ['historicalUsage', user?.id, daysWindow],
+    queryFn: () => getHistoricalUsage(user, daysWindow),
     enabled: !!user,
     staleTime: 1000 * 60 * 10,
   });
@@ -593,54 +883,59 @@ function UsageSection({ user }: any) {
   const searchCount = usageData?.searchCount;
   const extremeSearchCount = usageData?.extremeSearchCount;
 
-  // Generate loading stars data that matches real data structure
-  const loadingStars = useMemo(() => {
-    if (!historicalLoading) return [];
+  // Transform historical data for chart
+  const chartData = useMemo(() => {
+    if (!historicalUsageData || historicalUsageData.length === 0) return [];
 
-    const months = 9;
-    const totalDays = months * 30;
-    const futureDays = Math.min(15, Math.floor(totalDays * 0.08));
-    const pastDays = totalDays - futureDays - 1;
+    // For 12m, group by week; for others, use daily data
+    if (timePeriod === '12m') {
+      // Group by week for 12 months view
+      const weeklyData = new Map<string, { total: number; count: number }>();
 
-    const today = new Date();
-    const endDate = new Date(today);
-    endDate.setDate(endDate.getDate() + futureDays);
+      historicalUsageData.forEach((item) => {
+        const date = new Date(item.date);
+        const weekStart = new Date(date);
+        weekStart.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+        const weekKey = weekStart.toISOString().split('T')[0];
 
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - pastDays);
-
-    // Generate complete dataset like real getHistoricalUsage
-    const completeData: Activity[] = [];
-    for (let i = 0; i < totalDays; i++) {
-      const currentDate = new Date(startDate);
-      currentDate.setDate(startDate.getDate() + i);
-      const dateKey = currentDate.toISOString().split('T')[0];
-
-      // Randomly light up some dots for star effect
-      const shouldLight = Math.random() > 0.85; // 15% chance
-      const count = shouldLight ? Math.floor(Math.random() * 10) + 1 : 0;
-
-      let level: 0 | 1 | 2 | 3 | 4;
-      if (count === 0) level = 0;
-      else if (count <= 3) level = 1;
-      else if (count <= 7) level = 2;
-      else if (count <= 12) level = 3;
-      else level = 4;
-
-      completeData.push({
-        date: dateKey,
-        count,
-        level,
+        const existing = weeklyData.get(weekKey) || { total: 0, count: 0 };
+        weeklyData.set(weekKey, {
+          total: existing.total + item.count,
+          count: existing.count + 1,
+        });
       });
-    }
 
-    return completeData;
-  }, [historicalLoading]);
+      return Array.from(weeklyData.entries())
+        .map(([date, data]) => ({
+          date,
+          messages: data.total,
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+    } else {
+      // Use daily data for 7d and 30d
+      return historicalUsageData
+        .map((item) => ({
+          date: item.date,
+          messages: item.count,
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+    }
+  }, [historicalUsageData, timePeriod]);
+
+  const chartConfig: ChartConfig = {
+    messages: {
+      label: 'Messages',
+      theme: {
+        light: 'oklch(0.4341 0.0392 41.9938)', // Primary color for light mode
+        dark: 'oklch(0.9247 0.0524 66.1732)', // Lighter primary for dark mode
+      },
+    },
+  };
 
   const handleRefreshUsage = async () => {
     try {
       setIsRefreshing(true);
-      await Promise.all([refetchUsageData(), refetchHistoricalData(), refetchSearchLimits()]);
+      await Promise.all([refetchUsageData(), refetchHistoricalData()]);
       toast.success('Usage data refreshed');
     } catch (error) {
       toast.error('Failed to refresh usage data');
@@ -651,12 +946,12 @@ function UsageSection({ user }: any) {
 
   const usagePercentage = isProUser
     ? 0
-    : searchLimits && typeof searchLimits.used !== 'undefined' && typeof searchLimits.limit !== 'undefined'
-    ? Math.min((searchLimits.used / searchLimits.limit) * 100, 100)
     : Math.min(((searchCount?.count || 0) / SEARCH_LIMITS.DAILY_SEARCH_LIMIT) * 100, 100);
 
   return (
-    <div className={cn(isMobile ? 'space-y-3' : 'space-y-4', isMobile && !isProUser ? 'pb-4' : '')}>
+    <div
+      className={cn('flex flex-col gap-4', isMobile ? 'space-y-4' : 'space-y-5', isMobile && !isProUser ? 'pb-4' : '')}
+    >
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-semibold">Daily Search Usage</h3>
         <Button
@@ -674,29 +969,21 @@ function UsageSection({ user }: any) {
         </Button>
       </div>
 
-      <div className={cn('grid grid-cols-2', isMobile ? 'gap-2' : 'gap-3')}>
-        <div className={cn('bg-muted/50 rounded-lg space-y-1', isMobile ? 'p-2.5' : 'p-3')}>
+      <div className={cn('grid', isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-2 gap-3')}>
+        <div className={cn('bg-muted/50 rounded-lg space-y-1', isMobile ? 'p-3' : 'p-3')}>
           <div className="flex items-center justify-between">
             <span className={cn('text-muted-foreground', isMobile ? 'text-[11px]' : 'text-xs')}>Today</span>
             <MagnifyingGlassIcon className={isMobile ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
           </div>
-          {searchLimitsLoading ? (
+          {usageLoading ? (
             <Skeleton className={cn('font-semibold', isMobile ? 'text-base h-4' : 'text-lg h-5')} />
           ) : (
-            <div className={cn('font-semibold', isMobile ? 'text-base' : 'text-lg')}>
-              {searchLimits && typeof searchLimits.used !== 'undefined' && typeof searchLimits.limit !== 'undefined' 
-                ? `${searchLimits.used}/${searchLimits.limit}` 
-                : `${searchCount?.count || 0}/100`}
-            </div>
+            <div className={cn('font-semibold', isMobile ? 'text-base' : 'text-lg')}>{searchCount?.count || 0}</div>
           )}
-          <p className="text-[10px] text-muted-foreground">
-            {searchLimits && typeof searchLimits.remaining !== 'undefined' 
-              ? `${searchLimits.remaining} left` 
-              : `${Math.max(0, 100 - (searchCount?.count || 0))} left`}
-          </p>
+          <p className="text-[10px] text-muted-foreground">Regular searches</p>
         </div>
 
-        <div className={cn('bg-muted/50 rounded-lg space-y-1', isMobile ? 'p-2.5' : 'p-3')}>
+        <div className={cn('bg-muted/50 rounded-lg space-y-1', isMobile ? 'p-3' : 'p-3')}>
           <div className="flex items-center justify-between">
             <span className={cn('text-muted-foreground', isMobile ? 'text-[11px]' : 'text-xs')}>Extreme</span>
             <LightningIcon className={isMobile ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
@@ -713,9 +1000,9 @@ function UsageSection({ user }: any) {
       </div>
 
       {!isProUser && (
-        <div className={isMobile ? 'space-y-2' : 'space-y-3'}>
-          <div className={cn('bg-muted/30 rounded-lg space-y-2', isMobile ? 'p-2.5' : 'p-3')}>
-            {searchLimitsLoading ? (
+        <div className={isMobile ? 'space-y-3' : 'space-y-4'}>
+          <div className={cn('bg-muted/30 rounded-lg space-y-2 p-3')}>
+            {usageLoading ? (
               <>
                 <div className="flex justify-between text-xs">
                   <Skeleton className="h-3 w-16" />
@@ -726,27 +1013,51 @@ function UsageSection({ user }: any) {
             ) : (
               <>
                 <div className="flex justify-between text-xs">
-                  <span className="font-medium">Daily Limit</span>
+                  <span className="font-medium">Daily Search Limit</span>
                   <span className="text-muted-foreground">{usagePercentage.toFixed(0)}%</span>
                 </div>
                 <Progress value={usagePercentage} className="h-1.5 [&>div]:transition-none" />
                 <div className="flex justify-between text-[10px] text-muted-foreground">
                   <span>
-                    {searchLimits && typeof searchLimits.used !== 'undefined' && typeof searchLimits.limit !== 'undefined'
-                      ? `${searchLimits.used} / ${searchLimits.limit}` 
-                      : `${searchCount?.count || 0} / ${SEARCH_LIMITS.DAILY_SEARCH_LIMIT}`}
+                    {searchCount?.count || 0} / {SEARCH_LIMITS.DAILY_SEARCH_LIMIT}
                   </span>
-                  <span>
-                    {searchLimits && typeof searchLimits.remaining !== 'undefined' 
-                      ? `${searchLimits.remaining} left` 
-                      : `${Math.max(0, SEARCH_LIMITS.DAILY_SEARCH_LIMIT - (searchCount?.count || 0))} left`}
+                  <span>{Math.max(0, SEARCH_LIMITS.DAILY_SEARCH_LIMIT - (searchCount?.count || 0))} left</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className={cn('bg-muted/30 rounded-lg space-y-2 p-3')}>
+            {usageLoading ? (
+              <>
+                <div className="flex justify-between text-xs">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
+                <Skeleton className="h-1.5 w-full" />
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between text-xs">
+                  <span className="font-medium">Monthly Extreme Search Limit</span>
+                  <span className="text-muted-foreground">
+                    {Math.min(
+                      ((extremeSearchCount?.count || 0) / SEARCH_LIMITS.EXTREME_SEARCH_LIMIT) * 100,
+                      100,
+                    ).toFixed(0)}
+                    %
                   </span>
                 </div>
-                {searchLimits?.resetTime && (
-                  <div className="text-[9px] text-muted-foreground pt-1">
-                    Resets {searchLimits.resetTime.toLocaleTimeString()} today
-                  </div>
-                )}
+                <Progress
+                  value={Math.min(((extremeSearchCount?.count || 0) / SEARCH_LIMITS.EXTREME_SEARCH_LIMIT) * 100, 100)}
+                  className="h-1.5 [&>div]:transition-none"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>
+                    {extremeSearchCount?.count || 0} / {SEARCH_LIMITS.EXTREME_SEARCH_LIMIT}
+                  </span>
+                  <span>{Math.max(0, SEARCH_LIMITS.EXTREME_SEARCH_LIMIT - (extremeSearchCount?.count || 0))} left</span>
+                </div>
               </>
             )}
           </div>
@@ -767,192 +1078,144 @@ function UsageSection({ user }: any) {
       )}
 
       {!usageLoading && (
-        <div className={cn('space-y-2', isMobile && !isProUser ? 'pb-4' : '')}>
-          <h4 className={cn('font-semibold text-muted-foreground', isMobile ? 'text-[11px]' : 'text-xs')}>
-            Activity (Past 9 Months)
-          </h4>
-          <div className={cn('bg-muted/50 dark:bg-card rounded-lg p-3')}>
+        <div className={cn('space-y-2 w-full', isMobile && !isProUser ? 'pb-4' : '')}>
+          <div className="flex items-center justify-between">
+            <h4 className={cn('font-semibold text-muted-foreground', isMobile ? 'text-[11px]' : 'text-xs')}>
+              Activity
+            </h4>
+            <ButtonGroup orientation="horizontal" className="h-7">
+              <Button
+                variant={timePeriod === '7d' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTimePeriod('7d')}
+                className={cn('h-7 px-2 text-[10px]', isMobile && 'px-1.5')}
+              >
+                7d
+              </Button>
+              <Button
+                variant={timePeriod === '30d' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTimePeriod('30d')}
+                className={cn('h-7 px-2 text-[10px]', isMobile && 'px-1.5')}
+              >
+                30d
+              </Button>
+              <Button
+                variant={timePeriod === '12m' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTimePeriod('12m')}
+                className={cn('h-7 px-2 text-[10px]', isMobile && 'px-1.5')}
+              >
+                12m
+              </Button>
+            </ButtonGroup>
+          </div>
+          <div className={cn('bg-muted/50 dark:bg-card rounded-lg p-3 w-full')}>
             {historicalLoading ? (
-              <TooltipProvider>
-                <ContributionGraph
-                  data={loadingStars}
-                  blockSize={isMobile ? 8 : 12}
-                  blockMargin={isMobile ? 3 : 4}
-                  fontSize={isMobile ? 9 : 12}
-                  labels={{
-                    totalCount: 'Loading activity data...',
-                    legend: {
-                      less: 'Less',
-                      more: 'More',
-                    },
-                  }}
-                  className="w-full opacity-60"
-                >
-                  <ContributionGraphCalendar
-                    hideMonthLabels={false}
-                    className={cn('text-muted-foreground', isMobile ? 'text-[9px]' : 'text-xs')}
-                  >
-                    {({ activity, dayIndex, weekIndex }) => (
-                      <ContributionGraphBlock
-                        key={`${weekIndex}-${dayIndex}-loading`}
-                        activity={activity}
-                        dayIndex={dayIndex}
-                        weekIndex={weekIndex}
-                        className={cn(
-                          'data-[level="0"]:fill-muted/40',
-                          'data-[level="1"]:fill-primary/30',
-                          'data-[level="2"]:fill-primary/50',
-                          'data-[level="3"]:fill-primary/70',
-                          'data-[level="4"]:fill-primary/90',
-                          activity.level > 0 && 'animate-pulse',
-                        )}
+              <div className="h-[200px] flex items-center justify-center opacity-60">
+                <div className="text-center space-y-2">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                  <p className={cn('text-muted-foreground', isMobile ? 'text-[11px]' : 'text-xs')}>
+                    Loading activity data...
+                  </p>
+                </div>
+              </div>
+            ) : chartData && chartData.length > 0 ? (
+              <div className="w-full min-w-0 overflow-hidden">
+                <ChartContainer config={chartConfig} className="h-[200px] w-full min-w-0 flex-col! justify-start!">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 5, right: 5, left: isMobile ? 0 : 5, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="messagesGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--color-messages)" stopOpacity={0.4} />
+                          <stop offset="95%" stopColor="var(--color-messages)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.1} />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(value, index) => {
+                          const date = new Date(value);
+                          let labelInterval: number;
+                          let format: (d: Date) => string;
+
+                          if (timePeriod === '7d') {
+                            // Show day names for 7d view
+                            labelInterval = Math.max(1, Math.floor(chartData.length / 5));
+                            format = (d) => d.toLocaleDateString('en-US', { weekday: 'short' });
+                          } else if (timePeriod === '30d') {
+                            // Show month and day for 30d view
+                            labelInterval = Math.max(1, Math.floor(chartData.length / 5));
+                            format = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                          } else {
+                            // Show month for 12m view
+                            labelInterval = Math.max(1, Math.floor(chartData.length / 6));
+                            format = (d) => d.toLocaleDateString('en-US', { month: 'short' });
+                          }
+
+                          // Only show label at intervals, first, and last
+                          if (index % labelInterval !== 0 && index !== 0 && index !== chartData.length - 1) {
+                            return '';
+                          }
+
+                          return format(date);
+                        }}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isMobile ? 9 : 11 }}
+                        tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
+                        minTickGap={isMobile ? 15 : 25}
+                        interval={0}
+                        angle={isMobile ? -45 : 0}
+                        textAnchor={isMobile ? 'end' : 'middle'}
+                        height={isMobile ? 50 : 30}
                       />
-                    )}
-                  </ContributionGraphCalendar>
-                  <ContributionGraphFooter
-                    className={cn('pt-2 flex-col sm:flex-row', isMobile ? 'gap-1.5 items-start' : 'gap-2 items-center')}
-                  >
-                    <ContributionGraphTotalCount
-                      className={cn('text-muted-foreground', isMobile ? 'text-[9px] mb-1' : 'text-xs')}
-                    />
-                    <ContributionGraphLegend className={cn('text-muted-foreground', isMobile ? 'flex-shrink-0' : '')}>
-                      {({ level }) => (
-                        <svg height={isMobile ? 8 : 12} width={isMobile ? 8 : 12}>
-                          <rect
-                            className={cn(
-                              'stroke-[1px] stroke-border/50',
-                              'data-[level="0"]:fill-muted/40',
-                              'data-[level="1"]:fill-primary/30',
-                              'data-[level="2"]:fill-primary/50',
-                              'data-[level="3"]:fill-primary/70',
-                              'data-[level="4"]:fill-primary/90',
-                            )}
-                            data-level={level}
-                            height={isMobile ? 8 : 12}
-                            rx={2}
-                            ry={2}
-                            width={isMobile ? 8 : 12}
-                          />
-                        </svg>
-                      )}
-                    </ContributionGraphLegend>
-                  </ContributionGraphFooter>
-                </ContributionGraph>
-              </TooltipProvider>
-            ) : historicalUsageData && historicalUsageData.length > 0 ? (
-              <TooltipProvider>
-                <ContributionGraph
-                  data={historicalUsageData}
-                  blockSize={isMobile ? 8 : 12}
-                  blockMargin={isMobile ? 3 : 4}
-                  fontSize={isMobile ? 9 : 12}
-                  labels={{
-                    totalCount: '{{count}} total messages in {{year}}',
-                    legend: {
-                      less: 'Less',
-                      more: 'More',
-                    },
-                  }}
-                  className="w-full"
-                >
-                  <ContributionGraphCalendar
-                    hideMonthLabels={false}
-                    className={cn('text-muted-foreground', isMobile ? 'text-[9px]' : 'text-xs')}
-                  >
-                    {({ activity, dayIndex, weekIndex }) => (
-                      <Tooltip key={`${weekIndex}-${dayIndex}`}>
-                        <TooltipTrigger asChild>
-                          <g className="cursor-help">
-                            <ContributionGraphBlock
-                              activity={activity}
-                              dayIndex={dayIndex}
-                              weekIndex={weekIndex}
-                              className={cn(
-                                'data-[level="0"]:fill-muted',
-                                'data-[level="1"]:fill-primary/20',
-                                'data-[level="2"]:fill-primary/40',
-                                'data-[level="3"]:fill-primary/60',
-                                'data-[level="4"]:fill-primary',
-                              )}
-                            />
-                          </g>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="text-center">
-                            <p className="font-medium">
-                              {activity.count} {activity.count === 1 ? 'message' : 'messages'}
-                            </p>
-                            <p className="text-xs text-muted">
-                              {new Date(activity.date).toLocaleDateString('en-US', {
+                      <YAxis
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isMobile ? 10 : 12 }}
+                        tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
+                        width={isMobile ? 30 : 40}
+                      />
+                      <ChartTooltip
+                        content={
+                          <ChartTooltipContent
+                            labelFormatter={(value) => {
+                              const date = new Date(value);
+                              if (timePeriod === '12m') {
+                                const weekEnd = new Date(date);
+                                weekEnd.setDate(date.getDate() + 6);
+                                return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+                              }
+                              return date.toLocaleDateString('en-US', {
                                 weekday: 'long',
                                 year: 'numeric',
                                 month: 'long',
                                 day: 'numeric',
-                              })}
-                            </p>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                  </ContributionGraphCalendar>
-                  <ContributionGraphFooter
-                    className={cn('pt-2 flex-col sm:flex-row', isMobile ? 'gap-1.5 items-start' : 'gap-2 items-center')}
-                  >
-                    <ContributionGraphTotalCount
-                      className={cn('text-muted-foreground', isMobile ? 'text-[9px] mb-1' : 'text-xs')}
-                    />
-                    <ContributionGraphLegend className={cn('text-muted-foreground', isMobile ? 'flex-shrink-0' : '')}>
-                      {({ level }) => {
-                        const getTooltipText = (level: number) => {
-                          switch (level) {
-                            case 0:
-                              return 'No messages';
-                            case 1:
-                              return '1-3 messages';
-                            case 2:
-                              return '4-7 messages';
-                            case 3:
-                              return '8-12 messages';
-                            case 4:
-                              return '13+ messages';
-                            default:
-                              return `${level} messages`;
-                          }
-                        };
-
-                        return (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <svg height={isMobile ? 8 : 12} width={isMobile ? 8 : 12} className="cursor-help">
-                                <rect
-                                  className={cn(
-                                    'stroke-[1px] stroke-border/50',
-                                    'data-[level="0"]:fill-muted',
-                                    'data-[level="1"]:fill-primary/20',
-                                    'data-[level="2"]:fill-primary/40',
-                                    'data-[level="3"]:fill-primary/60',
-                                    'data-[level="4"]:fill-primary',
-                                  )}
-                                  data-level={level}
-                                  height={isMobile ? 8 : 12}
-                                  rx={2}
-                                  ry={2}
-                                  width={isMobile ? 8 : 12}
-                                />
-                              </svg>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-xs">{getTooltipText(level)}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        );
-                      }}
-                    </ContributionGraphLegend>
-                  </ContributionGraphFooter>
-                </ContributionGraph>
-              </TooltipProvider>
+                              });
+                            }}
+                            formatter={(value) => {
+                              return [`${value}`, ' Messages'] as [string, string];
+                            }}
+                          />
+                        }
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="messages"
+                        stroke="var(--color-messages)"
+                        strokeWidth={1.5}
+                        fill="url(#messagesGradient)"
+                        dot={false}
+                        activeDot={{
+                          r: 4,
+                          stroke: 'var(--color-messages)',
+                          strokeWidth: 1.5,
+                          fill: 'var(--color-messages)',
+                        }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </div>
             ) : (
-              <div className="h-24 flex items-center justify-center">
+              <div className="h-[200px] flex items-center justify-center">
                 <p className={cn('text-muted-foreground', isMobile ? 'text-[11px]' : 'text-xs')}>No activity data</p>
               </div>
             )}
@@ -964,36 +1227,385 @@ function UsageSection({ user }: any) {
 }
 
 // Component for Subscription Information
-function SubscriptionSection({ subscriptionData, isProUser, user }: any) {
+export function SubscriptionSection({ subscriptionData, isProUser, user }: any) {
+  const [isManagingSubscription, setIsManagingSubscription] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
+
+  // Use data from user object (already cached)
+  const dodoProStatus = user?.dodoProStatus || null;
+
+  // Fetch Polar orders using React Query
+  const { data: polarOrders, isLoading: polarOrdersLoading } = useQuery({
+    queryKey: ['polarOrders', user?.id],
+    queryFn: async () => {
+      try {
+        const ordersResponse = await authClient.customer.orders.list({
+          query: {
+            page: 1,
+            limit: 10,
+            productBillingType: 'recurring',
+          },
+        });
+        return ordersResponse.data;
+      } catch (error) {
+        console.log('Failed to fetch Polar orders:', error);
+        return null;
+      }
+    },
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+
+  // Fetch Dodo subscriptions using React Query
+  const { data: dodoSubscriptions, isLoading: dodoSubscriptionsLoading } = useQuery({
+    queryKey: ['dodoSubscriptions', user?.id],
+    queryFn: async () => {
+      try {
+        const { data, error } = await betterauthClient.dodopayments.customer.subscriptions.list();
+        if (error) {
+          console.log('Failed to fetch Dodo subscriptions:', error);
+          return null;
+        }
+        console.log('Dodo subscriptions response:', data);
+        return data;
+      } catch (error) {
+        console.log('Failed to fetch Dodo subscriptions:', error);
+        return null;
+      }
+    },
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+
+  const handleManageSubscription = async () => {
+    // Determine the subscription source
+    const getProAccessSource = () => {
+      if (hasActiveSubscription) return 'polar';
+      if (hasDodoProStatus) return 'dodo';
+      return null;
+    };
+
+    const proSource = getProAccessSource();
+
+    console.log('proSource', proSource);
+
+    try {
+      setIsManagingSubscription(true);
+
+      console.log('Settings Dialog - Provider source:', proSource);
+      console.log('User dodoProStatus:', user?.dodoProStatus);
+      console.log('User full object keys:', Object.keys(user || {}));
+
+      if (proSource === 'dodo') {
+        // Use DodoPayments portal for DodoPayments users
+        console.log('Opening DodoPayments portal');
+        console.log('User object for DodoPayments:', {
+          id: user?.id,
+          email: user?.email,
+          dodoProStatus: user?.dodoProStatus,
+          isProUser: user?.isProUser,
+        });
+        await betterauthClient.dodopayments.customer.portal();
+      } else {
+        // Use Polar portal for Polar subscribers
+        console.log('Opening Polar portal');
+        await authClient.customer.portal();
+      }
+    } catch (error) {
+      console.error('Subscription management error:', error);
+
+      if (proSource === 'dodo') {
+        toast.error('Unable to access DodoPayments portal. Please contact support.');
+      } else {
+        toast.error('Failed to open subscription management');
+      }
+    } finally {
+      setIsManagingSubscription(false);
+    }
+  };
+
+  // Check for active status from either source
+  const hasActiveSubscription =
+    subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active';
+  const hasDodoProStatus = dodoProStatus?.isProUser || (user?.proSource === 'dodo' && user?.isProUser);
+  const isProUserActive = hasActiveSubscription || hasDodoProStatus;
+  const subscription = subscriptionData?.subscription;
+
+  // Check if DodoPayments Pro is expiring soon (within 7 days)
+  const getDaysUntilExpiration = () => {
+    if (!dodoProStatus?.expiresAt) return null;
+    const now = new Date();
+    const expiresAt = new Date(dodoProStatus.expiresAt);
+    const diffTime = expiresAt.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const daysUntilExpiration = getDaysUntilExpiration();
+  const isExpiringSoon = daysUntilExpiration !== null && daysUntilExpiration <= 7 && daysUntilExpiration > 0;
 
   return (
     <div className={isMobile ? 'space-y-3' : 'space-y-4'}>
-      <div className={cn('text-center border-2 border-dashed rounded-lg bg-muted/20', isMobile ? 'p-4' : 'p-6')}>
-        <HugeiconsIcon
-          icon={Crown02Icon}
-          size={isMobile ? 24 : 32}
-          color="currentColor"
-          strokeWidth={1.5}
-          className={cn('mx-auto text-muted-foreground mb-3')}
-        />
-        <h3 className={cn('font-semibold mb-1', isMobile ? 'text-sm' : 'text-base')}>Subscription Management</h3>
-        <p className={cn('text-muted-foreground mb-4', isMobile ? 'text-[11px]' : 'text-xs')}>
-          Manage your subscription, billing, and account settings
-        </p>
-        <Button asChild size="sm" className={cn('w-full', isMobile ? 'h-8 text-xs' : 'h-9')}>
-          <Link href="https://account.myapps.ai/settings/subscription" target="_blank" rel="noopener noreferrer">
-            <ExternalLink className={isMobile ? 'h-3 w-3 mr-1.5' : 'h-3.5 w-3.5 mr-2'} />
-            Manage Subscription
-          </Link>
-        </Button>
+      {isProUserActive ? (
+        <div className={isMobile ? 'space-y-2' : 'space-y-3'}>
+          <div className={cn('bg-primary text-primary-foreground rounded-lg', isMobile ? 'p-3' : 'p-4')}>
+            <div className={cn('flex items-start justify-between', isMobile ? 'mb-2' : 'mb-3')}>
+              <div className="flex items-center gap-2">
+                <div className={cn('bg-primary-foreground/20 rounded', isMobile ? 'p-1' : 'p-1.5')}>
+                  <HugeiconsIcon icon={Crown02Icon} size={isMobile ? 14 : 16} color="currentColor" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <h3 className={cn('font-semibold', isMobile ? 'text-xs' : 'text-sm')}>
+                    PRO {hasActiveSubscription ? 'Subscription' : 'Membership'}
+                  </h3>
+                  <p className={cn('opacity-90', isMobile ? 'text-[10px]' : 'text-xs')}>
+                    {hasActiveSubscription
+                      ? subscription?.status === 'active'
+                        ? 'Active'
+                        : subscription?.status || 'Unknown'
+                      : 'Active (DodoPayments)'}
+                  </p>
+                </div>
+              </div>
+              <Badge
+                className={cn(
+                  'bg-primary-foreground/20 text-primary-foreground border-0',
+                  isMobile ? 'text-[10px] px-1.5 py-0.5' : 'text-xs',
+                )}
+              >
+                ACTIVE
+              </Badge>
+            </div>
+            <div className={cn('opacity-90 mb-3', isMobile ? 'text-[11px]' : 'text-xs')}>
+              <p className="mb-1">Unlimited access to all premium features</p>
+              {hasActiveSubscription && subscription && (
+                <div className="flex gap-4 text-[10px] opacity-75">
+                  <span>
+                    ${(subscription.amount / 100).toFixed(2)}/{subscription.recurringInterval}
+                  </span>
+                  <span>Next billing: {new Date(subscription.currentPeriodEnd).toLocaleDateString()}</span>
+                </div>
+              )}
+              {hasDodoProStatus && !hasActiveSubscription && (
+                <div className="space-y-1">
+                  <div className="flex gap-4 text-[10px] opacity-75">
+                    <span>₹1500/month (auto-renews)</span>
+                    <span>🇮🇳 Indian pricing</span>
+                  </div>
+                  {dodoProStatus?.expiresAt && (
+                    <div className="text-[10px] opacity-75">
+                      <span>Next billing: {new Date(dodoProStatus.expiresAt).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            {(hasActiveSubscription || hasDodoProStatus) && (
+              <Button
+                variant="secondary"
+                onClick={handleManageSubscription}
+                className={cn('w-full', isMobile ? 'h-7 text-xs' : 'h-8')}
+                disabled={isManagingSubscription}
+              >
+                {isManagingSubscription ? (
+                  <Loader2 className={isMobile ? 'h-3 w-3 mr-1.5' : 'h-3.5 w-3.5 mr-2'} />
+                ) : (
+                  <ExternalLink className={isMobile ? 'h-3 w-3 mr-1.5' : 'h-3.5 w-3.5 mr-2'} />
+                )}
+                {isManagingSubscription ? 'Opening...' : 'Manage Billing'}
+              </Button>
+            )}
+          </div>
+
+          {/* Expiration Warning for DodoPayments */}
+          {isExpiringSoon && (
+            <div
+              className={cn(
+                'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg',
+                isMobile ? 'p-3' : 'p-4',
+              )}
+            >
+              <div className="flex items-start gap-2">
+                <div className={cn('bg-yellow-100 dark:bg-yellow-900/40 rounded', isMobile ? 'p-1' : 'p-1.5')}>
+                  <HugeiconsIcon
+                    icon={Crown02Icon}
+                    size={isMobile ? 14 : 16}
+                    color="currentColor"
+                    strokeWidth={1.5}
+                    className={cn('text-yellow-600 dark:text-yellow-500')}
+                  />
+                </div>
+                <div className="flex-1">
+                  <h4
+                    className={cn(
+                      'font-semibold text-yellow-800 dark:text-yellow-200',
+                      isMobile ? 'text-xs' : 'text-sm',
+                    )}
+                  >
+                    Pro Access Expiring Soon
+                  </h4>
+                  <p
+                    className={cn(
+                      'text-yellow-700 dark:text-yellow-300',
+                      isMobile ? 'text-[11px] mt-1' : 'text-xs mt-1',
+                    )}
+                  >
+                    Your Pro access expires in {daysUntilExpiration} {daysUntilExpiration === 1 ? 'day' : 'days'}. Renew
+                    now to continue enjoying unlimited features.
+                  </p>
+                  <Button
+                    asChild
+                    size="sm"
+                    className={cn(
+                      'mt-2 bg-yellow-600 hover:bg-yellow-700 text-white',
+                      isMobile ? 'h-7 text-xs' : 'h-8',
+                    )}
+                  >
+                    <Link href="/pricing">Renew Pro Access</Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className={isMobile ? 'space-y-2' : 'space-y-3'}>
+          <div className={cn('text-center border-2 border-dashed rounded-lg bg-muted/20', isMobile ? 'p-4' : 'p-6')}>
+            <HugeiconsIcon
+              icon={Crown02Icon}
+              size={isMobile ? 24 : 32}
+              color="currentColor"
+              strokeWidth={1.5}
+              className={cn('mx-auto text-muted-foreground mb-3')}
+            />
+            <h3 className={cn('font-semibold mb-1', isMobile ? 'text-sm' : 'text-base')}>No Active Subscription</h3>
+            <p className={cn('text-muted-foreground mb-4', isMobile ? 'text-[11px]' : 'text-xs')}>
+              Upgrade to Pro for unlimited access
+            </p>
+            <div className="space-y-2">
+              <Button asChild size="sm" className={cn('w-full', isMobile ? 'h-8 text-xs' : 'h-9')}>
+                <Link href="/pricing">
+                  <HugeiconsIcon
+                    icon={Crown02Icon}
+                    size={isMobile ? 12 : 14}
+                    color="currentColor"
+                    strokeWidth={1.5}
+                    className={isMobile ? 'mr-1.5' : 'mr-2'}
+                  />
+                  Upgrade to Pro
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm" className={cn('w-full', isMobile ? 'h-7 text-xs' : 'h-8')}>
+                <Link href="/pricing">Compare Plans</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className={isMobile ? 'space-y-2' : 'space-y-3'}>
+        <h4 className={cn('font-semibold', isMobile ? 'text-xs' : 'text-sm')}>Billing History</h4>
+        {polarOrdersLoading || dodoSubscriptionsLoading ? (
+          <div className={cn('border rounded-lg flex items-center justify-center', isMobile ? 'p-3 h-16' : 'p-4 h-20')}>
+            <Loader2 className={cn(isMobile ? 'w-3.5 h-3.5' : 'w-4 h-4', 'animate-spin')} />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {/* Show Dodo subscriptions */}
+            {dodoSubscriptions &&
+              (Array.isArray(dodoSubscriptions) ? dodoSubscriptions : dodoSubscriptions.items || []).length > 0 && (
+                <>
+                  {(Array.isArray(dodoSubscriptions) ? dodoSubscriptions : dodoSubscriptions.items || [])
+                    .slice(0, 3)
+                    .map((subscription) => (
+                      <div key={subscription.id} className={cn('bg-muted/30 rounded-lg', isMobile ? 'p-2.5' : 'p-3')}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <p className={cn('font-medium truncate', isMobile ? 'text-xs' : 'text-sm')}>
+                              Datavibes Pro (DodoPayments)
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className={cn('text-muted-foreground', isMobile ? 'text-[10px]' : 'text-xs')}>
+                                {new Date(subscription.created_at).toLocaleDateString()}
+                              </p>
+                              <Badge variant="secondary" className="text-[8px] px-1 py-0">
+                                🇮🇳 {subscription.currency?.toUpperCase() || 'INR'}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className={cn('font-semibold block', isMobile ? 'text-xs' : 'text-sm')}>
+                              ₹{subscription.recurring_pre_tax_amount ? subscription.recurring_pre_tax_amount : '—'}
+                            </span>
+                            <span className={cn('text-muted-foreground', isMobile ? 'text-[9px]' : 'text-xs')}>
+                              {subscription.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </>
+              )}
+
+            {/* Show Polar orders */}
+            {polarOrders?.result?.items && polarOrders.result.items.length > 0 && (
+              <>
+                {polarOrders.result.items.slice(0, 3).map((order: any) => (
+                  <div key={order.id} className={cn('bg-muted/30 rounded-lg', isMobile ? 'p-2.5' : 'p-3')}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className={cn('font-medium truncate', isMobile ? 'text-xs' : 'text-sm')}>
+                          {order.product?.name || 'Subscription'}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className={cn('text-muted-foreground', isMobile ? 'text-[10px]' : 'text-xs')}>
+                            {new Date(order.createdAt).toLocaleDateString()}
+                          </p>
+                          <Badge variant="secondary" className="text-[8px] px-1 py-0">
+                            🌍 USD
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={cn('font-semibold block', isMobile ? 'text-xs' : 'text-sm')}>
+                          ${(order.totalAmount / 100).toFixed(2)}
+                        </span>
+                        <span className={cn('text-muted-foreground', isMobile ? 'text-[9px]' : 'text-xs')}>
+                          recurring
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* Show message if no billing history */}
+            {(!dodoSubscriptions ||
+              (Array.isArray(dodoSubscriptions)
+                ? dodoSubscriptions.length === 0
+                : !dodoSubscriptions.items || dodoSubscriptions.items.length === 0)) &&
+              (!polarOrders?.result?.items || polarOrders.result.items.length === 0) && (
+                <div
+                  className={cn(
+                    'border rounded-lg text-center bg-muted/20 flex items-center justify-center',
+                    isMobile ? 'p-4 h-16' : 'p-6 h-20',
+                  )}
+                >
+                  <p className={cn('text-muted-foreground', isMobile ? 'text-[11px]' : 'text-xs')}>
+                    No billing history yet
+                  </p>
+                </div>
+              )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 // Component for Memories
-function MemoriesSection() {
+export function MemoriesSection() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingMemoryIds, setDeletingMemoryIds] = useState<Set<string>>(new Set());
@@ -1164,7 +1776,7 @@ function MemoriesSection() {
 }
 
 // Component for Connectors
-function ConnectorsSection({ user }: { user: any }) {
+export function ConnectorsSection({ user }: { user: any }) {
   const isProUser = user?.isProUser || false;
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [connectingProvider, setConnectingProvider] = useState<ConnectorProvider | null>(null);
@@ -1643,7 +2255,7 @@ export function SettingsDialog({
 
       <TabsContent
         value="preferences"
-        className="mt-0 !scrollbar-thin !scrollbar-track-transparent !scrollbar-thumb-muted-foreground/20 hover:!scrollbar-thumb-muted-foreground/30"
+        className="mt-0 scrollbar-thin! scrollbar-track-transparent! scrollbar-thumb-muted-foreground/20! hover:scrollbar-thumb-muted-foreground/30!"
       >
         <PreferencesSection
           user={user}
@@ -1666,7 +2278,7 @@ export function SettingsDialog({
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent
-          className="h-[85vh] max-h-[600px] p-0 [&[data-vaul-drawer]]:transition-none overflow-hidden"
+          className="h-[85vh] max-h-[600px] p-0 data-vaul-drawer:transition-none overflow-hidden"
           style={{
             height: mobileDrawerPxHeight ?? undefined,
             maxHeight: mobileDrawerPxHeight ?? undefined,
@@ -1688,25 +2300,25 @@ export function SettingsDialog({
               className="flex-1 flex flex-col overflow-hidden gap-0"
             >
               {/* Tab content - takes up most space */}
-              <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 !pb-4 overscroll-contain !scrollbar-w-1 !scrollbar-track-transparent !scrollbar-thumb-muted-foreground/20 hover:!scrollbar-thumb-muted-foreground/30">
+              <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4! overscroll-contain scrollbar-w-1! scrollbar-track-transparent! scrollbar-thumb-muted-foreground/20! hover:scrollbar-thumb-muted-foreground/30!">
                 {contentSections}
               </div>
 
               {/* Bottom tab navigation - compact and accessible */}
               <div
                 className={cn(
-                  'border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0',
+                  'border-t bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 shrink-0',
                   currentTab === 'preferences' || currentTab === 'connectors'
                     ? 'pb-[calc(env(safe-area-inset-bottom)+2.5rem)]'
                     : 'pb-[calc(env(safe-area-inset-bottom)+1rem)]',
                 )}
               >
-                <TabsList className="w-full py-1 h-14 bg-transparent rounded-none grid grid-cols-6 gap-1 !mb-2 px-4">
+                <TabsList className="w-full py-1.5 h-24 bg-transparent rounded-none grid grid-cols-3 sm:grid-cols-6 gap-2 mb-2! px-3 sm:px-4">
                   {tabItems.map((item) => (
                     <TabsTrigger
                       key={item.value}
                       value={item.value}
-                      className="flex-col gap-0.5 h-full rounded-md data-[state=active]:bg-muted data-[state=active]:shadow-none relative px-1 transition-colors"
+                      className="flex-col gap-0.5 h-full rounded-md data-[state=active]:bg-muted data-[state=active]:shadow-none relative px-2 min-w-0 transition-colors"
                     >
                       <item.icon
                         className={cn(
@@ -1735,8 +2347,8 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-4xl !w-full max-h-[85vh] !p-0 gap-0 overflow-hidden">
-        <DialogHeader className="p-4 !m-0">
+      <DialogContent className="max-w-4xl! w-full! max-h-[85vh] p-0! gap-0 overflow-hidden">
+        <DialogHeader className="p-4 m-0!">
           <DialogTitle className="text-xl font-medium tracking-normal flex items-center gap-2">
             <SciraLogo className="size-6" color="currentColor" />
             Settings
@@ -1744,8 +2356,8 @@ export function SettingsDialog({
         </DialogHeader>
 
         <div className="flex flex-1 overflow-hidden">
-          <div className="w-48 !m-0">
-            <div className="p-2 !gap-1 flex flex-col">
+          <div className="w-48 m-0!">
+            <div className="p-2 gap-1! flex flex-col">
               {tabItems.map((item) => (
                 <button
                   key={item.value}
@@ -1766,7 +2378,7 @@ export function SettingsDialog({
           </div>
 
           <div className="flex-1 overflow-hidden">
-            <ScrollArea className="h-[calc(85vh-120px)] !scrollbar-w-1 !scrollbar-track-transparent !scrollbar-thumb-muted-foreground/20 hover:!scrollbar-thumb-muted-foreground/30">
+            <ScrollArea className="h-[calc(85vh-120px)] scrollbar-w-1! scrollbar-track-transparent! scrollbar-thumb-muted-foreground/20! hover:scrollbar-thumb-muted-foreground/30!">
               <div className="p-6 pb-8">
                 <Tabs value={currentTab} onValueChange={setCurrentTab} orientation="vertical">
                   {contentSections}

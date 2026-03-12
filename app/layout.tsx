@@ -3,31 +3,49 @@ import 'katex/dist/katex.min.css';
 import 'leaflet/dist/leaflet.css';
 
 import { Metadata, Viewport } from 'next';
-import { Be_Vietnam_Pro, Inter, Baumans } from 'next/font/google';
+import { Be_Vietnam_Pro, Baumans } from 'next/font/google';
+import localFont from 'next/font/local';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { Toaster } from '@/components/ui/sonner';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/next';
-// import { Databuddy } from '@databuddy/sdk';
+import { ClientAnalytics } from '@/components/client-analytics';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://mydatavibes.com'),
   title: {
-    default: 'Datavibes AI – Faster intelligent search, a Perplexity alternative',
+    default: 'Datavibes AI - Faster intelligent search, a Perplexity alternative',
     template: '%s | Datavibes AI',
   },
   description:
-    'AI search with real-time results and Grok 4, Claude, DeepSeek, Qwen ast answers; a smart Perplexity alternative.',
+    'Datavibes AI is a fast AI search engine with real-time web results, citations, and modern models for focused research.',
   openGraph: {
     url: 'https://mydatavibes.com',
     siteName: 'Datavibes AI',
   },
   keywords: [
+    'agentic research platform',
+    'agentic research',
+    'agentic search',
+    'agentic search engine',
+    'agentic search platform',
+    'agentic search tool',
+    'agentic search tool',
+    'mydatavibes.com',
+    'free ai search',
+    'ai search',
+    'ai research tool',
+    'ai search tool',
+    'perplexity ai alternative',
     'perplexity alternative',
+    'chatgpt alternative',
     'ai search engine',
     'search engine',
+    'datavibes ai',
+    'Datavibes AI',
+    'datavibes',
+    'mydatavibes',
     'MiniPerplx',
     'Datavibes AI',
     'Perplexity alternatives',
@@ -43,7 +61,6 @@ export const metadata: Metadata = {
     'mplx.run',
     'mplx ai',
     'zaid mukaddam',
-    'scira.how',
     'search engine',
     'AI',
     'perplexity',
@@ -71,11 +88,21 @@ export const viewport: Viewport = {
   ],
 };
 
-const inter = Inter({
-  subsets: ['latin'],
+const sfPro = localFont({
+  src: [
+    {
+      path: '../public/fonts/SF-Pro.ttf',
+      weight: '100 900',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/SF-Pro-Italic.ttf',
+      weight: '100 900',
+      style: 'italic',
+    },
+  ],
   variable: '--font-sans',
   preload: true,
-  weight: 'variable',
   display: 'swap',
 });
 
@@ -95,7 +122,7 @@ const baumans = Baumans({
   weight: ['400'],
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -103,18 +130,18 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${beVietnamPro.variable} ${baumans.variable} font-sans antialiased`}
+        className={`${sfPro.variable} ${beVietnamPro.variable} ${baumans.variable} font-sans antialiased`}
         suppressHydrationWarning
       >
         <NuqsAdapter>
           <Providers>
-            <Toaster position="top-center" />
-            {children}
+            <SidebarProvider>
+              <Toaster position="top-center" />
+              {children}
+            </SidebarProvider>
           </Providers>
         </NuqsAdapter>
-        {/* <Databuddy clientId={process.env.DATABUDDY_CLIENT_ID!} enableBatching={true} trackSessions={true} /> */}
-        <Analytics />
-        <SpeedInsights />
+        <ClientAnalytics />
       </body>
     </html>
   );

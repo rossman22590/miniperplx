@@ -4,17 +4,19 @@ import React, { useState, useEffect } from 'react';
 import {
   CopyIcon,
   CheckIcon,
+  GlobeIcon,
   LockIcon,
   LinkedinLogoIcon,
   XLogoIcon,
   RedditLogoIcon,
 } from '@phosphor-icons/react';
-import { HugeiconsIcon } from '@hugeicons/react';
+import { HugeiconsIcon } from '@/components/ui/hugeicons';
 import { Share03Icon } from '@hugeicons/core-free-icons';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 interface ShareDialogProps {
   isOpen: boolean;
@@ -37,123 +39,93 @@ export function ShareDialog({
 }: ShareDialogProps) {
   const [copied, setCopied] = useState(false);
   const [isChangingVisibility, setIsChangingVisibility] = useState(false);
+  const [choice, setChoice] = useState<'public' | 'private'>(selectedVisibilityType);
+  const [isShared, setIsShared] = useState<boolean>(selectedVisibilityType === 'public');
 
-  // Generate the share URL
   const shareUrl = chatId ? `https://mydatavibes.com/search/${chatId}` : '';
 
-  // Reset copied state when dialog opens/closes
   useEffect(() => {
     if (!isOpen) {
       setCopied(false);
     }
   }, [isOpen]);
 
-  // Handle copy to clipboard
-  const handleCopyIconLink = async () => {
-    console.log('📋 Attempting to copy URL to clipboard:', shareUrl);
+  useEffect(() => {
+    setChoice(selectedVisibilityType);
+    setIsShared(selectedVisibilityType === 'public');
+  }, [selectedVisibilityType]);
+
+  const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       toast.success('Link copied to clipboard');
-      console.log('✅ URL copied to clipboard successfully');
-
-      // Reset copied state after 2 seconds
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('❌ Failed to copy to clipboard:', error);
+      console.error('Failed to copy to clipboard:', error);
       toast.error('Failed to copy link');
     }
   };
 
-  // Handle visibility change to public and copy link
-  const handleShareAndCopyIcon = async () => {
-    console.log('🔗 Share and copy initiated, chatId:', chatId);
+  const handleShareAndCopy = async () => {
     setIsChangingVisibility(true);
 
     try {
-      if (selectedVisibilityType === 'private') {
-        console.log('📡 Changing visibility to public');
-        await onVisibilityChange('public');
-        console.log('✅ Visibility changed to public successfully');
-      }
-
-      // Copy the link
-      await handleCopyIconLink();
+      await onVisibilityChange('public');
+      setChoice('public');
+      setIsShared(true);
+      await handleCopyLink();
     } catch (error) {
-      console.error('❌ Error in share and copy:', {
-        chatId,
-        error: error instanceof Error ? error.message : error,
-        stack: error instanceof Error ? error.stack : undefined,
-      });
+      console.error('Error sharing chat:', error);
       toast.error('Failed to share chat');
     } finally {
       setIsChangingVisibility(false);
     }
   };
 
-  // Handle making chat private
   const handleMakePrivate = async () => {
-    console.log('🔒 Make private initiated, chatId:', chatId);
     setIsChangingVisibility(true);
 
     try {
-      console.log('📡 Changing visibility to private');
       await onVisibilityChange('private');
-      console.log('✅ Visibility changed to private successfully');
+      setChoice('private');
+      setIsShared(false);
       toast.success('Chat is now private');
-      console.log('🍞 Success toast shown: Chat is now private');
-
-      // Close dialog after successful private change
       onOpenChange(false);
-      console.log('🚪 Dialog closed after making private');
     } catch (error) {
-      console.error('❌ Error making chat private:', {
-        chatId,
-        error: error instanceof Error ? error.message : error,
-        stack: error instanceof Error ? error.stack : undefined,
-      });
+      console.error('Error making chat private:', error);
       toast.error('Failed to make chat private');
-      console.log('🍞 Error toast shown: Failed to make chat private');
     } finally {
       setIsChangingVisibility(false);
     }
   };
 
-  // Social media share handlers
   const handleShareLinkedIn = (e: React.MouseEvent) => {
     e.preventDefault();
-    console.log('📱 Sharing to LinkedIn:', shareUrl);
     const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
     window.open(linkedInUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleShareTwitter = (e: React.MouseEvent) => {
     e.preventDefault();
-    console.log('📱 Sharing to Twitter:', shareUrl);
     const twitterUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}`;
     window.open(twitterUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleShareReddit = (e: React.MouseEvent) => {
     e.preventDefault();
-    console.log('📱 Sharing to Reddit:', shareUrl);
     const redditUrl = `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}`;
     window.open(redditUrl, '_blank', 'noopener,noreferrer');
   };
 
-  // Handle native share API
   const handleNativeShare = async () => {
-    console.log('📱 Using native share API:', shareUrl);
     try {
       await navigator.share({
         title: 'Shared Datavibes Chat',
         url: shareUrl,
       });
-      console.log('✅ Native share completed');
     } catch (error) {
-      console.error('❌ Native share failed:', error);
-      // Fallback to copy
-      await handleCopyIconLink();
+      await handleCopyLink();
     }
   };
 
@@ -161,132 +133,151 @@ export function ShareDialog({
     return null;
   }
 
+  const isPublic = isShared;
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-[500px] mx-auto max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <HugeiconsIcon icon={Share03Icon} size={20} color="currentColor" strokeWidth={2} />
-            Share Chat
-          </DialogTitle>
-          <DialogDescription>
-            {selectedVisibilityType === 'private'
-              ? 'Share this chat to make it accessible to anyone with the link.'
-              : 'This chat is already shared. Anyone with the link can access it.'}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="w-100 sm:max-w-130 gap-0 p-0 border-0 shadow-lg">
+        <div className="px-6 pt-6 pb-5">
+          <DialogHeader className="space-y-1 pb-0">
+            <DialogTitle className="text-base font-semibold tracking-tight">
+              {isPublic ? 'Chat shared' : 'Share chat'}
+            </DialogTitle>
+            <p className="text-[13px] text-muted-foreground pt-0.5">
+              {isPublic ? 'Future messages aren’t included' : 'Only messages up until now will be shared'}
+            </p>
+          </DialogHeader>
+        </div>
 
-        <div className="space-y-4 p-1">
-          {/* Share URL Display and CopyIcon */}
-          {selectedVisibilityType === 'public' && (
+        <div className="px-6 pb-6 overflow-x-hidden">
+          {isPublic ? (
             <div className="space-y-4">
-              {/* Make Private Option */}
-              <div className="flex justify-between items-center px-1">
-                <h4 className="text-sm font-medium">Share Link</h4>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-8"
+              {/* Access options (interactive in shared state) */}
+              <div className="rounded-2xl border bg-card overflow-hidden">
+                <button
+                  type="button"
                   onClick={handleMakePrivate}
                   disabled={isChangingVisibility}
+                  className={cn('w-full flex items-start gap-3 px-5 py-4 text-left hover:bg-muted/50')}
                 >
-                  <LockIcon size={12} className="mr-1" />
-                  {isChangingVisibility ? 'Making Private...' : 'Make Private'}
-                </Button>
+                  <div className="mt-0.5">
+                    <LockIcon size={16} weight="fill" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Private</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Only you have access</p>
+                  </div>
+                </button>
+                <Separator />
+                <button
+                  type="button"
+                  aria-disabled
+                  className={cn('w-full flex items-start gap-3 px-5 py-4 text-left cursor-default')}
+                >
+                  <div className="mt-0.5">
+                    <GlobeIcon size={16} weight="fill" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Public access</p>
+                      <CheckIcon size={16} className="text-primary" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Anyone with the link can view</p>
+                  </div>
+                </button>
               </div>
 
-              <div className="flex items-start gap-3 bg-muted/50 rounded-md p-3 border border-border">
-                <div className="flex-1 text-xs sm:text-sm text-muted-foreground font-mono break-all word-break-break-all overflow-wrap-anywhere leading-relaxed">
-                  <div className="max-h-16 sm:max-h-12 overflow-y-auto pr-1">{shareUrl}</div>
+              {/* Link with Copy button - overflow masked under button */}
+              <div className="group relative overflow-hidden rounded-2xl border bg-muted/40 ">
+                <div className="px-4 py-3 overflow-x-hidden">
+                  <code
+                    className="text-[13px] text-foreground/70 font-medium truncate! text-wrap block"
+                    style={{
+                      maskImage: 'linear-gradient(to right, black 70%, transparent 100%)',
+                      WebkitMaskImage: 'linear-gradient(to right, black 70%, transparent 100%)',
+                    }}
+                  >
+                    {shareUrl}
+                  </code>
                 </div>
                 <Button
-                  size="icon"
-                  variant="ghost"
-                  className="size-8 flex-shrink-0"
-                  onClick={handleCopyIconLink}
-                  title="Copy to clipboard"
+                  size="sm"
+                  variant="default"
+                  onClick={handleCopyLink}
+                  className={cn(
+                    'h-9 px-3 font-medium text-xs absolute right-1 top-1/2 -translate-y-1/2',
+                    copied && 'bg-primary hover:bg-primary',
+                  )}
                 >
-                  {copied ? <CheckIcon size={16} className="text-green-500" /> : <CopyIcon size={16} />}
+                  {copied ? 'Copied' : 'Copy link'}
                 </Button>
               </div>
-
-              <p className="text-xs text-muted-foreground text-center px-1">Anyone with this link can view this chat</p>
-
-              <Separator className="my-3" />
-
-              {/* Compact Social Links and Action Buttons */}
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-3 px-1">
-                {/* Social Share Options */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">Share on:</span>
-                  {typeof navigator !== 'undefined' && 'share' in navigator && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="size-8"
-                      onClick={handleNativeShare}
-                      title="Share via system"
-                    >
-                      <HugeiconsIcon icon={Share03Icon} size={14} color="currentColor" strokeWidth={2} />
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="size-8"
-                    onClick={handleShareLinkedIn}
-                    title="Share on LinkedIn"
-                  >
-                    <LinkedinLogoIcon size={14} />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="size-8"
-                    onClick={handleShareTwitter}
-                    title="Share on X (Twitter)"
-                  >
-                    <XLogoIcon size={14} />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="size-8"
-                    onClick={handleShareReddit}
-                    title="Share on Reddit"
-                  >
-                    <RedditLogoIcon size={14} />
-                  </Button>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => onOpenChange(false)} className="min-h-[36px] text-sm">
-                    Cancel
-                  </Button>
-                  <Button onClick={handleCopyIconLink} className="min-h-[36px] text-sm">
-                    <CopyIcon size={14} className="mr-1.5" />
-                    Copy
-                  </Button>
-                </div>
-              </div>
             </div>
-          )}
+          ) : (
+            <div className="space-y-4">
+              {/* Access options */}
+              <div className="rounded-2xl border bg-card overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setChoice('private')}
+                  className={cn('w-full flex items-start gap-3 px-5 py-4 text-left hover:bg-muted/50')}
+                >
+                  <div className="mt-0.5">
+                    <LockIcon size={16} weight="fill" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Private</p>
+                      {choice === 'private' && <CheckIcon size={16} className="text-primary" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Only you have access</p>
+                  </div>
+                </button>
+                <Separator />
+                <button
+                  type="button"
+                  onClick={handleShareAndCopy}
+                  className={cn('w-full flex items-start gap-3 px-5 py-4 text-left hover:bg-muted/50')}
+                >
+                  <div className="mt-0.5">
+                    <GlobeIcon size={16} weight="fill" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Public access</p>
+                      {choice === 'public' && <CheckIcon size={16} className="text-primary" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Anyone with the link can view</p>
+                  </div>
+                </button>
+              </div>
 
-          {/* Action Buttons for Private Chats */}
-          {selectedVisibilityType === 'private' && (
-            <div className="flex flex-col sm:flex-row justify-end gap-3 px-1">
-              <Button variant="outline" onClick={() => onOpenChange(false)} className="order-2 sm:order-1 min-h-[40px]">
-                Cancel
-              </Button>
-              <Button
-                onClick={handleShareAndCopyIcon}
-                disabled={isChangingVisibility}
-                className="order-1 sm:order-2 min-h-[40px]"
-              >
-                <HugeiconsIcon icon={Share03Icon} size={16} color="currentColor" strokeWidth={2} className="mr-2" />
-                {isChangingVisibility ? 'Sharing...' : 'Share & Copy Link'}
-              </Button>
+              <p className="text-[12px] text-muted-foreground">
+                Don&apos;t share personal information or third-party content without permission, and see our
+                <span className="px-0.5" />
+                <a className="underline" href="/privacy-policy" target="_blank" rel="noreferrer">
+                  Usage Policy
+                </a>
+                .
+              </p>
+
+              <div className="flex justify-end pt-1">
+                <Button
+                  onClick={async () => {
+                    // Ensure we switch to public before creating link
+                    if (choice === 'private') {
+                      await onVisibilityChange('public');
+                    }
+                    await handleShareAndCopy();
+                  }}
+                  disabled={isChangingVisibility}
+                  className="h-10 px-4 font-medium"
+                >
+                  {isChangingVisibility ? 'Creating…' : 'Create share link'}
+                </Button>
+              </div>
             </div>
           )}
         </div>

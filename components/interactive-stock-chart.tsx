@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { ChartBarIcon } from '@phosphor-icons/react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { HugeiconsIcon } from '@hugeicons/react';
+import { HugeiconsIcon } from '@/components/ui/hugeicons';
 import { Chart03Icon } from '@hugeicons/core-free-icons';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -509,7 +509,7 @@ export const InteractiveStockChart = React.memo(
         tooltipHtml += `</div>`;
         return tooltipHtml;
       },
-      [interval, processedData, isDark],
+      [processedData, isDark],
     );
 
     // Chart options
@@ -635,7 +635,7 @@ export const InteractiveStockChart = React.memo(
           };
         }),
       };
-    }, [processedData, interval, getTooltipFormatter, isDark, isMobile]);
+    }, [processedData, getTooltipFormatter, isDark, isMobile]);
 
     // Process earnings data for individual chart visualization per company
     const createEarningsChartForCompany = useCallback(
@@ -814,7 +814,7 @@ export const InteractiveStockChart = React.memo(
     );
 
     return (
-      <div className="w-full rounded-lg border !border-primary/20 overflow-hidden shadow-none">
+      <div className="w-full rounded-lg border border-primary/20! overflow-hidden shadow-none">
         <Accordion type="single" collapsible defaultValue="open">
           <AccordionItem value="open" className="border-0">
             <AccordionTrigger className="bg-card px-3 py-2 border-b border-border/40 no-underline hover:no-underline items-center">
@@ -1200,7 +1200,7 @@ export const InteractiveStockChart = React.memo(
                                         </button>
                                       </DialogTrigger>
 
-                                      <DialogContent className="w-[70vw] overflow-hidden !max-w-none">
+                                      <DialogContent className="w-[70vw] overflow-hidden max-w-none!">
                                         <DialogHeader>
                                           <DialogTitle className="flex items-center gap-3">
                                             <FileText className="size-5" />
@@ -1258,11 +1258,11 @@ export const InteractiveStockChart = React.memo(
                                         <ScrollArea className="h-[calc(90vh-200px)] w-full">
                                           <div className="w-full p-4 overflow-x-auto">
                                             <div
-                                              className="prose prose-sm dark:prose-invert !max-w-none w-full
+                                              className="prose prose-sm dark:prose-invert max-w-none! w-full
                                                prose-table:min-w-full prose-table:w-auto prose-table:table prose-table:whitespace-nowrap
                                                prose-pre:overflow-x-auto prose-pre:whitespace-pre-wrap prose-pre:break-all
-                                               prose-p:break-words prose-h1:break-words prose-h2:break-words prose-h3:break-words
-                                               prose-h4:break-words prose-h5:break-words prose-h6:break-words
+                                               prose-p:wrap-break-word prose-h1:wrap-break-word prose-h2:wrap-break-word prose-h3:wrap-break-word
+                                               prose-h4:wrap-break-word prose-h5:wrap-break-word prose-h6:wrap-break-word
                                                [&_table]:min-w-full [&_table]:w-auto [&_table]:table [&_table]:border-collapse
                                                [&_td]:px-2 [&_td]:py-1 [&_td]:border [&_td]:border-border/30
                                                [&_th]:px-2 [&_th]:py-1 [&_th]:border [&_th]:border-border/30 [&_th]:bg-muted/30"
@@ -2172,6 +2172,7 @@ export const InteractiveStockChart = React.memo(
                                     <div className="flex items-center justify-between mt-1.5">
                                       <div className="flex items-center gap-1">
                                         <div className="relative w-3 h-3 rounded-sm bg-muted/50 flex items-center justify-center overflow-hidden">
+                                          {/* eslint-disable-next-line @next/next/no-img-element */}
                                           <img
                                             src={`https://www.google.com/s2/favicons?sz=128&domain=${new URL(news.url).hostname}`}
                                             alt=""
@@ -2249,6 +2250,7 @@ export const InteractiveStockChart = React.memo(
                                     <div className="flex items-center justify-between mt-1.5">
                                       <div className="flex items-center gap-1">
                                         <div className="relative w-3 h-3 rounded-sm bg-muted/50 flex items-center justify-center overflow-hidden">
+                                          {/* eslint-disable-next-line @next/next/no-img-element */}
                                           <img
                                             src={`https://www.google.com/s2/favicons?sz=128&domain=${
                                               new URL(news.url).hostname
