@@ -1,17 +1,16 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { authClient, betterauthClient } from '@/lib/auth-client';
-import { ArrowRight, ArrowLeft, GraduationCap } from 'lucide-react';
-import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, ArrowRight, GraduationCap } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import { PRICING, SEARCH_LIMITS } from '@/lib/constants';
 import { getDiscountConfigAction } from '@/app/actions';
-import { DiscountConfig } from '@/lib/discount';
+import type { DiscountConfig } from '@/lib/discount';
 import { useLocation } from '@/hooks/use-location';
-import { ComprehensiveUserData } from '@/lib/user-data-server';
+import type { ComprehensiveUserData } from '@/lib/user-data-server';
 import { StudentDomainRequestButton } from '@/components/student-domain-request-button';
 import { SupportedDomainsList } from '@/components/supported-domains-list';
 import { SciraLogo } from '@/components/logos/scira-logo';
@@ -27,7 +26,6 @@ type SubscriptionDetails = {
   currentPeriodEnd: Date;
   cancelAtPeriodEnd: boolean;
   canceledAt: Date | null;
-  organizationId: string | null;
 };
 
 type SubscriptionDetailsResult = {
@@ -70,78 +68,45 @@ export default function PricingTable({ subscriptionDetails, user }: PricingTable
     };
 
     fetchDiscountConfig();
-  }, [location.isIndia, user?.email, derivedIsIndianStudentEmail]);
+  }, [derivedIsIndianStudentEmail, location.isIndia, user?.email]);
 
-  // Helper function to get student discount price
-  const getStudentPrice = (isINR: boolean = false) => {
-    if (!discountConfig.enabled || !discountConfig.isStudentDiscount) {
+  const hasProAccess = Boolean(user?.isProUser || subscriptionDetails.subscription?.status === 'active');
+  const hasStudentDiscount = Boolean(discountConfig.enabled && discountConfig.isStudentDiscount);
+
+  const getStudentPrice = (isInr: boolean) => {
+    if (!hasStudentDiscount) {
       return null;
     }
 
-    if (isINR) {
-      return discountConfig.inrPrice || null;
-    } else {
-      return discountConfig.finalPrice || null;
-    }
+    return isInr ? discountConfig.inrPrice || null : discountConfig.finalPrice || null;
   };
 
-  // Check if student discount is active
-  const hasStudentDiscount = () => {
-    return discountConfig.enabled && discountConfig.isStudentDiscount;
-  };
-
-  const handleCheckout = async (_productId: string, _slug: string, _paymentMethod?: 'dodo' | 'polar') => {
+  const handleCheckout = async () => {
     if (!user) {
       router.push('/sign-up');
       return;
     }
 
     try {
-      // Use DodoPayments checkout for all new subscriptions
       toast.loading('Redirecting to checkout...');
 
-      const { data: checkout, error } = await betterauthClient.dodopayments.checkoutSession({
-        slug: process.env.NEXT_PUBLIC_PREMIUM_SLUG,
-        customer: {
-          email: user.email || '',
-          name: user.name || '',
+      const response = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        billing_currency: location.isIndia ? 'INR' : 'USD',
-        allowed_payment_method_types: [
-          'credit',
-          'debit',
-          'upi_collect',
-          'upi_intent',
-          'apple_pay',
-          'google_pay',
-          'amazon_pay',
-          'sepa',
-          'ach',
-          'klarna',
-          'affirm',
-          'afterpay_clearpay',
-        ],
-        referenceId: `order_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-        ...(hasStudentDiscount() && discountConfig.dodoDiscountId && { discount_code: 'SCIRASTUD' }),
+        body: JSON.stringify({
+          isIndianUser: location.isIndia || derivedIsIndianStudentEmail,
+        }),
       });
 
-      if (error) {
-        toast.dismiss();
-        throw new Error(error.message || 'Checkout failed');
+      const payload = await response.json();
+      if (!response.ok || !payload?.url) {
+        throw new Error(payload?.error || 'Checkout failed');
       }
 
-      if (checkout?.url) {
-        // Show success message for student discount
-        if (hasStudentDiscount()) {
-          toast.dismiss();
-          toast.success('🎓 Student discount applied!');
-        }
-        // Redirect to DodoPayments checkout
-        window.location.href = checkout.url;
-      } else {
-        toast.dismiss();
-        throw new Error('No checkout URL received');
-      }
+      toast.dismiss();
+      window.location.href = payload.url;
     } catch (error) {
       console.error('Checkout failed:', error);
       toast.dismiss();
@@ -151,294 +116,227 @@ export default function PricingTable({ subscriptionDetails, user }: PricingTable
 
   const handleManageSubscription = async () => {
     try {
-      const proSource = getProAccessSource();
-      if (proSource === 'dodo') {
-        await betterauthClient.dodopayments.customer.portal();
-      } else {
-        await authClient.customer.portal();
+      const response = await fetch('/api/billing/portal', {
+        method: 'POST',
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload?.url) {
+        throw new Error(payload?.error || 'Failed to open billing portal');
       }
+
+      window.location.href = payload.url;
     } catch (error) {
-      console.error('Failed to open customer portal:', error);
-      toast.error('Failed to open subscription management');
+      console.error('Failed to open billing portal:', error);
+      toast.error('Failed to open billing portal');
     }
   };
 
-  const STARTER_TIER = process.env.NEXT_PUBLIC_STARTER_TIER;
-  const STARTER_SLUG = process.env.NEXT_PUBLIC_STARTER_SLUG;
-
-  if (!STARTER_TIER || !STARTER_SLUG) {
-    console.error('Missing required environment variables');
-    throw new Error('Missing required environment variables for Starter tier');
-  }
-
-  // Check if user has active Polar subscription
-  const hasPolarSubscription = () => {
-    return (
-      subscriptionDetails.hasSubscription &&
-      subscriptionDetails.subscription?.productId === STARTER_TIER &&
-      subscriptionDetails.subscription?.status === 'active'
-    );
-  };
-
-  // Check if user has active Dodo payments subscription
-  const hasDodoSubscription = () => {
-    return user?.isProUser === true && user?.proSource === 'dodo';
-  };
-
-  // Check if user has any Pro status (Polar or DodoPayments)
-  const hasProAccess = () => {
-    const polarAccess = hasPolarSubscription();
-    const dodoAccess = hasDodoSubscription();
-    return polarAccess || dodoAccess;
-  };
-
-  // Get the source of Pro access for display
-  const getProAccessSource = () => {
-    if (hasPolarSubscription()) return 'polar';
-    if (hasDodoSubscription()) return 'dodo';
-    return null;
-  };
-
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('en-US', {
+  const formatDate = (date: Date) =>
+    new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
-  };
+
+  const proPriceLabel =
+    location.isIndia || derivedIsIndianStudentEmail
+      ? hasStudentDiscount && getStudentPrice(true)
+        ? `Subscribe INR ${getStudentPrice(true)}/month`
+        : `Subscribe INR ${PRICING.PRO_MONTHLY_INR}/month`
+      : hasStudentDiscount && getStudentPrice(false)
+        ? `Subscribe USD ${getStudentPrice(false)}/month`
+        : 'Subscribe USD 15/month';
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between h-14 px-6">
-            <Link href="/" className="flex items-center gap-2.5 group">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm">
+        <div className="mx-auto max-w-4xl">
+          <div className="flex h-14 items-center justify-between px-6">
+            <Link href="/" className="group flex items-center gap-2.5">
               <SciraLogo className="size-5 transition-transform duration-300 group-hover:scale-110" />
-              <span className="text-lg font-light tracking-tighter font-be-vietnam-pro">Datavibes</span>
+              <span className="font-be-vietnam-pro text-lg font-light tracking-tighter">Datavibes</span>
             </Link>
             <Link
               href="/"
-              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
+              <ArrowLeft className="h-3.5 w-3.5" />
               Back
             </Link>
           </div>
         </div>
       </header>
 
-      {/* Hero */}
-      <div className="max-w-4xl mx-auto px-6 pt-16 pb-12">
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground tracking-wide mb-3">Plans</p>
-          <h1 className="text-3xl sm:text-4xl font-light tracking-tight text-foreground font-be-vietnam-pro mb-4">
-            Pricing
-          </h1>
-          <p className="text-base text-muted-foreground">Choose the plan that works for you</p>
-        </div>
+      <div className="mx-auto max-w-4xl px-6 pb-12 pt-16 text-center">
+        <p className="mb-3 text-xs tracking-wide text-muted-foreground">Plans</p>
+        <h1 className="font-be-vietnam-pro mb-4 text-3xl font-light tracking-tight text-foreground sm:text-4xl">
+          Pricing
+        </h1>
+        <p className="text-base text-muted-foreground">Choose the plan that works for you</p>
       </div>
 
-      {/* Pricing Cards */}
-      <div className="max-w-4xl mx-auto px-6 pb-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-border border border-border max-w-3xl mx-auto">
-          {/* Free Plan */}
-          <div className="bg-background p-8 flex flex-col">
-            <h3 className="text-lg font-medium mb-2 text-foreground">Free</h3>
-            <p className="text-sm text-muted-foreground mb-6">Get started with essential features</p>
-            <div className="flex items-baseline mb-8">
-              <span className="text-4xl font-light tracking-tight text-foreground font-be-vietnam-pro">$0</span>
-              <span className="text-sm text-muted-foreground ml-2">/month</span>
+      <div className="mx-auto max-w-4xl px-6 pb-20">
+        <div className="mx-auto grid max-w-3xl grid-cols-1 gap-px border border-border bg-border md:grid-cols-2">
+          <div className="flex flex-col bg-background p-8">
+            <h3 className="mb-2 text-lg font-medium text-foreground">Free</h3>
+            <p className="mb-6 text-sm text-muted-foreground">Get started with essential features</p>
+            <div className="mb-8 flex items-baseline">
+              <span className="font-be-vietnam-pro text-4xl font-light tracking-tight text-foreground">$0</span>
+              <span className="ml-2 text-sm text-muted-foreground">/month</span>
             </div>
 
-            <ul className="space-y-3 mb-8 flex-1">
+            <ul className="mb-8 flex-1 space-y-3">
               <li className="flex items-start gap-3 text-sm text-muted-foreground">
-                <span className="w-1 h-1 rounded-full bg-foreground/40 mt-2 shrink-0" />
+                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground/40" />
                 {SEARCH_LIMITS.DAILY_SEARCH_LIMIT} searches per day
               </li>
               <li className="flex items-start gap-3 text-sm text-muted-foreground">
-                <span className="w-1 h-1 rounded-full bg-foreground/40 mt-2 shrink-0" />
+                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground/40" />
                 Basic AI models
               </li>
               <li className="flex items-start gap-3 text-sm text-muted-foreground">
-                <span className="w-1 h-1 rounded-full bg-foreground/40 mt-2 shrink-0" />
+                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground/40" />
                 Search history
               </li>
             </ul>
 
-            <Button variant="outline" className="w-full h-11 rounded-none" disabled={!hasProAccess()}>
-              {!hasProAccess() ? 'Current plan' : 'Free plan'}
+            <Button variant="outline" className="h-11 w-full rounded-none" disabled={!hasProAccess}>
+              {!hasProAccess ? 'Current plan' : 'Free plan'}
             </Button>
           </div>
 
-          {/* Pro Plan */}
-          <div className="bg-muted/20 p-8 flex flex-col relative">
-            {hasProAccess() && (
-              <div className="absolute top-4 right-4">
-                <span className="text-[10px] uppercase tracking-wider text-foreground border border-foreground px-2 py-1">
+          <div className="relative flex flex-col bg-muted/20 p-8">
+            {hasProAccess && (
+              <div className="absolute right-4 top-4">
+                <span className="border border-foreground px-2 py-1 text-[10px] uppercase tracking-wider text-foreground">
                   Current
                 </span>
               </div>
             )}
-            {!hasProAccess() && hasStudentDiscount() && (
-              <div className="absolute top-4 right-4">
-                <span className="text-[10px] uppercase tracking-wider text-green-600 dark:text-green-400 border border-green-600 dark:border-green-400 px-2 py-1">
+            {!hasProAccess && hasStudentDiscount && (
+              <div className="absolute right-4 top-4">
+                <span className="border border-green-600 px-2 py-1 text-[10px] uppercase tracking-wider text-green-600 dark:border-green-400 dark:text-green-400">
                   Student
                 </span>
               </div>
             )}
 
-            <div className="flex items-center gap-3 mb-2">
+            <div className="mb-2 flex items-center gap-3">
               <h3 className="text-lg font-medium text-foreground">Pro</h3>
-              {!hasProAccess() && !hasStudentDiscount() && (
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border px-2 py-0.5">
+              {!hasProAccess && !hasStudentDiscount && (
+                <span className="border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
                   Popular
                 </span>
               )}
             </div>
-            <p className="text-sm text-muted-foreground mb-6">Everything for serious research</p>
+            <p className="mb-6 text-sm text-muted-foreground">Everything for serious research</p>
 
-            {/* Pricing Display */}
             <div className="mb-8">
-              {hasProAccess() ? (
-                getProAccessSource() === 'dodo' ? (
-                  <div className="flex items-baseline">
-                    <span className="text-4xl font-light tracking-tight text-foreground font-be-vietnam-pro">
-                      ₹{PRICING.PRO_MONTHLY_INR}
-                    </span>
-                    <span className="text-sm text-muted-foreground ml-2">(excl. GST)/month</span>
-                  </div>
-                ) : (
-                  <div className="flex items-baseline">
-                    <span className="text-4xl font-light tracking-tight text-foreground font-be-vietnam-pro">$15</span>
-                    <span className="text-sm text-muted-foreground ml-2">/month</span>
-                  </div>
-                )
+              {hasProAccess ? (
+                <div className="flex items-baseline">
+                  <span className="font-be-vietnam-pro text-4xl font-light tracking-tight text-foreground">
+                    {location.isIndia || derivedIsIndianStudentEmail ? `INR ${PRICING.PRO_MONTHLY_INR}` : 'USD 15'}
+                  </span>
+                  <span className="ml-2 text-sm text-muted-foreground">/month</span>
+                </div>
               ) : location.isIndia || derivedIsIndianStudentEmail ? (
                 <div className="space-y-1">
                   <div className="flex items-baseline">
                     {getStudentPrice(true) ? (
                       <>
-                        <span className="text-xl text-muted-foreground line-through mr-2">
-                          ₹{PRICING.PRO_MONTHLY_INR}
+                        <span className="mr-2 text-xl text-muted-foreground line-through">
+                          INR {PRICING.PRO_MONTHLY_INR}
                         </span>
-                        <span className="text-4xl font-light tracking-tight text-foreground font-be-vietnam-pro">
-                          ₹{getStudentPrice(true)}
+                        <span className="font-be-vietnam-pro text-4xl font-light tracking-tight text-foreground">
+                          INR {getStudentPrice(true)}
                         </span>
                       </>
                     ) : (
-                      <span className="text-4xl font-light tracking-tight text-foreground font-be-vietnam-pro">
-                        ₹{PRICING.PRO_MONTHLY_INR}
+                      <span className="font-be-vietnam-pro text-4xl font-light tracking-tight text-foreground">
+                        INR {PRICING.PRO_MONTHLY_INR}
                       </span>
                     )}
-                    <span className="text-sm text-muted-foreground ml-2">(excl. GST)/month</span>
+                    <span className="ml-2 text-sm text-muted-foreground">/month</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">Approx. $15/month</p>
+                  <p className="text-xs text-muted-foreground">Approx. USD 15/month</p>
                 </div>
               ) : (
                 <div className="space-y-1">
                   <div className="flex items-baseline">
                     {getStudentPrice(false) ? (
                       <>
-                        <span className="text-xl text-muted-foreground line-through mr-2">$15</span>
-                        <span className="text-4xl font-light tracking-tight text-foreground font-be-vietnam-pro">
-                          ${getStudentPrice(false)}
+                        <span className="mr-2 text-xl text-muted-foreground line-through">USD 15</span>
+                        <span className="font-be-vietnam-pro text-4xl font-light tracking-tight text-foreground">
+                          USD {getStudentPrice(false)}
                         </span>
                       </>
                     ) : (
-                      <span className="text-4xl font-light tracking-tight text-foreground font-be-vietnam-pro">
-                        $15
+                      <span className="font-be-vietnam-pro text-4xl font-light tracking-tight text-foreground">
+                        USD 15
                       </span>
                     )}
-                    <span className="text-sm text-muted-foreground ml-2">/month</span>
+                    <span className="ml-2 text-sm text-muted-foreground">/month</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">Approx. ₹{PRICING.PRO_MONTHLY_INR}/month</p>
+                  <p className="text-xs text-muted-foreground">Approx. INR {PRICING.PRO_MONTHLY_INR}/month</p>
                 </div>
               )}
             </div>
 
-            <ul className="space-y-3 mb-8 flex-1">
+            <ul className="mb-8 flex-1 space-y-3">
               <li className="flex items-start gap-3 text-sm text-foreground/80">
-                <span className="w-1 h-1 rounded-full bg-foreground mt-2 shrink-0" />
+                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground" />
                 Unlimited searches
               </li>
               <li className="flex items-start gap-3 text-sm text-foreground/80">
-                <span className="w-1 h-1 rounded-full bg-foreground mt-2 shrink-0" />
+                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground" />
                 All AI models
               </li>
               <li className="flex items-start gap-3 text-sm text-foreground/80">
-                <span className="w-1 h-1 rounded-full bg-foreground mt-2 shrink-0" />
+                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground" />
                 PDF analysis
               </li>
               <li className="flex items-start gap-3 text-sm text-foreground/80">
-                <span className="w-1 h-1 rounded-full bg-foreground mt-2 shrink-0" />
+                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground" />
                 Priority support
               </li>
               <li className="flex items-start gap-3 text-sm text-foreground/80">
-                <span className="w-1 h-1 rounded-full bg-foreground mt-2 shrink-0" />
+                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground" />
                 Datavibes Lookout
               </li>
             </ul>
 
-            {hasProAccess() ? (
+            {hasProAccess ? (
               <div className="space-y-3">
-                <Button className="w-full h-11 rounded-none" onClick={handleManageSubscription}>
-                  {getProAccessSource() === 'dodo' ? 'Manage payment' : 'Manage subscription'}
+                <Button className="h-11 w-full rounded-none" onClick={handleManageSubscription}>
+                  Manage billing
                 </Button>
-                {getProAccessSource() === 'polar' && subscriptionDetails.subscription && (
-                  <p className="text-xs text-muted-foreground text-center">
+                {subscriptionDetails.subscription && (
+                  <p className="text-center text-xs text-muted-foreground">
                     {subscriptionDetails.subscription.cancelAtPeriodEnd
                       ? `Expires ${formatDate(subscriptionDetails.subscription.currentPeriodEnd)}`
                       : `Renews ${formatDate(subscriptionDetails.subscription.currentPeriodEnd)}`}
                   </p>
                 )}
-                {getProAccessSource() === 'dodo' && user?.dodoSubscription?.expiresAt && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    Expires {formatDate(new Date(user.dodoSubscription.expiresAt))}
-                  </p>
-                )}
               </div>
             ) : !user ? (
-              <Button
-                className="w-full h-11 rounded-none group"
-                onClick={() => handleCheckout(STARTER_TIER, STARTER_SLUG)}
-              >
+              <Button className="group h-11 w-full rounded-none" onClick={handleCheckout}>
                 Sign up for Pro
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             ) : (
               <div className="space-y-3">
-                <Button
-                  className="w-full h-11 rounded-none group"
-                  onClick={() => handleCheckout(STARTER_TIER, STARTER_SLUG, 'dodo')}
-                  disabled={location.loading}
-                >
-                  {location.loading
-                    ? 'Loading...'
-                    : location.isIndia || derivedIsIndianStudentEmail
-                      ? getStudentPrice(true)
-                        ? `Subscribe ₹${getStudentPrice(true)}/month`
-                        : `Subscribe ₹${PRICING.PRO_MONTHLY_INR}/month`
-                      : getStudentPrice(false)
-                        ? `Subscribe $${getStudentPrice(false)}/month`
-                        : 'Subscribe $15/month'}
+                <Button className="group h-11 w-full rounded-none" onClick={handleCheckout} disabled={location.loading}>
+                  {location.loading ? 'Loading...' : proPriceLabel}
                   {!location.loading && (
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   )}
                 </Button>
-                <p className="text-xs text-center text-muted-foreground">
-                  {location.isIndia || derivedIsIndianStudentEmail
-                    ? 'UPI, Cards, Net Banking & more'
-                    : 'Credit/Debit Cards, UPI & more'}{' '}
-                  (auto-renews monthly)
+                <p className="text-center text-xs text-muted-foreground">
+                  Secure card checkout via Stripe. Subscription renews monthly.
                 </p>
-                {(location.isIndia || derivedIsIndianStudentEmail) && (
-                  <p className="text-xs text-center text-amber-600 dark:text-amber-400">
-                    Tip: UPI payments have a higher success rate on PC/Desktop
-                  </p>
-                )}
-                {hasStudentDiscount() && discountConfig.message && (
-                  <p className="text-xs text-green-600 dark:text-green-400 text-center font-medium">
+                {hasStudentDiscount && discountConfig.message && (
+                  <p className="text-center text-xs font-medium text-green-600 dark:text-green-400">
                     {discountConfig.message}
                   </p>
                 )}
@@ -447,19 +345,17 @@ export default function PricingTable({ subscriptionDetails, user }: PricingTable
           </div>
         </div>
 
-        {/* Student Discount Section */}
-        {!hasStudentDiscount() && (
-          <div className="max-w-3xl mx-auto mt-8 p-6 border border-border">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {!hasStudentDiscount && (
+          <div className="mx-auto mt-8 max-w-3xl border border-border p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-4">
-                <GraduationCap className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <GraduationCap className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
                 <div>
-                  <h3 className="text-sm font-medium mb-1">Student discount available</h3>
+                  <h3 className="mb-1 text-sm font-medium">Student discount available</h3>
                   <p className="text-xs text-muted-foreground">
                     {location.isIndia || derivedIsIndianStudentEmail
-                      ? 'Get Pro for just ₹450/month (approx. $5)!'
-                      : 'Get Pro for just $5/month (approx. ₹450)!'}{' '}
-                    Sign up with your university email.
+                      ? 'Get Pro for just INR 450/month. Sign up with your university email.'
+                      : 'Get Pro for just USD 5/month. Sign up with your university email.'}
                   </p>
                 </div>
               </div>
@@ -471,27 +367,21 @@ export default function PricingTable({ subscriptionDetails, user }: PricingTable
           </div>
         )}
 
-        {/* Student Discount Active */}
-        {hasStudentDiscount() && !hasProAccess() && (
-          <div className="max-w-3xl mx-auto mt-8 p-6 border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10">
+        {hasStudentDiscount && !hasProAccess && (
+          <div className="mx-auto mt-8 max-w-3xl border border-green-200 bg-green-50/50 p-6 dark:border-green-800 dark:bg-green-900/10">
             <div className="flex items-start gap-4">
-              <GraduationCap className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+              <GraduationCap className="mt-0.5 h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
               <div>
-                <h3 className="text-sm font-medium mb-1 text-green-700 dark:text-green-300">Student discount active</h3>
+                <h3 className="mb-1 text-sm font-medium text-green-700 dark:text-green-300">Student discount active</h3>
                 <p className="text-xs text-muted-foreground">
-                  Your university email has been recognized. Get Pro for{' '}
-                  {location.isIndia || derivedIsIndianStudentEmail
-                    ? `₹${getStudentPrice(true) || 450}/month`
-                    : `$${getStudentPrice(false) || 5}/month`}
-                  . Discount applied automatically at checkout.
+                  Your university email qualifies for discounted Stripe checkout pricing.
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Footer */}
-        <div className="max-w-3xl mx-auto mt-16 text-center space-y-4">
+        <div className="mx-auto mt-16 max-w-3xl space-y-4 text-center">
           <p className="text-xs text-muted-foreground">
             By subscribing, you agree to our{' '}
             <Link href="/terms" className="text-foreground hover:underline">
@@ -502,36 +392,29 @@ export default function PricingTable({ subscriptionDetails, user }: PricingTable
               Privacy Policy
             </Link>
           </p>
-          <p className="text-xs text-muted-foreground">
-            Questions?{' '}
-            <a href="mailto:zaid@scira.ai" className="text-foreground hover:underline">
-              zaid@scira.ai
-            </a>
-          </p>
         </div>
       </div>
 
-      {/* Page Footer */}
       <footer className="border-t border-border">
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="flex items-center justify-between h-14">
+        <div className="mx-auto max-w-4xl px-6">
+          <div className="flex h-14 items-center justify-between">
             <div className="flex items-center gap-3">
               <SciraLogo className="size-4" />
               <span className="text-xs text-muted-foreground">© {new Date().getFullYear()} Datavibes AI</span>
             </div>
             <div className="flex items-center gap-6">
-              <Link href="/" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              <Link href="/" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
                 Home
               </Link>
-              <Link href="/about" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              <Link href="/about" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
                 About
               </Link>
-              <Link href="/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              <Link href="/terms" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
                 Terms
               </Link>
               <Link
                 href="/privacy-policy"
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="text-xs text-muted-foreground transition-colors hover:text-foreground"
               >
                 Privacy
               </Link>

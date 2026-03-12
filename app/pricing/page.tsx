@@ -7,13 +7,11 @@ import PricingTable from './_component/pricing-table';
 export default async function PricingPage() {
   const user = await getCurrentUser();
 
-  // Extract subscription details from unified user data
-  const subscriptionDetails = user?.polarSubscription
+  const subscriptionDetails = user?.subscription
     ? {
         hasSubscription: true,
         subscription: {
-          ...user.polarSubscription,
-          organizationId: null,
+          ...user.subscription,
         },
       }
     : { hasSubscription: false };

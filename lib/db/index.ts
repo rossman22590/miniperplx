@@ -15,25 +15,35 @@ const poolConfig = {
 
 let cache: RedisDrizzleCache | undefined;
 
-try {
-  const redis = new Redis(serverEnv.REDIS_URL, {
-    lazyConnect: true,
-    maxRetriesPerRequest: 1,
-    enableOfflineQueue: false,
-  });
+function canUseRedisCache(url: string | undefined) {
+  if (!url || process.env.NODE_ENV !== 'production') {
+    return false;
+  }
 
-  redis.on('error', (error) => {
-    console.error('Drizzle cache Redis unavailable:', error);
-  });
+  return /^rediss?:\/\//.test(url);
+}
 
-  cache = new RedisDrizzleCache({
-    redis,
-    defaultTtl: 20,
-    strategy: 'explicit',
-    namespace: 'scira:drizzle',
-  });
-} catch (error) {
-  console.error('Failed to initialize Drizzle cache:', error);
+if (canUseRedisCache(serverEnv.REDIS_URL)) {
+  try {
+    const redis = new Redis(serverEnv.REDIS_URL, {
+      lazyConnect: true,
+      maxRetriesPerRequest: 1,
+      enableOfflineQueue: false,
+    });
+
+    redis.on('error', (error) => {
+      console.error('Drizzle cache Redis unavailable:', error);
+    });
+
+    cache = new RedisDrizzleCache({
+      redis,
+      defaultTtl: 20,
+      strategy: 'explicit',
+      namespace: 'scira:drizzle',
+    });
+  } catch (error) {
+    console.error('Failed to initialize Drizzle cache:', error);
+  }
 }
 
 function createDatabase(connectionString: string) {

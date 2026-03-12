@@ -37,19 +37,9 @@ export function useUserData() {
     isProUser: Boolean(userData?.isProUser),
     proSource: userData?.proSource || 'none',
     subscriptionStatus: userData?.subscriptionStatus || 'none',
+    subscription: userData?.subscription,
 
-    // Polar subscription details
-    polarSubscription: userData?.polarSubscription,
-    hasPolarSubscription: Boolean(userData?.polarSubscription),
-
-    // Dodo Subscription details
-    dodoSubscription: userData?.dodoSubscription,
-    hasDodoSubscription: Boolean(userData?.dodoSubscription?.hasSubscriptions),
-    dodoExpiresAt: userData?.dodoSubscription?.expiresAt,
-    isDodoExpiring: Boolean(userData?.dodoSubscription?.isExpiringSoon),
-    isDodoExpired: Boolean(userData?.dodoSubscription?.isExpired),
-
-    // Subscription history
+    // Normalized subscription data
     subscriptionHistory: userData?.subscriptionHistory || [],
 
     // Rate limiting helpers
@@ -62,28 +52,21 @@ export function useUserData() {
     isSubscriptionExpired: userData?.subscriptionStatus === 'expired',
     hasNoSubscription: userData?.subscriptionStatus === 'none',
 
-    // Legacy compatibility helpers
-    subscriptionData: userData?.polarSubscription
+    // Legacy compatibility helpers during the Stripe cutover
+    polarSubscription: userData?.subscription || userData?.polarSubscription,
+    hasPolarSubscription: Boolean(userData?.subscription || userData?.polarSubscription),
+    dodoSubscription: userData?.dodoSubscription,
+    hasDodoSubscription: false,
+    dodoExpiresAt: userData?.dodoSubscription?.expiresAt,
+    isDodoExpiring: Boolean(userData?.dodoSubscription?.isExpiringSoon),
+    isDodoExpired: Boolean(userData?.dodoSubscription?.isExpired),
+    subscriptionData: userData?.subscription
       ? {
           hasSubscription: true,
-          subscription: userData.polarSubscription,
+          subscription: userData.subscription,
         }
       : { hasSubscription: false },
-
-    // Map dodoSubscription to legacy dodoProStatus structure for settings dialog
-    dodoProStatus: userData?.dodoSubscription
-      ? {
-          isProUser: userData.proSource === 'dodo' && userData.isProUser,
-          hasSubscriptions: userData.dodoSubscription.hasSubscriptions,
-          expiresAt: userData.dodoSubscription.expiresAt,
-          mostRecentSubscription: userData.dodoSubscription.mostRecentSubscription,
-          daysUntilExpiration: userData.dodoSubscription.daysUntilExpiration,
-          isExpired: userData.dodoSubscription.isExpired,
-          isExpiringSoon: userData.dodoSubscription.isExpiringSoon,
-          source: userData.proSource,
-        }
-      : null,
-
+    dodoProStatus: null,
     expiresAt: userData?.dodoSubscription?.expiresAt,
   };
 }
