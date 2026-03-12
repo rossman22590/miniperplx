@@ -4,9 +4,9 @@ import { Geist_Mono } from 'next/font/google';
 import { highlight } from 'sugar-high';
 import Image from 'next/image';
 import Link from 'next/link';
-import Latex from 'react-latex-next';
 import Marked, { ReactRenderer } from 'marked-react';
 import { Lexer } from 'marked';
+import { BlockMath, InlineMath } from 'react-katex';
 import React, { useCallback, useMemo, useState, Fragment, useRef, lazy, Suspense, useEffect, use } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -547,7 +547,7 @@ const useProcessedContent = (content: string) => {
           rebuilt += modifiedContent.slice(lastPos);
           modifiedContent = rebuilt;
         }
-      } catch { }
+      } catch {}
 
       // Process citations (simplified for performance)
       // Updated regex to handle brackets and exclamation marks in citation text
@@ -591,7 +591,9 @@ const useProcessedContent = (content: string) => {
 
       // Helper function to extract links using marked's Lexer (handles all edge cases)
       // Uses a hybrid approach: Lexer to parse links correctly, then finds positions in text
-      function extractLinksWithLexer(text: string): Array<{ raw: string; href: string; text: string; index: number; end: number }> {
+      function extractLinksWithLexer(
+        text: string,
+      ): Array<{ raw: string; href: string; text: string; index: number; end: number }> {
         const links: Array<{ raw: string; href: string; text: string; index: number; end: number }> = [];
 
         try {
@@ -602,13 +604,12 @@ const useProcessedContent = (content: string) => {
           const linkTokens: Array<{ href: string; text: string; raw: string }> = [];
           for (const token of tokens) {
             if (token.type === 'link') {
-              const linkText = typeof token.text === 'string'
-                ? token.text
-                : (token.tokens?.map(t => t.raw || '').join('') || '');
+              const linkText =
+                typeof token.text === 'string' ? token.text : token.tokens?.map((t) => t.raw || '').join('') || '';
               linkTokens.push({
                 href: token.href,
                 text: linkText,
-                raw: token.raw
+                raw: token.raw,
               });
             }
           }
@@ -630,8 +631,12 @@ const useProcessedContent = (content: string) => {
               let isValidated = false;
               try {
                 const validateTokens = Lexer.lexInline(match[0]);
-                const validateLink = validateTokens.find(t => t.type === 'link');
-                if (validateLink && 'href' in validateLink && (validateLink as { href: string }).href === linkToken.href) {
+                const validateLink = validateTokens.find((t) => t.type === 'link');
+                if (
+                  validateLink &&
+                  'href' in validateLink &&
+                  (validateLink as { href: string }).href === linkToken.href
+                ) {
                   isValidated = true;
                 }
               } catch {
@@ -645,7 +650,7 @@ const useProcessedContent = (content: string) => {
                   href: linkToken.href,
                   text: linkToken.text,
                   index: match.index!,
-                  end: match.index! + match[0].length
+                  end: match.index! + match[0].length,
                 });
                 searchPos = match.index! + match[0].length;
                 continue;
@@ -660,7 +665,7 @@ const useProcessedContent = (content: string) => {
                 href: linkToken.href,
                 text: linkToken.text,
                 index: rawIndex,
-                end: rawIndex + linkToken.raw.length
+                end: rawIndex + linkToken.raw.length,
               });
               searchPos = rawIndex + linkToken.raw.length;
             } else {
@@ -691,7 +696,7 @@ const useProcessedContent = (content: string) => {
                       href: linkToken.href,
                       text: matchFromBracket[1],
                       index: absoluteIndex,
-                      end: absoluteIndex + matchFromBracket[0].length
+                      end: absoluteIndex + matchFromBracket[0].length,
                     });
                     searchPos = absoluteIndex + matchFromBracket[0].length;
                     linkFound = true;
@@ -706,7 +711,7 @@ const useProcessedContent = (content: string) => {
                         href: linkToken.href,
                         text: windowMatch[1],
                         index: absoluteIndex,
-                        end: absoluteIndex + windowMatch[0].length
+                        end: absoluteIndex + windowMatch[0].length,
                       });
                       searchPos = absoluteIndex + windowMatch[0].length;
                       linkFound = true;
@@ -723,7 +728,7 @@ const useProcessedContent = (content: string) => {
                       href: linkToken.href,
                       text: windowMatch[1],
                       index: absoluteIndex,
-                      end: absoluteIndex + windowMatch[0].length
+                      end: absoluteIndex + windowMatch[0].length,
                     });
                     searchPos = absoluteIndex + windowMatch[0].length;
                     linkFound = true;
@@ -759,7 +764,7 @@ const useProcessedContent = (content: string) => {
               href: match[2],
               text: match[1].replace(/\\(.)/g, '$1'), // Unescape
               index: match.index,
-              end: match.index + match[0].length
+              end: match.index + match[0].length,
             });
           }
         }
@@ -791,7 +796,7 @@ const useProcessedContent = (content: string) => {
               groups.push({
                 links: currentGroup,
                 startIndex: currentGroup[0].index,
-                endIndex: currentGroup[currentGroup.length - 1].end
+                endIndex: currentGroup[currentGroup.length - 1].end,
               });
             }
             // Start new group
@@ -804,7 +809,7 @@ const useProcessedContent = (content: string) => {
           groups.push({
             links: currentGroup,
             startIndex: currentGroup[0].index,
-            endIndex: currentGroup[currentGroup.length - 1].end
+            endIndex: currentGroup[currentGroup.length - 1].end,
           });
         }
 
@@ -813,8 +818,8 @@ const useProcessedContent = (content: string) => {
           let groupProcessed = modifiedContent;
           for (let g = groups.length - 1; g >= 0; g--) {
             const group = groups[g];
-            const urls = group.links.map(l => l.href);
-            const texts = group.links.map(l => l.text);
+            const urls = group.links.map((l) => l.href);
+            const texts = group.links.map((l) => l.text);
             const groupId = `§§§CITATIONGROUP_${citationGroups.length}§§§`;
 
             citationGroups.push({ urls, texts, id: groupId });
@@ -855,7 +860,7 @@ const useProcessedContent = (content: string) => {
                 groups.push({
                   links: currentGroup,
                   startIndex: currentGroup[0].index,
-                  endIndex: currentGroup[currentGroup.length - 1].end
+                  endIndex: currentGroup[currentGroup.length - 1].end,
                 });
               }
               // Start new group
@@ -868,7 +873,7 @@ const useProcessedContent = (content: string) => {
             groups.push({
               links: currentGroup,
               startIndex: currentGroup[0].index,
-              endIndex: currentGroup[currentGroup.length - 1].end
+              endIndex: currentGroup[currentGroup.length - 1].end,
             });
           }
 
@@ -878,8 +883,8 @@ const useProcessedContent = (content: string) => {
           let newRow = rowContent;
           for (let g = groups.length - 1; g >= 0; g--) {
             const group = groups[g];
-            const urls = group.links.map(l => l.href);
-            const texts = group.links.map(l => l.text);
+            const urls = group.links.map((l) => l.href);
+            const texts = group.links.map((l) => l.text);
             const groupId = `§§§CITATIONGROUP_${citationGroups.length}§§§`;
 
             citationGroups.push({ urls, texts, id: groupId });
@@ -1000,6 +1005,17 @@ const SafeLatex: React.FC<{
 }> = React.memo(({ children, delimiters, isBlock = false }) => {
   const [hasError, setHasError] = useState(false);
 
+  const expression = useMemo(() => {
+    const trimmed = children.trim();
+    const matchingDelimiter = delimiters.find(({ left, right }) => trimmed.startsWith(left) && trimmed.endsWith(right));
+
+    if (!matchingDelimiter) {
+      return trimmed;
+    }
+
+    return trimmed.slice(matchingDelimiter.left.length, trimmed.length - matchingDelimiter.right.length).trim();
+  }, [children, delimiters]);
+
   useEffect(() => {
     setHasError(false);
   }, [children]);
@@ -1025,11 +1041,7 @@ const SafeLatex: React.FC<{
   }
 
   try {
-    return (
-      <Latex delimiters={delimiters} strict={false}>
-        {children}
-      </Latex>
-    );
+    return isBlock ? <BlockMath math={expression} /> : <InlineMath math={expression} />;
   } catch (error) {
     console.warn('LaTeX rendering error:', error, 'Content:', children);
     setHasError(true);
@@ -1201,7 +1213,7 @@ function fetchMetadata(url: string) {
       fetch(`https://og.metadata.vision/${encodeURIComponent(url)}`)
         .then((res) => res.json())
         .then((data) => (data.ok && data.data ? data.data : null))
-        .catch(() => null)
+        .catch(() => null),
     );
   }
   return metadataCache.get(url)!;
@@ -1222,7 +1234,7 @@ function preloadCitationMetadata(content: string) {
   }
 
   // Start fetching metadata for all URLs in the background
-  urls.forEach(url => {
+  urls.forEach((url) => {
     fetchMetadata(url);
   });
 }
@@ -1245,7 +1257,7 @@ const LinkPreviewContent = ({ href, title }: { href: string; title?: string }) =
 
   // Fallback to original text if metadata title is "Access Denied" or empty
   const isAccessDenied = metadata?.title === 'Access Denied';
-  const displayTitle = (metadata?.title && !isAccessDenied) ? metadata.title : title;
+  const displayTitle = metadata?.title && !isAccessDenied ? metadata.title : title;
 
   const metadataFavicon = metadata?.logo;
   const googleFavicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
@@ -1331,17 +1343,19 @@ const LinkPreview = React.memo(({ href, title }: { href: string; title?: string 
   }, [href]);
 
   return (
-    <Suspense fallback={
-      <div className="flex flex-col bg-muted/30 text-xs m-0">
-        <div className="flex items-center space-x-2 px-3 py-2">
-          <div className="w-[14px] h-[14px] bg-muted/50 rounded-sm shrink-0 animate-pulse" />
-          <span className="truncate font-medium text-foreground text-[10px]">{domain}</span>
+    <Suspense
+      fallback={
+        <div className="flex flex-col bg-muted/30 text-xs m-0">
+          <div className="flex items-center space-x-2 px-3 py-2">
+            <div className="w-[14px] h-[14px] bg-muted/50 rounded-sm shrink-0 animate-pulse" />
+            <span className="truncate font-medium text-foreground text-[10px]">{domain}</span>
+          </div>
+          <div className="px-3 pb-2 pt-1">
+            <div className="h-4 w-3/4 bg-muted/50 animate-pulse rounded"></div>
+          </div>
         </div>
-        <div className="px-3 pb-2 pt-1">
-          <div className="h-4 w-3/4 bg-muted/50 animate-pulse rounded"></div>
-        </div>
-      </div>
-    }>
+      }
+    >
       <LinkPreviewContent href={href} title={title} />
     </Suspense>
   );
@@ -1360,20 +1374,23 @@ const MobileHoverCard: React.FC<{
   const [isOpen, setIsOpen] = useState(false);
   const title = citationText || (typeof text === 'string' ? text : '');
 
-  const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (isMobile) {
-      if (isOpen) {
-        // If preview is already open, allow navigation
-        // Don't prevent default, let the link work normally
-        setIsOpen(false);
-      } else {
-        // First tap: show preview
-        e.preventDefault();
-        setIsOpen(true);
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>) => {
+      if (isMobile) {
+        if (isOpen) {
+          // If preview is already open, allow navigation
+          // Don't prevent default, let the link work normally
+          setIsOpen(false);
+        } else {
+          // First tap: show preview
+          e.preventDefault();
+          setIsOpen(true);
+        }
       }
-    }
-    // On desktop, let the link work normally (hover will show preview)
-  }, [isMobile, isOpen]);
+      // On desktop, let the link work normally (hover will show preview)
+    },
+    [isMobile, isOpen],
+  );
 
   // Always use controlled mode to prevent mode switching during hydration
   // On desktop, HoverCard's hover events will trigger onOpenChange naturally
@@ -1383,11 +1400,7 @@ const MobileHoverCard: React.FC<{
   }, []);
 
   return (
-    <HoverCard 
-      open={isOpen}
-      onOpenChange={handleOpenChange}
-      openDelay={!isMobile ? 10 : undefined}
-    >
+    <HoverCard open={isOpen} onOpenChange={handleOpenChange} openDelay={!isMobile ? 10 : undefined}>
       <HoverCardTrigger asChild>
         <Link
           href={href}
@@ -1427,57 +1440,59 @@ interface CitationGroupProps {
 }
 
 // Citation item with favicon fallback
-const CitationItem = React.memo(({ url, text, domain, itemKey }: { url: string; text: string; domain: string; itemKey: string }) => {
-  const [faviconError, setFaviconError] = useState(false);
-  const [proxyError, setProxyError] = useState(false);
-  const googleFavicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-  const proxiedFavicon = `/api/proxy-image?url=${encodeURIComponent(googleFavicon)}`;
+const CitationItem = React.memo(
+  ({ url, text, domain, itemKey }: { url: string; text: string; domain: string; itemKey: string }) => {
+    const [faviconError, setFaviconError] = useState(false);
+    const [proxyError, setProxyError] = useState(false);
+    const googleFavicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+    const proxiedFavicon = `/api/proxy-image?url=${encodeURIComponent(googleFavicon)}`;
 
-  const handleError = () => {
-    if (!faviconError) {
-      setFaviconError(true);
-    } else {
-      setProxyError(true);
-    }
-  };
+    const handleError = () => {
+      if (!faviconError) {
+        setFaviconError(true);
+      } else {
+        setProxyError(true);
+      }
+    };
 
-  return (
-    <Link
-      key={itemKey}
-      href={url}
-      target="_blank"
-      className="flex items-center gap-2 px-3 py-2 no-underline hover:bg-muted/50 active:bg-muted/50 transition-all duration-200 touch-manipulation"
-    >
-      {proxyError ? (
-        <div className="w-[14px] h-[14px] flex items-center justify-center text-muted-foreground">
-          <Globe size={14} />
+    return (
+      <Link
+        key={itemKey}
+        href={url}
+        target="_blank"
+        className="flex items-center gap-2 px-3 py-2 no-underline hover:bg-muted/50 active:bg-muted/50 transition-all duration-200 touch-manipulation"
+      >
+        {proxyError ? (
+          <div className="w-[14px] h-[14px] flex items-center justify-center text-muted-foreground">
+            <Globe size={14} />
+          </div>
+        ) : faviconError ? (
+          <img
+            src={proxiedFavicon}
+            alt=""
+            width={14}
+            height={14}
+            className="rounded-sm shrink-0"
+            onError={handleError}
+          />
+        ) : (
+          <Image
+            src={googleFavicon}
+            alt=""
+            width={14}
+            height={14}
+            className="rounded-sm shrink-0"
+            onError={handleError}
+          />
+        )}
+        <div className="flex-1 min-w-0 flex items-baseline gap-2">
+          <h5 className="text-xs font-medium text-foreground truncate m-0 flex-1">{text}</h5>
+          <p className="text-[10px] text-muted-foreground font-mono m-0 shrink-0">{domain}</p>
         </div>
-      ) : faviconError ? (
-        <img
-          src={proxiedFavicon}
-          alt=""
-          width={14}
-          height={14}
-          className="rounded-sm shrink-0"
-          onError={handleError}
-        />
-      ) : (
-        <Image
-          src={googleFavicon}
-          alt=""
-          width={14}
-          height={14}
-          className="rounded-sm shrink-0"
-          onError={handleError}
-        />
-      )}
-      <div className="flex-1 min-w-0 flex items-baseline gap-2">
-        <h5 className="text-xs font-medium text-foreground truncate m-0 flex-1">{text}</h5>
-        <p className="text-[10px] text-muted-foreground font-mono m-0 shrink-0">{domain}</p>
-      </div>
-    </Link>
-  );
-});
+      </Link>
+    );
+  },
+);
 
 CitationItem.displayName = 'CitationItem';
 
@@ -1492,18 +1507,21 @@ const CitationGroup = React.memo(({ urls, texts, elementKey }: CitationGroupProp
     }
   }, [urls]);
 
-  const handleClick = useCallback((e: React.MouseEvent<HTMLSpanElement>) => {
-    if (isMobile) {
-      if (isOpen) {
-        // If preview is already open, close it
-        setIsOpen(false);
-      } else {
-        // First tap: show preview
-        e.preventDefault();
-        setIsOpen(true);
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLSpanElement>) => {
+      if (isMobile) {
+        if (isOpen) {
+          // If preview is already open, close it
+          setIsOpen(false);
+        } else {
+          // First tap: show preview
+          e.preventDefault();
+          setIsOpen(true);
+        }
       }
-    }
-  }, [isMobile, isOpen]);
+    },
+    [isMobile, isOpen],
+  );
 
   // Always use controlled mode to prevent mode switching during hydration
   // On desktop, HoverCard's hover events will trigger onOpenChange naturally
@@ -1513,11 +1531,7 @@ const CitationGroup = React.memo(({ urls, texts, elementKey }: CitationGroupProp
   }, []);
 
   return (
-    <HoverCard 
-      open={isOpen}
-      onOpenChange={handleOpenChange}
-      openDelay={!isMobile ? 10 : undefined}
-    >
+    <HoverCard open={isOpen} onOpenChange={handleOpenChange} openDelay={!isMobile ? 10 : undefined}>
       <HoverCardTrigger asChild>
         <span
           onClick={handleClick}
@@ -1572,7 +1586,13 @@ CitationGroup.displayName = 'CitationGroup';
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
   ({ content, isUserMessage = false }) => {
-    const { processedContent, citations: extractedCitations, citationGroups, latexBlocks, isProcessing } = useProcessedContent(content);
+    const {
+      processedContent,
+      citations: extractedCitations,
+      citationGroups,
+      latexBlocks,
+      isProcessing,
+    } = useProcessedContent(content);
     const citationLinks = extractedCitations;
 
     // Preload metadata for all citation URLs as content streams in
@@ -1621,9 +1641,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
 
     const renderHoverCard = useCallback(
       (href: string, text: React.ReactNode, isCitation: boolean = false, citationText?: string) => {
-        return (
-          <MobileHoverCard href={href} text={text} isCitation={isCitation} citationText={citationText} />
-        );
+        return <MobileHoverCard href={href} text={text} isCitation={isCitation} citationText={citationText} />;
       },
       [],
     );
@@ -1661,7 +1679,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
 
           const components: any[] = [];
           let lastEnd = 0;
-          const allMatches: Array<{ match: RegExpExecArray; type: 'latex-block' | 'latex-inline' | 'citation-group' }> = [];
+          const allMatches: Array<{ match: RegExpExecArray; type: 'latex-block' | 'latex-inline' | 'citation-group' }> =
+            [];
 
           let match;
           while ((match = blockPattern.exec(text)) !== null) {
@@ -1691,12 +1710,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
               if (citationGroup) {
                 const key = getElementKey('link', citationGroup.id);
                 components.push(
-                  <CitationGroup
-                    key={key}
-                    urls={citationGroup.urls}
-                    texts={citationGroup.texts}
-                    elementKey={key}
-                  />
+                  <CitationGroup key={key} urls={citationGroup.urls} texts={citationGroup.texts} elementKey={key} />,
                 );
               }
             } else {
@@ -1939,7 +1953,10 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
           ) : (
             <TableCell
               key={key}
-              className={cn(alignClass, 'text-[15px] border-r border-border last:border-r-0 p-2! m-1! whitespace-normal wrap-break-word min-w-[120px]')}
+              className={cn(
+                alignClass,
+                'text-[15px] border-r border-border last:border-r-0 p-2! m-1! whitespace-normal wrap-break-word min-w-[120px]',
+              )}
             >
               {childrenWithKeys}
             </TableCell>

@@ -139,7 +139,6 @@
     "react-dom": "^19.2.3",
     "react-hook-form": "^7.61.1",
     "react-katex": "^3.1.0",
-    "react-latex-next": "^3.0.0",
     "react-markdown": "^10.1.0",
     "react-tweet": "^3.3.0",
     "react-use-measure": "^2.1.7",
