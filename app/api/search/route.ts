@@ -330,6 +330,13 @@ export async function POST(req: Request) {
   const lightweightUser = await lightweightUserPromise;
   recordTiming('get_lightweight_user', opStart);
 
+  if (lightweightUser?.isBanned) {
+    return new ChatSDKError(
+      'forbidden:auth',
+      lightweightUser.banReason || 'Your account has been suspended. Contact support if you think this is a mistake.',
+    ).toResponse();
+  }
+
   // Start full user fetch immediately (doesn't block early exits)
   const isProUser = lightweightUser?.isProUser ?? false;
   opStart = Date.now();

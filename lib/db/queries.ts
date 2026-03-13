@@ -635,6 +635,10 @@ export async function upsertUserPreferences({
     'scira-blur-personal-info'?: boolean;
     'scira-custom-instructions-enabled'?: boolean;
     'scira-location-metadata-enabled'?: boolean;
+    'admin-banned'?: boolean;
+    'admin-ban-reason'?: string;
+    'admin-ban-updated-at'?: string;
+    'admin-ban-updated-by'?: string;
   }>;
 }) {
   try {

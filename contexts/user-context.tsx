@@ -1,8 +1,11 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCachedUserData } from '@/hooks/use-cached-user-data';
 import { type ComprehensiveUserData } from '@/lib/user-data';
+import { signOut } from '@/lib/auth-client';
+import { toast } from 'sonner';
 
 interface UserContextType {
   // Core user data
@@ -60,7 +63,16 @@ interface UserProviderProps {
 export function UserProvider({ children }: UserProviderProps) {
   const userData = useCachedUserData();
 
-  return <UserContext.Provider value={userData}>{children}</UserContext.Provider>;
+  return (
+    <UserContext.Provider value={userData}>
+      <BannedUserGuard
+        user={userData.user}
+        isLoading={userData.isLoading}
+        clearCache={userData.clearCache}
+      />
+      {children}
+    </UserContext.Provider>
+  );
 }
 
 export function useUser(): UserContextType {
@@ -99,4 +111,46 @@ export function useSubscriptionStatus() {
     hasNoSubscription,
     isLoading,
   };
+}
+
+function BannedUserGuard({
+  user,
+  isLoading,
+  clearCache,
+}: {
+  user: ComprehensiveUserData | null | undefined;
+  isLoading: boolean;
+  clearCache: () => void;
+}) {
+  const router = useRouter();
+  const hasHandledBanRef = useRef(false);
+
+  useEffect(() => {
+    if (isLoading || !user?.isBanned || hasHandledBanRef.current) {
+      return;
+    }
+
+    hasHandledBanRef.current = true;
+    clearCache();
+
+    void signOut({
+      fetchOptions: {
+        onRequest: () => {
+          try {
+            localStorage.removeItem('scira-user-data');
+          } catch {}
+        },
+        onSuccess: () => {
+          toast.error(user.banReason || 'Your account has been banned.');
+          router.replace('/banned');
+        },
+        onError: () => {
+          toast.error(user.banReason || 'Your account has been banned.');
+          router.replace('/banned');
+        },
+      },
+    });
+  }, [clearCache, isLoading, router, user]);
+
+  return null;
 }

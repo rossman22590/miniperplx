@@ -172,6 +172,7 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
   const [deleteTarget, setDeleteTarget] = React.useState<{ id: string; title?: string | null } | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [openMenuChatId, setOpenMenuChatId] = React.useState<string | null>(null);
+  const isAdminUser = user?.email?.toLowerCase() === 'rcohen@mytsi.org';
 
   // Fetch recent chats - optimized with smart caching
   const { data: chatsData, isLoading: isChatsLoading } = useQuery({
@@ -820,6 +821,14 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
                         <span>Settings</span>
                       </Link>
                     </DropdownMenuItem>
+                    {isAdminUser && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin" onClick={closeMobileSidebar}>
+                          <ShieldIcon size={16} weight="regular" className="mr-2" />
+                          <span>Admin</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
 
                     <DropdownMenuSeparator />
 
@@ -940,6 +949,14 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
                         <span>Settings</span>
                       </Link>
                     </DropdownMenuItem>
+                    {isAdminUser && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin" onClick={closeMobileSidebar}>
+                          <ShieldIcon size={16} weight="regular" className="mr-2" />
+                          <span>Admin</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
 
                     {/* Theme toggle */}
                     <DropdownMenuItem onClick={toggleTheme}>
