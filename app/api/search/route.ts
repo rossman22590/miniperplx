@@ -478,6 +478,24 @@ export async function POST(req: Request) {
         });
       }
 
+      const openRouterThinkingModels = new Set([
+        'scira-grok4.1-fast-thinking',
+        'scira-grok-4-fast-think',
+        'scira-qwen-4b-thinking',
+        'scira-qwen-32b-thinking',
+        'scira-gpt-5.1-thinking',
+        'scira-gpt-5.2-thinking',
+        'scira-deepseek-chat-think',
+        'scira-deepseek-chat-think-exp',
+        'scira-cmd-a-think',
+        'scira-google-think',
+        'scira-google-pro-think',
+        'scira-gemini-3-flash-think',
+        'scira-gemini-3-pro',
+        'scira-anthropic-think',
+        'scira-anthropic-opus-think',
+      ]);
+
       const result = streamText({
         model: scira.languageModel(model),
         messages: prunedMessages,
@@ -501,12 +519,6 @@ export async function POST(req: Request) {
             ? `\n\nThe user's location is ${latitude}, ${longitude}.`
             : ''),
         toolChoice: 'auto',
-        ...(model === 'scira-anthropic' || model === 'scira-anthropic-think'
-          ? {
-            headers: {
-              'anthropic-beta': 'context-1m-2025-08-07',
-            },
-          } : {}),
         providerOptions: {
           gateway: {
             only: ['openai', 'google', 'zai', 'arcee-ai', 'deepseek', 'alibaba', 'baseten', 'minimax', 'fireworks', 'bedrock', 'vercel'],
@@ -676,11 +688,21 @@ export async function POST(req: Request) {
             threshold: 'OFF',
           } satisfies GoogleGenerativeAIProviderOptions,
           openrouter: {
-            ...(model === 'scira-anthropic-think' || model === 'scira-anthropic-opus-think'
+            ...(openRouterThinkingModels.has(model)
               ? {
                 reasoning: {
+                  enabled: true,
                   exclude: false,
-                  max_tokens: 400,
+                  ...(model === 'scira-anthropic-think' || model === 'scira-anthropic-opus-think'
+                    ? {
+                      max_tokens: 400,
+                    }
+                    : {}),
+                  ...(model === 'scira-gpt-5.1-thinking' || model === 'scira-gpt-5.2-thinking'
+                    ? {
+                      effort: 'high',
+                    }
+                    : {}),
                 },
               }
               : {}),

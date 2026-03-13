@@ -5,6 +5,7 @@ import { z } from 'zod';
 export const serverEnv = createEnv({
   server: {
     XAI_API_KEY: z.string().min(1),
+    OPENROUTER_API_KEY: z.string().optional().default(''),
     OPENAI_API_KEY: z.string().min(1),
     ANTHROPIC_API_KEY: z.string().min(1),
     GROQ_API_KEY: z.string().min(1),
