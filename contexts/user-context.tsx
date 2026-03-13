@@ -126,6 +126,12 @@ function BannedUserGuard({
   const hasHandledBanRef = useRef(false);
 
   useEffect(() => {
+    if (!user?.isBanned) {
+      hasHandledBanRef.current = false;
+    }
+  }, [user?.isBanned]);
+
+  useEffect(() => {
     if (isLoading || !user?.isBanned || hasHandledBanRef.current) {
       return;
     }

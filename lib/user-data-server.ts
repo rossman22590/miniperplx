@@ -2,7 +2,7 @@ import 'server-only';
 
 import { desc, eq } from 'drizzle-orm';
 import { subscription, user } from './db/schema';
-import { getReadReplica, maindb } from './db';
+import { maindb } from './db';
 import { auth } from './auth';
 import { headers } from 'next/headers';
 import { getCustomInstructionsByUserId, getUserPreferencesByUserId } from './db/queries';
@@ -270,8 +270,7 @@ export async function getLightweightUserAuth(): Promise<LightweightUserAuth | nu
       return lightweightData;
     }
 
-    const readDb = getReadReplica();
-    const [userRecord] = await readDb
+    const [userRecord] = await maindb
       .select({
         userId: user.id,
         email: user.email,
@@ -285,7 +284,7 @@ export async function getLightweightUserAuth(): Promise<LightweightUserAuth | nu
     }
 
     const [userSubscriptions, userPreferenceRecord] = await Promise.all([
-      readDb.select().from(subscription).where(eq(subscription.userId, userId)).orderBy(desc(subscription.currentPeriodEnd)),
+      maindb.select().from(subscription).where(eq(subscription.userId, userId)).orderBy(desc(subscription.currentPeriodEnd)),
       getUserPreferencesByUserId({ userId }),
     ]);
 
@@ -366,14 +365,13 @@ export async function getComprehensiveUserData(): Promise<ComprehensiveUserData 
       return cached;
     }
 
-    const readDb = getReadReplica();
-    const [userData] = await readDb.select().from(user).where(eq(user.id, userId)).limit(1);
+    const [userData] = await maindb.select().from(user).where(eq(user.id, userId)).limit(1);
     if (!userData) {
       return null;
     }
 
     const [userSubscriptions, userPreferenceRecord] = await Promise.all([
-      readDb.select().from(subscription).where(eq(subscription.userId, userId)).orderBy(desc(subscription.currentPeriodEnd)),
+      maindb.select().from(subscription).where(eq(subscription.userId, userId)).orderBy(desc(subscription.currentPeriodEnd)),
       getUserPreferencesByUserId({ userId }),
     ]);
 

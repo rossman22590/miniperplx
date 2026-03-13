@@ -68,6 +68,20 @@ export async function getCurrentUser() {
   return await getComprehensiveUserData();
 }
 
+async function requireActiveUser() {
+  const user = await getComprehensiveUserData();
+
+  if (!user) {
+    throw new Error('Authentication required');
+  }
+
+  if (user.isBanned) {
+    throw new Error(user.banReason || 'Your account has been suspended. Contact support if you think this is a mistake.');
+  }
+
+  return user;
+}
+
 // Lightweight auth check for fast authentication validation
 export async function getLightweightUser() {
   'use server';
@@ -2142,11 +2156,11 @@ export async function getGroupConfig(
     // Use lightweight user for quick auth check when available
     if (!lightweightUser) {
       // No lightweight user provided, check if user exists
-      const user = fullUserPromise ? await fullUserPromise : await getCurrentUser();
-      if (!user) {
-        // Redirect to web group if user is not authenticated
-        groupId = 'web';
-      } else if (groupId === 'connectors') {
+        const user = fullUserPromise ? await fullUserPromise : await getCurrentUser();
+        if (!user || user.isBanned) {
+          // Redirect to web group if user is not authenticated
+          groupId = 'web';
+        } else if (groupId === 'connectors') {
         // Check if user has Pro access for connectors
         if (!user.isProUser) {
           // Redirect to web group if user is not Pro
@@ -2376,10 +2390,7 @@ export async function branchOutChat({
   'use server';
 
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
+    const currentUser = await requireActiveUser();
 
     // Generate new chat ID and message IDs
     const newChatId = uuidv7();
@@ -2974,10 +2985,7 @@ export async function createScheduledLookout({
   date?: string; // For 'once' frequency
 }) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error('Authentication required');
-    }
+    const user = await requireActiveUser();
 
     // Check if user is Pro
     if (!user.isProUser) {
@@ -3136,10 +3144,7 @@ export async function createScheduledLookout({
 
 export async function getUserLookouts() {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error('Authentication required');
-    }
+    const user = await requireActiveUser();
 
     const lookouts = await getLookoutsByUserId({ userId: user.id });
 
@@ -3172,10 +3177,7 @@ export async function updateLookoutStatusAction({
   status: 'active' | 'paused' | 'archived' | 'running';
 }) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error('Authentication required');
-    }
+    const user = await requireActiveUser();
 
     // Get lookout to verify ownership
     const lookout = await getLookoutById({ id });
@@ -3231,10 +3233,7 @@ export async function updateLookoutAction({
   dayOfWeek?: string;
 }) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error('Authentication required');
-    }
+    const user = await requireActiveUser();
 
     // Get lookout to verify ownership
     const lookout = await getLookoutById({ id });
@@ -3342,10 +3341,7 @@ export async function updateLookoutAction({
 
 export async function deleteLookoutAction({ id }: { id: string }) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error('Authentication required');
-    }
+    const user = await requireActiveUser();
 
     // Get lookout to verify ownership
     const lookout = await getLookoutById({ id });
@@ -3374,10 +3370,7 @@ export async function deleteLookoutAction({ id }: { id: string }) {
 
 export async function testLookoutAction({ id }: { id: string }) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error('Authentication required');
-    }
+    const user = await requireActiveUser();
 
     // Get lookout to verify ownership
     const lookout = await getLookoutById({ id });
@@ -3452,10 +3445,7 @@ export async function createConnectorAction(provider: ConnectorProvider) {
   'use server';
 
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Authentication required' };
-    }
+    const user = await requireActiveUser();
 
     const authLink = await createConnection(provider, user.id);
     return { success: true, authLink };
@@ -3469,10 +3459,7 @@ export async function listUserConnectorsAction() {
   'use server';
 
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Authentication required', connections: [] };
-    }
+    const user = await requireActiveUser();
 
     const connections = await listUserConnections(user.id);
     return { success: true, connections };
@@ -3486,10 +3473,7 @@ export async function deleteConnectorAction(connectionId: string) {
   'use server';
 
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Authentication required' };
-    }
+    const user = await requireActiveUser();
 
     const result = await deleteConnection(connectionId);
     if (result) {
@@ -3507,10 +3491,7 @@ export async function manualSyncConnectorAction(provider: ConnectorProvider) {
   'use server';
 
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Authentication required' };
-    }
+    const user = await requireActiveUser();
 
     const result = await manualSync(provider, user.id);
     if (result) {
@@ -3528,10 +3509,7 @@ export async function getConnectorSyncStatusAction(provider: ConnectorProvider) 
   'use server';
 
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Authentication required', status: null };
-    }
+    const user = await requireActiveUser();
 
     const status = await getSyncStatus(provider, user.id);
     return { success: true, status };

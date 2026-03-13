@@ -199,6 +199,10 @@ export function invalidateUserCaches(userId: string) {
   }
 }
 
+export function invalidateSessionCaches(): void {
+  sessionCache.clear();
+}
+
 export function invalidateAllCaches() {
   sessionCache.clear();
   subscriptionCache.clear();

@@ -609,7 +609,7 @@ export async function deleteCustomInstructions({ userId }: { userId: string }) {
 // User Preferences CRUD operations
 export async function getUserPreferencesByUserId({ userId }: { userId: string }) {
   try {
-    const [preferences] = await getReadReplica()
+    const [preferences] = await maindb
       .select()
       .from(userPreferences)
       .where(eq(userPreferences.userId, userId))

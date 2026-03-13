@@ -6,6 +6,7 @@ import { v7 as uuidv7 } from 'uuid';
 import { auth } from '@/lib/auth';
 import { db, maindb } from '@/lib/db';
 import { chat, lookout, session, subscription, type UserPreferences, user, userPreferences } from '@/lib/db/schema';
+import { invalidateSessionCaches, invalidateUserCaches } from '@/lib/performance-cache';
 import { clearUserDataCache } from '@/lib/user-data-server';
 import { upsertUserPreferences } from '@/lib/db/queries';
 
@@ -13,6 +14,12 @@ const ADMIN_EMAIL = 'rcohen@mytsi.org';
 const MANUAL_PRO_PRODUCT_ID = 'admin-pro';
 const MANUAL_PRO_INTERVAL = 'manual';
 const MANUAL_PRO_DURATION_YEARS = 50;
+
+function invalidateAdminManagedUserState(userId: string) {
+  clearUserDataCache(userId);
+  invalidateUserCaches(userId);
+  invalidateSessionCaches();
+}
 
 export type AdminSessionUser = {
   id: string;
@@ -243,7 +250,7 @@ export async function setManualProStatus(userId: string, makePro: boolean, admin
     }
   }
 
-  clearUserDataCache(userId);
+  invalidateAdminManagedUserState(userId);
 }
 
 export async function setManualBanStatus(userId: string, banned: boolean, reason: string | null, adminEmail: string) {
@@ -259,12 +266,12 @@ export async function setManualBanStatus(userId: string, banned: boolean, reason
   });
 
   await db.delete(session).where(eq(session.userId, userId));
-  clearUserDataCache(userId);
+  invalidateAdminManagedUserState(userId);
 }
 
 export async function clearUserSessions(userId: string) {
   await db.delete(session).where(eq(session.userId, userId));
-  clearUserDataCache(userId);
+  invalidateAdminManagedUserState(userId);
 }
 
 export function isAdminEmail(email?: string | null) {

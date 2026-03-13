@@ -14,9 +14,10 @@ export function useUserData() {
     queryKey: ['comprehensive-user-data'],
     queryFn: getCurrentUser,
     // Keep this aggressively fresh so subscription changes reflect quickly
-    staleTime: 5 * 1000,
+    staleTime: 0,
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: true,
+    refetchOnMount: true,
     retry: 2,
   });
 
