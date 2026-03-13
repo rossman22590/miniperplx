@@ -609,7 +609,7 @@ export async function deleteCustomInstructions({ userId }: { userId: string }) {
 // User Preferences CRUD operations
 export async function getUserPreferencesByUserId({ userId }: { userId: string }) {
   try {
-    const [preferences] = await getReadReplica()
+    const [preferences] = await maindb
       .select()
       .from(userPreferences)
       .where(eq(userPreferences.userId, userId))
@@ -635,6 +635,10 @@ export async function upsertUserPreferences({
     'scira-blur-personal-info'?: boolean;
     'scira-custom-instructions-enabled'?: boolean;
     'scira-location-metadata-enabled'?: boolean;
+    'admin-banned'?: boolean;
+    'admin-ban-reason'?: string;
+    'admin-ban-updated-at'?: string;
+    'admin-ban-updated-by'?: string;
   }>;
 }) {
   try {

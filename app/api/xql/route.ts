@@ -135,6 +135,13 @@ export async function POST(req: Request) {
   }
 
   if (user) {
+    if (user.isBanned) {
+      return new ChatSDKError(
+        'forbidden:auth',
+        user.banReason || 'Your account has been suspended. Contact support if you think this is a mistake.',
+      ).toResponse();
+    }
+
     const isProUser = user.isProUser;
 
     if (!isProUser) {

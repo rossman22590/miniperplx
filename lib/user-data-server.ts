@@ -2,7 +2,7 @@ import 'server-only';
 
 import { desc, eq } from 'drizzle-orm';
 import { subscription, user } from './db/schema';
-import { getReadReplica, maindb } from './db';
+import { maindb } from './db';
 import { auth } from './auth';
 import { headers } from 'next/headers';
 import { getCustomInstructionsByUserId, getUserPreferencesByUserId } from './db/queries';
@@ -37,6 +37,8 @@ export type ComprehensiveUserData = {
   subscriptionStatus: 'active' | 'canceled' | 'expired' | 'none';
   subscription?: NormalizedSubscription;
   polarSubscription?: NormalizedSubscription;
+  isBanned: boolean;
+  banReason?: string | null;
   dodoSubscription?: {
     hasSubscriptions: boolean;
     expiresAt: Date | null;
@@ -54,6 +56,8 @@ export type LightweightUserAuth = {
   userId: string;
   email: string;
   isProUser: boolean;
+  isBanned: boolean;
+  banReason?: string | null;
 };
 
 const userDataCache = new Map<string, { data: ComprehensiveUserData; expiresAt: number }>();
@@ -213,6 +217,13 @@ function mapSubscriptionRecord(record: typeof subscription.$inferSelect): Normal
   };
 }
 
+function getBanState(preferences?: UserPreferences | null) {
+  return {
+    isBanned: Boolean(preferences?.preferences?.['admin-banned']),
+    banReason: preferences?.preferences?.['admin-ban-reason'] ?? null,
+  };
+}
+
 function isSubscriptionCurrentlyActive(record: typeof subscription.$inferSelect): boolean {
   return (
     ACTIVE_SUBSCRIPTION_STATUSES.includes(record.status as (typeof ACTIVE_SUBSCRIPTION_STATUSES)[number]) &&
@@ -252,13 +263,14 @@ export async function getLightweightUserAuth(): Promise<LightweightUserAuth | nu
         userId: fullCached.id,
         email: fullCached.email,
         isProUser: fullCached.isProUser,
+        isBanned: fullCached.isBanned,
+        banReason: fullCached.banReason,
       };
       setCachedLightweightAuth(userId, lightweightData);
       return lightweightData;
     }
 
-    const readDb = getReadReplica();
-    const [userRecord] = await readDb
+    const [userRecord] = await maindb
       .select({
         userId: user.id,
         email: user.email,
@@ -271,18 +283,20 @@ export async function getLightweightUserAuth(): Promise<LightweightUserAuth | nu
       return null;
     }
 
-    const userSubscriptions = await readDb
-      .select()
-      .from(subscription)
-      .where(eq(subscription.userId, userId))
-      .orderBy(desc(subscription.currentPeriodEnd));
+    const [userSubscriptions, userPreferenceRecord] = await Promise.all([
+      maindb.select().from(subscription).where(eq(subscription.userId, userId)).orderBy(desc(subscription.currentPeriodEnd)),
+      getUserPreferencesByUserId({ userId }),
+    ]);
 
     const activeSubscription = userSubscriptions.find((record) => isSubscriptionCurrentlyActive(record));
+    const banState = getBanState(userPreferenceRecord);
 
     const lightweightData: LightweightUserAuth = {
       userId: userRecord.userId,
       email: userRecord.email,
       isProUser: Boolean(activeSubscription),
+      isBanned: banState.isBanned,
+      banReason: banState.banReason,
     };
 
     // Cache the result
@@ -313,6 +327,9 @@ export async function getComprehensiveUserData(): Promise<ComprehensiveUserData 
         return null;
       }
 
+      const userPreferenceRecord = await getUserPreferencesByUserId({ userId: userData.id });
+      const banState = getBanState(userPreferenceRecord);
+
       // Return user with premium status when billing is disabled
       return {
         id: userData.id,
@@ -322,9 +339,11 @@ export async function getComprehensiveUserData(): Promise<ComprehensiveUserData 
         image: userData.image,
         createdAt: userData.createdAt,
         updatedAt: userData.updatedAt,
-        isProUser: true,
+        isProUser: !banState.isBanned,
         proSource: 'stripe',
         subscriptionStatus: 'active',
+        isBanned: banState.isBanned,
+        banReason: banState.banReason,
         subscriptionHistory: [],
       };
     }
@@ -346,22 +365,21 @@ export async function getComprehensiveUserData(): Promise<ComprehensiveUserData 
       return cached;
     }
 
-    const readDb = getReadReplica();
-    const [userData] = await readDb.select().from(user).where(eq(user.id, userId)).limit(1);
+    const [userData] = await maindb.select().from(user).where(eq(user.id, userId)).limit(1);
     if (!userData) {
       return null;
     }
 
-    const userSubscriptions = await readDb
-      .select()
-      .from(subscription)
-      .where(eq(subscription.userId, userId))
-      .orderBy(desc(subscription.currentPeriodEnd));
+    const [userSubscriptions, userPreferenceRecord] = await Promise.all([
+      maindb.select().from(subscription).where(eq(subscription.userId, userId)).orderBy(desc(subscription.currentPeriodEnd)),
+      getUserPreferencesByUserId({ userId }),
+    ]);
 
     const activeSubscription = userSubscriptions.find((record) => isSubscriptionCurrentlyActive(record));
     const latestSubscription = userSubscriptions[0];
+    const banState = getBanState(userPreferenceRecord);
 
-    let isProUser = Boolean(activeSubscription);
+    let isProUser = Boolean(activeSubscription) && !banState.isBanned;
     let proSource: 'stripe' | 'polar' | 'dodo' | 'none' = activeSubscription ? 'stripe' : 'none';
     let subscriptionStatus: 'active' | 'canceled' | 'expired' | 'none' = 'none';
 
@@ -387,6 +405,8 @@ export async function getComprehensiveUserData(): Promise<ComprehensiveUserData 
       isProUser,
       proSource,
       subscriptionStatus,
+      isBanned: banState.isBanned,
+      banReason: banState.banReason,
       subscription: activeSubscription ? mapSubscriptionRecord(activeSubscription) : undefined,
       polarSubscription: activeSubscription ? mapSubscriptionRecord(activeSubscription) : undefined,
       dodoSubscription: undefined,
@@ -408,16 +428,14 @@ export async function getComprehensiveUserData(): Promise<ComprehensiveUserData 
 
 // Helper functions for backward compatibility and specific use cases
 export async function isUserPro(): Promise<boolean> {
-  // If billing is off, everyone is premium
+  // If billing is off, everyone is premium unless banned
   if (process.env.BILLING_OFF === 'true') {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-    return !!session?.user?.id; // Premium if authenticated
+    const userData = await getComprehensiveUserData();
+    return userData?.isProUser && !userData.isBanned || false;
   }
-  
+
   const userData = await getComprehensiveUserData();
-  return userData?.isProUser || false;
+  return userData?.isProUser && !userData.isBanned || false;
 }
 
 export async function getUserSubscriptionStatus(): Promise<'active' | 'canceled' | 'expired' | 'none'> {

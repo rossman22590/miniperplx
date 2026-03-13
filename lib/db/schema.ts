@@ -209,6 +209,10 @@ export const userPreferences = pgTable('user_preferences', {
       'scira-blur-personal-info'?: boolean;
       'scira-custom-instructions-enabled'?: boolean;
       'scira-location-metadata-enabled'?: boolean;
+      'admin-banned'?: boolean;
+      'admin-ban-reason'?: string;
+      'admin-ban-updated-at'?: string;
+      'admin-ban-updated-by'?: string;
     }>()
     .notNull()
     .default({}),
