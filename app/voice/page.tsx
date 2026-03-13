@@ -603,15 +603,17 @@ Then: Continue the conversation naturally
                     className="shadow-none border"
                   />
                   {isConnected && (agentState === "talking" || agentState === "thinking") && (
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
                       onClick={interrupt}
-                      className="flex items-center gap-1 rounded-sm border p-2 text-[11px] transition-colors bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                      aria-label="Stop current response"
+                      className="h-9 gap-1.5 border-destructive/30 bg-destructive/10 px-3 text-destructive hover:bg-destructive/15 hover:text-destructive"
+                      aria-label="Stop AI response"
                     >
-                      <Square className="size-4 fill-current" />
-                      <span className="hidden xs:inline">Stop</span>
-                    </button>
+                      <Square className="size-3.5 fill-current" />
+                      <span>Stop AI</span>
+                    </Button>
                   )}
                   <button
                     type="button"
