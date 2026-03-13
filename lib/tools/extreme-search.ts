@@ -7,9 +7,10 @@
 
 import Exa from 'exa-js';
 import { Daytona } from '@daytonaio/sdk';
-import { generateObject, generateText, stepCountIs, tool } from 'ai';
+import { generateText, stepCountIs, tool } from 'ai';
 import type { UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
+import { jsonrepair } from 'jsonrepair';
 import { serverEnv } from '@/env/server';
 import { scira } from '@/ai/providers';
 import { SNAPSHOT_NAME } from '@/lib/constants';
@@ -34,6 +35,145 @@ const daytona = new Daytona({
   apiKey: serverEnv.DAYTONA_API_KEY,
   target: 'us',
 });
+
+const researchPlanSchema = z.object({
+  plan: z
+    .array(
+      z.object({
+        title: z.string().min(10).max(70),
+        todos: z.array(z.string()).min(3).max(5),
+      }),
+    )
+    .min(1)
+    .max(5),
+});
+
+type ResearchPlan = z.infer<typeof researchPlanSchema>;
+
+const EXTREME_SEARCH_PLACEHOLDER_PATTERNS = [
+  /^planning research$/i,
+  /^preparing research strategy$/i,
+  /^planning research preparing research strategy$/i,
+];
+
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function sanitizeExtremeSearchPrompt(prompt: string): string {
+  const normalized = normalizeWhitespace(prompt);
+
+  if (EXTREME_SEARCH_PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(normalized))) {
+    return '';
+  }
+
+  return normalized;
+}
+
+function fallbackResearchPlan(prompt: string): ResearchPlan {
+  const topic = prompt.slice(0, 60) || 'the topic';
+
+  return {
+    plan: [
+      {
+        title: `Research overview for ${topic}`.slice(0, 70),
+        todos: [
+          `Find the latest authoritative sources about ${topic}`,
+          `Identify key facts, dates, and organizations tied to ${topic}`,
+          `Compare multiple sources for agreement and contradictions`,
+        ],
+      },
+    ],
+  };
+}
+
+function normalizePlanCandidate(candidate: unknown): ResearchPlan | null {
+  const parsed = researchPlanSchema.safeParse(candidate);
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  if (!candidate || typeof candidate !== 'object') {
+    return null;
+  }
+
+  const record = candidate as { plan?: unknown };
+  if (!Array.isArray(record.plan)) {
+    return null;
+  }
+
+  const normalizedPlan = record.plan
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const planItem = item as { title?: unknown; todos?: unknown };
+      const title = typeof planItem.title === 'string' ? normalizeWhitespace(planItem.title) : '';
+      const todos = Array.isArray(planItem.todos)
+        ? planItem.todos
+            .filter((todo): todo is string => typeof todo === 'string')
+            .map((todo) => normalizeWhitespace(todo))
+            .filter(Boolean)
+            .slice(0, 5)
+        : [];
+
+      if (!title || title.length < 10 || todos.length < 3) {
+        return null;
+      }
+
+      return {
+        title: title.slice(0, 70),
+        todos,
+      };
+    })
+    .filter((item): item is ResearchPlan['plan'][number] => item !== null)
+    .slice(0, 5);
+
+  if (normalizedPlan.length === 0) {
+    return null;
+  }
+
+  return { plan: normalizedPlan };
+}
+
+function extractJsonObject(text: string): string | null {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+
+  if (start === -1 || end === -1 || end <= start) {
+    return null;
+  }
+
+  return text.slice(start, end + 1);
+}
+
+function parseResearchPlanText(text: string, prompt: string): ResearchPlan {
+  const trimmed = text.trim();
+  const candidates = [trimmed, extractJsonObject(trimmed)].filter((candidate): candidate is string => Boolean(candidate));
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      const normalized = normalizePlanCandidate(parsed);
+      if (normalized) {
+        return normalized;
+      }
+    } catch {}
+
+    try {
+      const repaired = jsonrepair(candidate);
+      const parsed = JSON.parse(repaired);
+      const normalized = normalizePlanCandidate(parsed);
+      if (normalized) {
+        return normalized;
+      }
+    } catch {}
+  }
+
+  console.warn('[ExtremeSearch] Planner returned non-JSON output, using fallback plan');
+  return fallbackResearchPlan(prompt);
+}
 
 const runCode = async (code: string, installLibs: string[] = []) => {
   const sandbox = await daytona.create({
@@ -362,6 +502,12 @@ async function extremeSearch(
   dataStream: UIMessageStreamWriter<ChatMessage> | undefined,
   contentProvider: 'exa' | 'parallel' = 'exa',
 ): Promise<Research> {
+  const sanitizedPrompt = sanitizeExtremeSearchPrompt(prompt);
+
+  if (!sanitizedPrompt) {
+    throw new Error('Extreme Search received an invalid research prompt.');
+  }
+
   const allSources: SearchResult[] = [];
 
   // Initialize clients
@@ -391,21 +537,10 @@ async function extremeSearch(
   }
 
   // plan out the research
-  const { object: result } = await generateObject({
+  const { text: plannerText } = await generateText({
     model: scira.languageModel('scira-grok-4'),
-    schema: z.object({
-      plan: z
-        .array(
-          z.object({
-            title: z.string().min(10).max(70).describe('A title for the research topic'),
-            todos: z.array(z.string()).min(3).max(5).describe('A list of what to research for the given title'),
-          }),
-        )
-        .min(1)
-        .max(5),
-    }),
     prompt: `
-Plan out the research for the following topic: ${prompt}.
+Plan out the research for the following topic: ${sanitizedPrompt}.
 
 Today's Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit', weekday: 'short' })}
 
@@ -422,9 +557,14 @@ Plan Guidelines:
 - Keep the titles concise and to the point, no more than 70 characters
 - Mention if the topic needs to use the xSearch tool
 - Mention any need for visualizations in the plan
-- Make the plan technical and specific to the topic`,
+- Make the plan technical and specific to the topic
+- Return ONLY valid JSON
+- Do not add markdown fences
+- Use exactly this shape:
+{"plan":[{"title":"Topic title","todos":["todo one","todo two","todo three"]}]}`,
   });
 
+  const result = parseResearchPlanText(plannerText, sanitizedPrompt);
   console.log(result.plan);
 
   const plan = result.plan;
@@ -533,7 +673,7 @@ For research:
 Research Plan:
 ${JSON.stringify(plan)}
 `,
-    prompt,
+    prompt: sanitizedPrompt,
     temperature: 1,
     providerOptions: {
       xai: {
@@ -938,9 +1078,30 @@ export function extremeSearchTool(
         ),
     }),
     execute: async ({ prompt }) => {
-      console.log({ prompt, contentProvider });
+      const sanitizedPrompt = sanitizeExtremeSearchPrompt(prompt);
+      console.log({ prompt, sanitizedPrompt, contentProvider });
 
-      const research = await extremeSearch(prompt, dataStream, contentProvider);
+      if (!sanitizedPrompt) {
+        if (dataStream) {
+          dataStream.write({
+            type: 'data-extreme_search',
+            data: {
+              kind: 'plan',
+              status: { title: 'Could not start research from that prompt' },
+            },
+          });
+        }
+
+        return {
+          research: {
+            toolResults: [],
+            sources: [],
+            charts: [],
+          },
+        };
+      }
+
+      const research = await extremeSearch(sanitizedPrompt, dataStream, contentProvider);
 
       return {
         research: {

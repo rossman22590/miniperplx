@@ -149,9 +149,63 @@ export async function suggestQuestions(history: any[]) {
 
   console.log(history);
 
-  const { output } = await generateText({
-    model: scira.languageModel('scira-follow-up'),
-    system: `You are a search engine follow up query/questions generator. You MUST create between 3 and 5 questions for the search engine based on the conversation history.
+  const sanitizeQuestions = (questions: unknown): string[] => {
+    if (!Array.isArray(questions)) {
+      return [];
+    }
+
+    return questions
+      .filter((question): question is string => typeof question === 'string')
+      .map((question) => question.trim())
+      .filter((question) => question.length > 0)
+      .slice(0, 5);
+  };
+
+  const normalizeQuestion = (question: string) => {
+    const trimmed = question.replace(/^[-*•\d.\s]+/, '').trim();
+    if (!trimmed) {
+      return '';
+    }
+    return trimmed.endsWith('?') ? trimmed : `${trimmed}?`;
+  };
+
+  const parseSuggestedQuestions = (text: string): string[] => {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    const directJsonCandidates = [trimmed];
+    const firstBrace = trimmed.indexOf('{');
+    const lastBrace = trimmed.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      directJsonCandidates.push(trimmed.slice(firstBrace, lastBrace + 1));
+    }
+
+    for (const candidate of directJsonCandidates) {
+      try {
+        const parsed = JSON.parse(jsonrepair(candidate)) as { questions?: unknown };
+        const questions = sanitizeQuestions(parsed?.questions).map(normalizeQuestion).filter(Boolean);
+        if (questions.length >= 3) {
+          return questions.slice(0, 5);
+        }
+      } catch {
+        // Fall through to looser parsing.
+      }
+    }
+
+    const lineQuestions = trimmed
+      .split('\n')
+      .map((line) => normalizeQuestion(line))
+      .filter((line) => line.includes('?'));
+
+    return Array.from(new Set(lineQuestions)).slice(0, 5);
+  };
+
+  try {
+    const { text } = await generateText({
+      model: scira.languageModel('scira-follow-up'),
+      system: `You are a search engine follow up query/questions generator. You MUST create between 3 and 5 questions for the search engine based on the conversation history.
 
 ### Question Generation Guidelines:
 - Create 3-5 questions that are open-ended and encourage further discussion
@@ -185,21 +239,32 @@ export async function suggestQuestions(history: any[]) {
 - Each question must be grammatically complete
 - Each question must end with a question mark
 - Questions must be diverse and not redundant
-- Do not include instructions or meta-commentary in the questions`,
-    messages: history,
-    output: Output.object({
-      schema: z.object({
-        questions: z
-          .array(z.string().max(150))
-          .describe('The generated questions based on the message history.')
-          .min(3)
-          .max(5),
-      }),
-    }),
-  });
+- Do not include instructions or meta-commentary in the questions
+
+### Output Requirements:
+- Return ONLY valid JSON
+- Use this exact shape: {"questions":["Question 1?","Question 2?","Question 3?"]}
+- Do not wrap the JSON in markdown fences
+- Do not add any explanation before or after the JSON`,
+      messages: history,
+    });
+
+    const questions = parseSuggestedQuestions(text);
+    if (questions.length >= 3) {
+      return {
+        questions,
+      };
+    }
+  } catch (error) {
+    console.error('Error generating suggested questions:', error);
+  }
 
   return {
-    questions: output.questions,
+    questions: [
+      'What happened with OpenAI GPT-5 latest release?',
+      'How is Google Gemini changing AI products?',
+      'What AI regulation news matters most today?',
+    ],
   };
 }
 
