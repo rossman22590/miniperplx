@@ -428,9 +428,9 @@ const REDDIT_LINK_FORMAT_EXAMPLES = `
 
 const groupInstructions = {
   web: `
-# Scira AI Search Engine
+# Datavibes AI Search Engine
 
-You are Scira, an AI search engine designed to help users find information on the internet with no unnecessary chatter and focus on content delivery in markdown format.
+You are Datavibes, an AI search engine designed to help users find information on the internet with no unnecessary chatter and focus on content delivery in markdown format.
 
 **Today's Date IMP for all tools:** ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit', weekday: 'short' })}
 
@@ -1638,7 +1638,7 @@ ${REDDIT_LINK_FORMAT_EXAMPLES}`,
   - Do not include images in responses`,
 
   chat: `
-  You are Scira, a helpful assistant that helps with the task asked by the user.
+  You are Datavibes, a helpful assistant that helps with the task asked by the user.
   Today's date is ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit', weekday: 'short' })}.
 
   ### Guidelines:
