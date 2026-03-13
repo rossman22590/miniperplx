@@ -27,8 +27,8 @@ export function useCachedUserData() {
     }
   }, [freshUser, isFreshLoading, cachedUser, setCachedUser]);
 
-  // Use cached data if available, otherwise use fresh data
-  const user = cachedUser || freshUser;
+  // Prefer fresh server data when it exists; fall back to cached data while loading.
+  const user = freshUser ?? cachedUser;
 
   // Show loading only if we have no cached data and fresh data is loading
   const isLoading = !cachedUser && isFreshLoading;
@@ -81,10 +81,10 @@ export function useCachedUserData() {
     hasNoSubscription: user?.subscriptionStatus === 'none',
 
     // Legacy compatibility helpers
-    subscriptionData: user?.polarSubscription
+    subscriptionData: user?.subscription || user?.polarSubscription
       ? {
           hasSubscription: true,
-          subscription: user.polarSubscription,
+          subscription: user.subscription || user.polarSubscription,
         }
       : { hasSubscription: false },
 

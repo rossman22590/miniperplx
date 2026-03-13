@@ -1263,13 +1263,15 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
   const dodoProStatus: { isProUser?: boolean; expiresAt?: string | Date } | null = user?.dodoProStatus ?? null;
   const dodoSubscriptionItems = Array.isArray(dodoSubscriptions) ? dodoSubscriptions : dodoSubscriptions?.items || [];
   const polarOrderItems = polarOrders?.result?.items || [];
+  const normalizedSubscription = user?.subscription ?? user?.polarSubscription ?? subscriptionData?.subscription;
 
-  // Check for active status from either source
+  // Prefer the normalized user record; fall back to legacy props while old callers still exist.
   const hasActiveSubscription =
-    subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active';
+    user?.subscriptionStatus === 'active' ||
+    (subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active');
   const hasDodoProStatus = dodoProStatus?.isProUser || (user?.proSource === 'dodo' && user?.isProUser);
   const isProUserActive = hasActiveSubscription || hasDodoProStatus;
-  const subscription = subscriptionData?.subscription;
+  const subscription = normalizedSubscription;
 
   // Check if DodoPayments Pro is expiring soon (within 7 days)
   const getDaysUntilExpiration = () => {
