@@ -1302,9 +1302,9 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
                   </h3>
                   <p className={cn('opacity-90', isMobile ? 'text-[10px]' : 'text-xs')}>
                     {hasActiveSubscription
-                      ? subscription?.status === 'active'
+                      ? subscription?.status === 'active' || !subscription?.status
                         ? 'Active'
-                        : subscription?.status || 'Unknown'
+                        : subscription.status
                       : 'Active (DodoPayments)'}
                   </p>
                 </div>
@@ -1346,7 +1346,10 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
               <Button
                 variant="secondary"
                 onClick={handleManageSubscription}
-                className={cn('w-full', isMobile ? 'h-7 text-xs' : 'h-8')}
+                className={cn(
+                  'w-full border-0 bg-[#c21875] text-white hover:bg-[#a91564] dark:bg-[#d81b84] dark:text-white dark:hover:bg-[#bb176f]',
+                  isMobile ? 'h-7 text-xs' : 'h-8',
+                )}
                 disabled={isManagingSubscription}
               >
                 {isManagingSubscription ? (
