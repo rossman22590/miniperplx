@@ -877,23 +877,23 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent sideOffset={8} alignOffset={-20} collisionPadding={{ bottom: 20 }} className="bg-background border shadow-lg">
                         <DropdownMenuItem asChild>
-                          <a href="https://x.com/sciraai" target="_blank" rel="noopener noreferrer" onClick={closeMobileSidebar}>
+                          <a href="https://x.com/tsi_org" target="_blank" rel="noopener noreferrer" onClick={closeMobileSidebar}>
                             <XLogoIcon size={16} weight="regular" className="mr-2" />
                             <span>X.com</span>
                           </a>
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
+                        {/* <DropdownMenuItem asChild>
                           <a href="https://www.instagram.com/scira.ai" target="_blank" rel="noopener noreferrer" onClick={closeMobileSidebar}>
                             <InstagramLogoIcon size={16} weight="regular" className="mr-2" />
                             <span>Instagram</span>
                           </a>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
+                        </DropdownMenuItem> */}
+                        {/* <DropdownMenuItem asChild>
                           <a href="https://scira.userjot.com" target="_blank" rel="noopener noreferrer" onClick={closeMobileSidebar}>
                             <BugIcon size={16} weight="regular" className="mr-2" />
                             <span>Feedback</span>
                           </a>
-                        </DropdownMenuItem>
+                        </DropdownMenuItem> */}
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
                   </DropdownMenuContent>
