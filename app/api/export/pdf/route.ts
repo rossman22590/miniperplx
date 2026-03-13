@@ -303,7 +303,7 @@ export async function POST(req: NextRequest) {
       const logoTop = y + capHeight + baselineAdjust;
       const logoHeight = drawSciraLogo(margin, logoTop, logoWidth, logoColor);
       const textX = margin + logoWidth + 8;
-      const headerText = title ?? 'Scira AI';
+      const headerText = title ?? 'Datavibes AI';
       drawTextWithFallback(headerText, textX, y, titleSize, fontBold, rgb(0, 0, 0));
       y -= Math.max(titleSize, logoHeight) + 12;
 
@@ -2000,7 +2000,7 @@ export async function POST(req: NextRequest) {
     const view = new Uint8Array(ab);
     view.set(pdfBytes);
 
-    const filename = `scira-export.pdf`;
+    const filename = `datavibes-export.pdf`;
     return new Response(ab, {
       status: 200,
       headers: {

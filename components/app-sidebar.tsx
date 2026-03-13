@@ -6,10 +6,8 @@ import { usePathname } from 'next/navigation';
 import {
   PlusIcon,
   GearIcon,
-  CodeIcon,
   SignIn,
   XLogoIcon,
-  GithubLogoIcon,
   InstagramLogoIcon,
   InfoIcon,
   BookIcon,
@@ -23,7 +21,6 @@ import {
 import { Crown02Icon, BinocularsIcon, SearchList02Icon, FolderLibraryIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@/components/ui/hugeicons';
 import {
-  RocketIcon as VercelIcon,
   MonitorIcon,
   Globe,
   ChevronsUpDown,
@@ -205,8 +202,8 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
       href: '/about',
     },
     {
-      id: 'blog',
-      label: 'Blog',
+      id: 'journal',
+      label: 'Journal',
       icon: BookIcon,
       href: '/blog',
     },
@@ -221,13 +218,6 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
       label: 'Privacy',
       icon: ShieldIcon,
       href: '/privacy-policy',
-    },
-    {
-      id: 'github',
-      label: 'GitHub',
-      icon: GithubLogoIcon,
-      href: 'https://git.new/scira',
-      external: true,
     },
     {
       id: 'feedback',
@@ -360,7 +350,7 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
                   <SciraLogo width={26} height={26} />
                 </div>
                 <div className="flex flex-row items-center gap-2 leading-none group-data-[collapsible=icon]:hidden">
-                  <span className="font-be-vietnam-pro font-light tracking-tighter text-xl">scira</span>
+                  <span className="font-be-vietnam-pro font-light tracking-tighter text-xl">Datavibes</span>
                   {user && isProUser && (
                     <div className="w-fit">
                       <span className="animate-shimmer text-xs font-baumans inline-flex items-center justify-center min-w-6 h-4 px-1.5 pt-0 pb-0.5 rounded-md shadow-sm bg-linear-to-br from-secondary/30 via-primary/25 to-accent/30 text-foreground ring-1 ring-primary/25 ring-offset-1 ring-offset-background dark:bg-linear-to-br dark:from-primary dark:via-secondary dark:to-primary dark:text-foreground dark:ring-primary/40">
@@ -549,26 +539,6 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
                 <XLogoIcon size={18} weight="regular" />
                 <span className="group-data-[collapsible=icon]:hidden">X Wrapped</span>
               </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          {/* API */}
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              tooltip="API"
-              className="hover:bg-primary/10 transition-all duration-200"
-            >
-              <a
-                href="https://api.scira.ai/"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={closeMobileSidebar}
-                className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full"
-              >
-                <CodeIcon size={18} weight="regular" />
-                <span className="group-data-[collapsible=icon]:hidden">API</span>
-              </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
 
@@ -835,7 +805,7 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
                             {user.name || 'User'}
                           </span>
                           <span className="text-xs text-sidebar-foreground/70 truncate text-left w-full">
-                            {isProUser ? 'Scira Pro' : 'Scira Free'}
+                            {isProUser ? 'Datavibes Pro' : 'Datavibes Free'}
                           </span>
                         </div>
                       </div>
@@ -881,7 +851,7 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
                         <DropdownMenuItem asChild>
                           <Link href="/blog" target="_blank" rel="noopener noreferrer" onClick={closeMobileSidebar}>
                             <BookIcon size={16} weight="regular" className="mr-2" />
-                            <span>Blog</span>
+                            <span>Journal</span>
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
@@ -899,19 +869,13 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
 
-                    {/* Community Submenu */}
+                    {/* Connect Submenu */}
                     <DropdownMenuSub>
                       <DropdownMenuSubTrigger>
                         <UsersIcon size={16} weight="regular" className="mr-2" />
-                        <span>Community</span>
+                        <span>Connect</span>
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent sideOffset={8} alignOffset={-20} collisionPadding={{ bottom: 20 }} className="bg-background border shadow-lg">
-                        <DropdownMenuItem asChild>
-                          <a href="https://git.new/scira" target="_blank" rel="noopener noreferrer" onClick={closeMobileSidebar}>
-                            <GithubLogoIcon size={16} weight="regular" className="mr-2" />
-                            <span>GitHub</span>
-                          </a>
-                        </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <a href="https://x.com/sciraai" target="_blank" rel="noopener noreferrer" onClick={closeMobileSidebar}>
                             <XLogoIcon size={16} weight="regular" className="mr-2" />
@@ -928,17 +892,6 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
                           <a href="https://scira.userjot.com" target="_blank" rel="noopener noreferrer" onClick={closeMobileSidebar}>
                             <BugIcon size={16} weight="regular" className="mr-2" />
                             <span>Feedback</span>
-                          </a>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <a
-                            href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fzaidmukaddam%2Fscira"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={closeMobileSidebar}
-                          >
-                            <VercelIcon size={16} className="mr-2" />
-                            <span>Deploy</span>
                           </a>
                         </DropdownMenuItem>
                       </DropdownMenuSubContent>
@@ -975,7 +928,7 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
                     {/* User info header */}
                     <div className="px-2 py-1.5">
                       <p className="text-sm font-semibold">{user.name || 'User'}</p>
-                      <p className="text-xs text-muted-foreground">{isProUser ? 'Scira Pro' : 'Scira Free'}</p>
+                      <p className="text-xs text-muted-foreground">{isProUser ? 'Datavibes Pro' : 'Datavibes Free'}</p>
                     </div>
 
                     <DropdownMenuSeparator />
@@ -1008,10 +961,10 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <a href="https://git.new/scira" target="_blank" rel="noopener noreferrer" onClick={closeMobileSidebar}>
-                        <GithubLogoIcon size={16} weight="regular" className="mr-2" />
-                        <span>GitHub</span>
-                      </a>
+                      <Link href="/blog" onClick={closeMobileSidebar}>
+                        <BookIcon size={16} weight="regular" className="mr-2" />
+                        <span>Journal</span>
+                      </Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

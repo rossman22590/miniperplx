@@ -28,7 +28,7 @@ import {
 function useOrbColors(): [string, string] {
   const [colors, setColors] = React.useState<[string, string]>(() => {
     if (typeof window === "undefined") {
-      return ["#6B5B4F", "#8B7355"];
+      return ["#ff4fa3", "#d946ef"];
     }
     return resolveColors();
   });
@@ -55,13 +55,13 @@ function resolveColors(): [string, string] {
   
   // Light mode: use fixed colors
   if (!isDark) {
-    return ["#6B5B4F", "#8B7355"];
+    return ["#ff4fa3", "#d946ef"];
   }
   
   // Dark mode: read from CSS variables
   const readCssColor = (variable: string, fallback: string) => {
     const el = document.createElement("div");
-    el.style.color = `hsl(var(${variable}))`;
+    el.style.color = `var(${variable})`;
     el.style.position = "absolute";
     el.style.pointerEvents = "none";
     document.body.appendChild(el);
@@ -71,8 +71,8 @@ function resolveColors(): [string, string] {
   };
 
   return [
-    readCssColor("--primary", "#6B5B4F"),
-    readCssColor("--secondary-foreground", "#8B7355"),
+    readCssColor("--primary", "#ff4fa3"),
+    readCssColor("--secondary", "#d946ef"),
   ];
 }
 

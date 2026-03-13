@@ -45,6 +45,7 @@ export const serverEnv = createEnv({
     COINGECKO_API_KEY: z.string().min(1),
     SUPADATA_API_KEY: z.string().min(1),
     QSTASH_TOKEN: z.string().min(1),
+    QSTASH_URL: z.string().url().optional(),
     RESEND_API_KEY: z.string().min(1),
     SUPERMEMORY_API_KEY: z.string().min(1),
     ALLOWED_ORIGINS: z.string().optional().default('https://mydatavibes.com'),

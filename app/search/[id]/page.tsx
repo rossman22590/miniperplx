@@ -73,12 +73,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
   return {
     title: title,
-    description: 'A search in scira.ai',
+    description: 'A search on Datavibes',
     openGraph: {
       title: title,
       url: `https://mydatavibes.com/search/${id}`,
-      description: 'A search in scira.ai',
-      siteName: 'scira.ai',
+      description: 'A search on Datavibes',
+      siteName: 'Datavibes AI',
       images: [
         {
           url: `https://mydatavibes.com/api/og/chat/${id}`,
@@ -91,9 +91,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       card: 'summary_large_image',
       title: title,
       url: `https://mydatavibes.com/search/${id}`,
-      description: 'A search in scira.ai',
-      siteName: 'scira.ai',
-      creator: '@sciraai',
+      description: 'A search on Datavibes',
+      siteName: 'Datavibes AI',
+      creator: '@datavibesai',
       images: [
         {
           url: `https://mydatavibes.com/api/og/chat/${id}`,

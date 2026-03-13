@@ -1,3 +1,7 @@
+/** Logo used app-wide (sidebar, auth, about, dialogs, etc.). Always this URL. */
+export const APP_LOGO_URL =
+  'https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1759034358692-scira.png';
+
 // Search limits for free users
 export const SEARCH_LIMITS = {
   DAILY_SEARCH_LIMIT: 10,

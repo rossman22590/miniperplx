@@ -82,7 +82,7 @@ export function ShareIconDialog({
     if (navigator.share) {
       navigator
         .share({
-          title: 'ShareIcond Chat - Scira',
+          title: 'Shared Chat - Datavibes',
           url: shareUrl,
         })
         .then(() => {
@@ -126,7 +126,7 @@ export function ShareIconDialog({
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
               <ShareIcon size={20} color="currentColor" />
-              ShareIcon Chat
+              Shared Chat
             </DialogTitle>
             <Button variant="ghost" size="icon" className="size-8" onClick={onClose} disabled={isChangingVisibility}>
               <XIcon size={16} color="currentColor" />
@@ -160,7 +160,7 @@ export function ShareIconDialog({
                   ) : (
                     <>
                       <GlobeHemisphereWestIcon size={16} className="mr-2" />
-                      Make Public & ShareIcon
+                      Make Public & Share
                     </>
                   )}
                 </Button>

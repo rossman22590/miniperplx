@@ -111,7 +111,7 @@ const SearchCompletedEmail = (props: SearchCompletedEmailProps) => {
               <Text className="text-[14px] text-[#6B7280] m-0">
                 Datavibes AI •{' '}
                 <a href="https://mydatavibes.com" className="text-[#6B7280] no-underline">
-                  scira.ai
+                  mydatavibes.com
                 </a>
               </Text>
             </Section>

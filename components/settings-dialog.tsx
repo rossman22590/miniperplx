@@ -925,8 +925,8 @@ export function UsageSection({ user }: any) {
     messages: {
       label: 'Messages',
       theme: {
-        light: 'oklch(0.4341 0.0392 41.9938)', // Primary color for light mode
-        dark: 'oklch(0.9247 0.0524 66.1732)', // Lighter primary for dark mode
+        light: 'oklch(0.68 0.24 356)', // Primary color for light mode
+        dark: 'oklch(0.74 0.21 356)', // Lighter primary for dark mode
       },
     },
   };

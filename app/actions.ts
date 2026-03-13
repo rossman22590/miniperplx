@@ -2859,8 +2859,21 @@ export async function getDodoSubscriptionExpirationDate() {
   return userData?.dodoSubscription?.expiresAt || null;
 }
 
-// Initialize QStash client
-const qstash = new Client({ token: serverEnv.QSTASH_TOKEN });
+// Initialize QStash client (use QSTASH_URL for regional endpoint, e.g. https://qstash-us-east-1.upstash.io)
+const qstash = new Client({
+  token: serverEnv.QSTASH_TOKEN,
+  ...(serverEnv.QSTASH_URL && { baseUrl: serverEnv.QSTASH_URL }),
+});
+
+/** Lookout API URL for QStash destination; always has http:// or https:// (required by QStash). */
+function getLookoutApiUrl(): string {
+  if (process.env.NODE_ENV === 'development') {
+    const base = process.env.NGROK_URL ?? 'http://localhost:3000';
+    const url = base.startsWith('http://') || base.startsWith('https://') ? base : `https://${base}`;
+    return `${url.replace(/\/$/, '')}/api/lookout`;
+  }
+  return 'https://mydatavibes.com/api/lookout';
+}
 
 // Helper function to convert frequency to cron schedule with timezone
 function frequencyToCron(frequency: string, time: string, timezone: string, dayOfWeek?: string): string {
@@ -3039,11 +3052,7 @@ export async function createScheduledLookout({
 
           if (delay > 0) {
             await qstash.publish({
-              // if dev env use localhost:3000/api/lookout, else use scira.ai/api/lookout
-              url:
-                process.env.NODE_ENV === 'development'
-                  ? process.env.NGROK_URL + '/api/lookout'
-                  : `https://mydatavibes.com/api/lookout`,
+              url: getLookoutApiUrl(),
               body: JSON.stringify({
                 lookoutId: lookout.id,
                 prompt,
@@ -3073,11 +3082,7 @@ export async function createScheduledLookout({
           console.log('📅 Cron schedule with timezone:', cronSchedule);
 
           const scheduleResponse = await qstash.schedules.create({
-            // if dev env use localhost:3000/api/lookout, else use scira.ai/api/lookout
-            destination:
-              process.env.NODE_ENV === 'development'
-                ? process.env.NGROK_URL + '/api/lookout'
-                : `https://mydatavibes.com/api/lookout`,
+            destination: getLookoutApiUrl(),
             method: 'POST',
             cron: cronSchedule,
             body: JSON.stringify({
@@ -3104,6 +3109,18 @@ export async function createScheduledLookout({
         console.error('Error creating QStash schedule:', qstashError);
         // Delete the lookout if QStash creation fails
         await deleteLookout({ id: lookout.id });
+        const qstashStatus =
+          typeof qstashError === 'object' &&
+          qstashError !== null &&
+          'status' in qstashError &&
+          typeof (qstashError as { status?: unknown }).status === 'number'
+            ? (qstashError as { status: number }).status
+            : undefined;
+
+        if (qstashStatus === 401) {
+          throw new Error('QStash authentication failed. Check QSTASH_TOKEN and QSTASH_URL.');
+        }
+
         throw new Error(
           `Failed to ${frequency === 'once' ? 'schedule one-time search' : 'create recurring schedule'}. Please try again.`,
         );
@@ -3273,11 +3290,7 @@ export async function updateLookoutAction({
 
         // Create new schedule with updated cron
         const scheduleResponse = await qstash.schedules.create({
-          // if dev env use localhost:3000/api/lookout, else use scira.ai/api/lookout
-          destination:
-            process.env.NODE_ENV === 'development'
-              ? process.env.NGROK_URL + '/api/lookout'
-              : `https://mydatavibes.com/api/lookout`,
+          destination: getLookoutApiUrl(),
           method: 'POST',
           cron: cronSchedule,
           body: JSON.stringify({
@@ -3378,9 +3391,7 @@ export async function testLookoutAction({ id }: { id: string }) {
     }
 
     // Make a POST request to the lookout API endpoint to trigger the run
-    const response = await fetch(
-      process.env.NODE_ENV === 'development' ? process.env.NGROK_URL + '/api/lookout' : `https://mydatavibes.com/api/lookout`,
-      {
+    const response = await fetch(getLookoutApiUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

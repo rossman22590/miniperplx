@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { APP_LOGO_URL } from '@/lib/constants';
 
 export function SciraLogo({
   className,
@@ -13,8 +14,8 @@ export function SciraLogo({
 }) {
   return (
     <Image
-      src="https://pixiomedia.nyc3.digitaloceanspaces.com/uploads/1759034358692-scira.png"
-      alt="Scira Logo"
+      src={APP_LOGO_URL}
+      alt="Datavibes Logo"
       width={width}
       height={height}
       className={className}

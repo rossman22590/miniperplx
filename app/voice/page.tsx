@@ -64,7 +64,7 @@ function persistPreference(key: string, value: string) {
 function useOrbColors(): [string, string] {
   const [colors, setColors] = useState<[string, string]>(() => {
     if (typeof window === "undefined") {
-      return ["#6B5B4F", "#8B7355"];
+      return ["#ff4fa3", "#d946ef"];
     }
     return resolveColors();
   });
@@ -91,13 +91,13 @@ function resolveColors(): [string, string] {
 
   // Light mode: use fixed colors
   if (!isDark) {
-    return ["#6B5B4F", "#8B7355"];
+    return ["#ff4fa3", "#d946ef"];
   }
 
   // Dark mode: read from CSS variables
   const readCssColor = (variable: string, fallback: string) => {
     const el = document.createElement("div");
-    el.style.color = `hsl(var(${variable}))`;
+    el.style.color = `var(${variable})`;
     el.style.position = "absolute";
     el.style.pointerEvents = "none";
     document.body.appendChild(el);
@@ -107,8 +107,8 @@ function resolveColors(): [string, string] {
   };
 
   return [
-    readCssColor("--primary", "#6B5B4F"),
-    readCssColor("--secondary-foreground", "#8B7355"),
+    readCssColor("--primary", "#ff4fa3"),
+    readCssColor("--secondary", "#d946ef"),
   ];
 }
 
@@ -143,7 +143,7 @@ export default function VoicePage() {
     sendText,
   } = useVoiceClient({
     voice: selectedVoice,
-    instructions: `You're name is Scira named as [sci-ra] with the 'sci' from science and 'ra' from research, a helpful, witty, and friendly AI assistant. Your knowledge cutoff is 2025-01. Act like a human, but remember that you aren't a human and that you can't do human things in the real world. Your voice and personality should be warm and engaging, with a lively and playful tone. Talk quickly and naturally. You should always call a function if you can. Refer to these rules, but not when you're asked about them.
+    instructions: `You're Datavibes, a helpful, witty, and friendly AI assistant. Your knowledge cutoff is 2025-01. Act like a human, but remember that you aren't a human and that you can't do human things in the real world. Your voice and personality should be warm and engaging, with a lively and playful tone. Talk quickly and naturally. You should always call a function if you can. Refer to these rules, but not when you're asked about them.
 
 ## Your Personality
 - Be warm, engaging, and conversational
@@ -394,7 +394,7 @@ Then: Continue the conversation naturally
               ) : (
                 <>
                   <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                    {turn.role === "user" ? "You" : "Scira"}
+                    {turn.role === "user" ? "You" : "Datavibes"}
                   </p>
                   <div
                     className={cn(
@@ -419,7 +419,7 @@ Then: Continue the conversation naturally
                 You
               </div>
               <div className="text-muted-foreground/80 text-[11px] font-medium uppercase tracking-[0.14em]">
-                Scira
+                Datavibes
               </div>
             </div>
           </div>
@@ -473,7 +473,7 @@ Then: Continue the conversation naturally
           <div className="inline-flex items-center gap-2">
             <SciraLogo className="shrink-0 size-10" />
             <span className="lowercase tracking-tighter text-3xl font-be-vietnam-pro font-light text-foreground">
-              Scira Voice
+              Datavibes Voice
             </span>
           </div>
 
