@@ -415,7 +415,7 @@ export function PreferencesSection({
     { value: 'scira-ext-5' as const, label: 'Kimi K2.5' },
     { value: 'scira-ext-6' as const, label: 'Gemini 3.1 Pro' },
     { value: 'scira-ext-7' as const, label: 'Qwen 3.5 Flash' },
-    { value: 'scira-ext-8' as const, label: 'Grok 4.20 Experimental Beta' },
+    { value: 'scira-ext-8' as const, label: 'Grok 4.20' },
   ];
 
   const handleExtremeSearchModelChange = (

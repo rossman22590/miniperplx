@@ -169,8 +169,8 @@ export const models: Model[] = [
   },
   {
     value: 'scira-grok-4.20-experimental-beta-0304',
-    label: 'Grok 4.20 Beta',
-    description: "xAI's experimental beta chat model",
+    label: 'Grok 4.20',
+    description: "xAI's Grok 4.20 reasoning model via OpenRouter",
     vision: true,
     reasoning: false,
     experimental: true,
@@ -185,8 +185,8 @@ export const models: Model[] = [
   },
   {
     value: 'scira-grok-4.20-experimental-beta-0304-thinking',
-    label: 'Grok 4.20 Beta Thinking',
-    description: "xAI's experimental beta reasoning model",
+    label: 'Grok 4.20 Thinking',
+    description: "xAI's Grok 4.20 reasoning model via OpenRouter",
     vision: true,
     reasoning: true,
     experimental: true,
