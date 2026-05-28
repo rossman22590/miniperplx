@@ -331,6 +331,38 @@ export const customInstructions = pgTable(
   (table) => [index('customInstructions_userId_idx').on(table.userId)],
 );
 
+export type UserPreferenceSettings = {
+  'scira-search-provider'?: 'exa' | 'parallel' | 'firecrawl';
+  'scira-extreme-search-model'?:
+    | 'scira-ext-1'
+    | 'scira-ext-2'
+    | 'scira-ext-4'
+    | 'scira-ext-5'
+    | 'scira-ext-6'
+    | 'scira-ext-7'
+    | 'scira-ext-8';
+  'scira-group-order'?: string[];
+  'scira-model-order-global'?: string[];
+  'scira-blur-personal-info'?: boolean;
+  'scira-custom-instructions-enabled'?: boolean;
+  'scira-scroll-to-latest-on-open'?: boolean;
+  'scira-location-metadata-enabled'?: boolean;
+  'scira-auto-router-enabled'?: boolean;
+  'scira-auto-router-config'?: {
+    routes: Array<{
+      name: string;
+      description: string;
+      model: string;
+    }>;
+  };
+  'scira-preferred-models'?: string[];
+  'scira-visible-modes'?: string[];
+  'admin-banned'?: boolean;
+  'admin-ban-reason'?: string;
+  'admin-ban-updated-at'?: string;
+  'admin-ban-updated-by'?: string;
+};
+
 // User preferences table
 export const userPreferences = pgTable('user_preferences', {
   id: text('id')
@@ -341,33 +373,7 @@ export const userPreferences = pgTable('user_preferences', {
     .unique()
     .references(() => user.id, { onDelete: 'cascade' }),
   preferences: json('preferences')
-    .$type<{
-      'scira-search-provider'?: 'exa' | 'parallel' | 'firecrawl';
-      'scira-extreme-search-model'?:
-        | 'scira-ext-1'
-        | 'scira-ext-2'
-        | 'scira-ext-4'
-        | 'scira-ext-5'
-        | 'scira-ext-6'
-        | 'scira-ext-7'
-        | 'scira-ext-8';
-      'scira-group-order'?: string[];
-      'scira-model-order-global'?: string[];
-      'scira-blur-personal-info'?: boolean;
-      'scira-custom-instructions-enabled'?: boolean;
-      'scira-scroll-to-latest-on-open'?: boolean;
-      'scira-location-metadata-enabled'?: boolean;
-      'scira-auto-router-enabled'?: boolean;
-      'scira-auto-router-config'?: {
-        routes: Array<{
-          name: string;
-          description: string;
-          model: string;
-        }>;
-      };
-      'scira-preferred-models'?: string[];
-      'scira-visible-modes'?: string[];
-    }>()
+    .$type<UserPreferenceSettings>()
     .notNull()
     .default({}),
   createdAt: timestamp('created_at').notNull().defaultNow(),

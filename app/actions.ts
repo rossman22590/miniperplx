@@ -44,7 +44,7 @@ import {
 } from '@/lib/db/queries';
 import { extractChatPreview } from '@/lib/search-utils';
 import { db, maindb } from '@/lib/db';
-import { chat, message, buildSession, dodosubscription, type User } from '@/lib/db/schema';
+import { chat, message, buildSession, dodosubscription, type User, type UserPreferenceSettings } from '@/lib/db/schema';
 import { eq, desc, ilike, and, asc, inArray, notExists } from 'drizzle-orm';
 import { getDiscountConfig } from '@/lib/discount';
 import { get } from '@vercel/edge-config';
@@ -1598,33 +1598,7 @@ export async function getUserPreferences(providedUser?: User | null) {
   }
 }
 
-export async function saveUserPreferences(
-  preferences: Partial<{
-    'scira-search-provider'?: 'exa' | 'parallel' | 'firecrawl';
-    'scira-extreme-search-model'?:
-      | 'scira-ext-1'
-      | 'scira-ext-2'
-      | 'scira-ext-4'
-      | 'scira-ext-5'
-      | 'scira-ext-6'
-      | 'scira-ext-7'
-      | 'scira-ext-8';
-    'scira-group-order'?: string[];
-    'scira-model-order-global'?: string[];
-    'scira-blur-personal-info'?: boolean;
-    'scira-custom-instructions-enabled'?: boolean;
-    'scira-scroll-to-latest-on-open'?: boolean;
-    'scira-location-metadata-enabled'?: boolean;
-    'scira-auto-router-enabled'?: boolean;
-    'scira-auto-router-config'?: {
-      routes: Array<{
-        name: string;
-        description: string;
-        model: string;
-      }>;
-    };
-  }>,
-) {
+export async function saveUserPreferences(preferences: Partial<UserPreferenceSettings>) {
   'use server';
 
   try {

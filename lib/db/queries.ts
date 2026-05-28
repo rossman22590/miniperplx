@@ -16,6 +16,7 @@ import {
   agentModeUsageEvents,
   customInstructions,
   userPreferences,
+  type UserPreferenceSettings,
   dodosubscription,
   lookout,
   userMcpServer,
@@ -1194,31 +1195,7 @@ export async function upsertUserPreferences({
   preferences,
 }: {
   userId: string;
-  preferences: Partial<{
-    'scira-search-provider'?: 'exa' | 'parallel' | 'firecrawl';
-    'scira-extreme-search-model'?:
-      | 'scira-ext-1'
-      | 'scira-ext-2'
-      | 'scira-ext-4'
-      | 'scira-ext-5'
-      | 'scira-ext-6'
-      | 'scira-ext-7'
-      | 'scira-ext-8';
-    'scira-group-order'?: string[];
-    'scira-model-order-global'?: string[];
-    'scira-blur-personal-info'?: boolean;
-    'scira-custom-instructions-enabled'?: boolean;
-    'scira-scroll-to-latest-on-open'?: boolean;
-    'scira-location-metadata-enabled'?: boolean;
-    'scira-auto-router-enabled'?: boolean;
-    'scira-auto-router-config'?: {
-      routes: Array<{
-        name: string;
-        description: string;
-        model: string;
-      }>;
-    };
-  }>;
+  preferences: Partial<UserPreferenceSettings>;
 }) {
   try {
     // Use transaction to ensure atomicity of read-modify-write
