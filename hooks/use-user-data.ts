@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getCurrentUser } from '@/app/actions';
 import { type ComprehensiveUserData } from '@/lib/user-data';
-import { shouldBypassRateLimits } from '@/ai/providers';
+import { shouldBypassRateLimits } from '@/ai/models';
 
 export function useUserData() {
   const {
@@ -13,11 +13,11 @@ export function useUserData() {
   } = useQuery({
     queryKey: ['comprehensive-user-data'],
     queryFn: getCurrentUser,
-    // Keep this aggressively fresh so subscription changes reflect quickly
-    staleTime: 0,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
+    // Keep reasonably fresh without frequent refetches on reload/focus
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
     retry: 2,
   });
 
@@ -38,9 +38,19 @@ export function useUserData() {
     isProUser: Boolean(userData?.isProUser),
     proSource: userData?.proSource || 'none',
     subscriptionStatus: userData?.subscriptionStatus || 'none',
-    subscription: userData?.subscription,
 
-    // Normalized subscription data
+    // Polar subscription details
+    polarSubscription: userData?.polarSubscription,
+    hasPolarSubscription: Boolean(userData?.polarSubscription),
+
+    // Dodo Subscription details
+    dodoSubscription: userData?.dodoSubscription,
+    hasDodoSubscription: Boolean(userData?.dodoSubscription?.hasSubscriptions),
+    dodoExpiresAt: userData?.dodoSubscription?.expiresAt,
+    isDodoExpiring: Boolean(userData?.dodoSubscription?.isExpiringSoon),
+    isDodoExpired: Boolean(userData?.dodoSubscription?.isExpired),
+
+    // Subscription history
     subscriptionHistory: userData?.subscriptionHistory || [],
 
     // Rate limiting helpers
@@ -53,21 +63,28 @@ export function useUserData() {
     isSubscriptionExpired: userData?.subscriptionStatus === 'expired',
     hasNoSubscription: userData?.subscriptionStatus === 'none',
 
-    // Legacy compatibility helpers during the Stripe cutover
-    polarSubscription: userData?.subscription || userData?.polarSubscription,
-    hasPolarSubscription: Boolean(userData?.subscription || userData?.polarSubscription),
-    dodoSubscription: userData?.dodoSubscription,
-    hasDodoSubscription: false,
-    dodoExpiresAt: userData?.dodoSubscription?.expiresAt,
-    isDodoExpiring: Boolean(userData?.dodoSubscription?.isExpiringSoon),
-    isDodoExpired: Boolean(userData?.dodoSubscription?.isExpired),
-    subscriptionData: userData?.subscription
+    // Legacy compatibility helpers
+    subscriptionData: userData?.polarSubscription
       ? {
-          hasSubscription: true,
-          subscription: userData.subscription,
-        }
+        hasSubscription: true,
+        subscription: userData.polarSubscription,
+      }
       : { hasSubscription: false },
-    dodoProStatus: null,
+
+    // Map dodoSubscription to legacy dodoProStatus structure for settings dialog
+    dodoProStatus: userData?.dodoSubscription
+      ? {
+        isProUser: userData.proSource === 'dodo' && userData.isProUser,
+        hasSubscriptions: userData.dodoSubscription.hasSubscriptions,
+        expiresAt: userData.dodoSubscription.expiresAt,
+        mostRecentSubscription: userData.dodoSubscription.mostRecentSubscription,
+        daysUntilExpiration: userData.dodoSubscription.daysUntilExpiration,
+        isExpired: userData.dodoSubscription.isExpired,
+        isExpiringSoon: userData.dodoSubscription.isExpiringSoon,
+        source: userData.proSource,
+      }
+      : null,
+
     expiresAt: userData?.dodoSubscription?.expiresAt,
   };
 }

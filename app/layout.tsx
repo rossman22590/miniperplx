@@ -3,12 +3,14 @@ import 'katex/dist/katex.min.css';
 import 'leaflet/dist/leaflet.css';
 
 import { Metadata, Viewport } from 'next';
-import { Be_Vietnam_Pro, Baumans } from 'next/font/google';
-import localFont from 'next/font/local';
+import { Be_Vietnam_Pro, Baumans, Geist, Instrument_Serif } from 'next/font/google';
+import { GeistPixelSquare, GeistPixelGrid } from 'geist/font/pixel';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
-import { Toaster } from '@/components/ui/sonner';
-import { ClientAnalytics } from '@/components/client-analytics';
+import { Toaster } from '@/components/ui/sileo-toaster';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import { NewChatHotkey } from '@/components/new-chat-hotkey';
+import { ClientAnalytics } from '@/components/client-analytics';
+import { HapticsProvider } from '@/components/haptics-provider';
 
 import { Providers } from './providers';
 
@@ -64,6 +66,9 @@ export const metadata: Metadata = {
       follow: true,
     },
   },
+  alternates: {
+    canonical: 'https://mydatavibes.com',
+  },
 };
 
 export const viewport: Viewport = {
@@ -78,24 +83,6 @@ export const viewport: Viewport = {
     { media: '(prefers-color-scheme: dark)', color: '#111111' },
   ],
 };
-
-const sfPro = localFont({
-  src: [
-    {
-      path: '../public/fonts/SF-Pro.ttf',
-      weight: '100 900',
-      style: 'normal',
-    },
-    {
-      path: '../public/fonts/SF-Pro-Italic.ttf',
-      weight: '100 900',
-      style: 'italic',
-    },
-  ],
-  variable: '--font-sans',
-  preload: true,
-  display: 'swap',
-});
 
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['latin'],
@@ -113,6 +100,23 @@ const baumans = Baumans({
   weight: ['400'],
 });
 
+const geist = Geist({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  preload: true,
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
+});
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ['latin'],
+  variable: '--font-instrument-serif',
+  preload: true,
+  display: 'swap',
+  weight: ['400'],
+  style: ['normal', 'italic'],
+});
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -121,13 +125,15 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${sfPro.variable} ${beVietnamPro.variable} ${baumans.variable} font-sans antialiased`}
+        className={`${geist.variable} ${beVietnamPro.variable} ${baumans.variable} ${instrumentSerif.variable} ${GeistPixelSquare.variable} ${GeistPixelGrid.variable} font-sans antialiased`}
         suppressHydrationWarning
       >
         <NuqsAdapter>
           <Providers>
             <SidebarProvider>
               <Toaster position="top-center" />
+              <HapticsProvider />
+              <NewChatHotkey />
               {children}
             </SidebarProvider>
           </Providers>
