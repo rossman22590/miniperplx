@@ -1716,7 +1716,7 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
       } else {
         // Use Polar portal for Polar subscribers
         console.log('Opening Polar portal');
-        await authClient.customer.portal({});
+        await authClient.customer.portal();
       }
     } catch (error) {
       console.error('Subscription management error:', error);

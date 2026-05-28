@@ -262,7 +262,7 @@ export default function PricingTable({ subscriptionDetails, user }: PricingTable
     try {
       const proSource = getProAccessSource();
       if (proSource === 'dodo') await betterauthClient.dodopayments.customer.portal();
-      else await authClient.customer.portal({});
+      else await authClient.customer.portal();
     } catch (error) {
       console.error('Failed to open customer portal:', error);
       sileo.error({ title: 'Failed to open subscription management' });
