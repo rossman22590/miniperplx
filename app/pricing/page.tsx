@@ -7,11 +7,12 @@ import PricingTable from './_component/pricing-table';
 export default async function PricingPage() {
   const user = await getCurrentUser();
 
-  const subscriptionDetails = user?.subscription
+  const subscriptionDetails = user?.polarSubscription
     ? {
         hasSubscription: true,
         subscription: {
-          ...user.subscription,
+          ...user.polarSubscription,
+          organizationId: null,
         },
       }
     : { hasSubscription: false };

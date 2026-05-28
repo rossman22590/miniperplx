@@ -365,7 +365,7 @@ const UserProfile = memo(
             isProUser={isProUser}
             isProStatusLoading={isProStatusLoading}
             isCustomInstructionsEnabled={isCustomInstructionsEnabled}
-            setIsCustomInstructionsEnabled={setIsCustomInstructionsEnabled}
+            setIsCustomInstructionsEnabledAction={setIsCustomInstructionsEnabled}
             initialTab={settingsInitialTab}
           />
         )}

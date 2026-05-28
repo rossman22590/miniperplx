@@ -156,6 +156,8 @@ export interface ComprehensiveUserData {
   planTier: PlanTier;
   proSource: ProSource;
   subscriptionStatus: SubscriptionStatus;
+  isBanned?: boolean;
+  banReason?: string | null;
   polarSubscription?: PolarSubscriptionData;
   dodoSubscription?: DodoSubscriptionDetails;
   subscriptionHistory: DodoSubscriptionData[];

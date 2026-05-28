@@ -597,7 +597,6 @@ class ExaSearchStrategy implements SearchProviderStrategy {
         | 'research paper'
         | 'financial report'
         | 'pdf'
-        | 'tweet'
         | 'personal site'
         | 'people';
       const validExaCategories: ExaCategory[] = [
@@ -606,7 +605,6 @@ class ExaSearchStrategy implements SearchProviderStrategy {
         'research paper',
         'financial report',
         'pdf',
-        'tweet',
         'personal site',
         'people',
       ];
