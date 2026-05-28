@@ -59,12 +59,12 @@ import { getSearchGroups } from '@/lib/utils';
 const testimonials = [
   {
     content:
-      'Scira is better than Grok at digging up information from X, its own platform! Scira did much much better with insanely accurate answers!',
+      'Datavibes is better than Grok at digging up information from X, its own platform! Datavibes did much much better with insanely accurate answers!',
     author: 'Chris Universe',
     handle: '@chrisuniverseb',
   },
   {
-    content: 'Scira does a really good job scraping through the reddit mines.',
+    content: 'Datavibes does a really good job scraping through the reddit mines.',
     author: 'nyaaier',
     handle: '@nyaaier',
   },
@@ -76,7 +76,7 @@ const testimonials = [
   },
   {
     content:
-      'Read nothing the whole sem and here I am with Scira to top my mid sems! Literally so good to get all the related diagrams, points and topics.',
+      'Read nothing the whole sem and here I am with Datavibes to top my mid sems! Literally so good to get all the related diagrams, points and topics.',
     author: 'Rajnandinit',
     handle: '@itsRajnandinit',
   },
@@ -153,7 +153,7 @@ function AppsBeamSection() {
             Your tools, <span className="font-pixel text-3xl sm:text-4xl">connected.</span>
           </h2>
           <p className="text-muted-foreground leading-relaxed">
-            Connect 100+ apps via MCP and let Scira take action inside them. Research and act, without leaving the
+            Connect 100+ apps via MCP and let Datavibes take action inside them. Research and act, without leaving the
             conversation.
           </p>
         </div>
@@ -360,7 +360,7 @@ export default function AboutPage() {
           <div className="flex items-center justify-between h-14 px-6">
             <Link href="/" className="flex items-center gap-2.5 group">
               <SciraLogo className="size-6 transition-transform duration-300 group-hover:scale-110" />
-              <span className="text-xl font-light tracking-tighter font-be-vietnam-pro">scira</span>
+              <span className="text-xl font-light tracking-tighter font-be-vietnam-pro">Datavibes</span>
             </Link>
 
             <nav className="hidden md:flex items-center gap-6">
@@ -385,7 +385,7 @@ export default function AboutPage() {
             <div className="flex items-center gap-3">
               <ThemeSwitcher />
               <Button size="sm" className="h-8 px-5 text-sm rounded-full font-medium" onClick={() => router.push('/')}>
-                Try Scira
+                Try Datavibes
                 <ArrowRight className="w-3 h-3 ml-1" />
               </Button>
             </div>
@@ -548,11 +548,11 @@ export default function AboutPage() {
               {
                 step: '01',
                 title: 'Ask anything',
-                description: 'Type a question, upload a PDF, or paste a URL. Pick a mode or let Scira decide for you.',
+                description: 'Type a question, upload a PDF, or paste a URL. Pick a mode or let Datavibes decide for you.',
               },
               {
                 step: '02',
-                title: 'Scira plans & retrieves',
+                title: 'Datavibes plans & retrieves',
                 description:
                   'The agent breaks your question into sub-tasks, searches live sources, and cross-checks the evidence.',
               },
@@ -693,7 +693,7 @@ export default function AboutPage() {
                 One box, <span className="font-pixel text-3xl sm:text-4xl">every</span> source
               </h2>
               <p className="text-muted-foreground leading-relaxed">
-                Each mode is fine-tuned for a specific type of research. Pick one, or let Scira choose.
+                Each mode is fine-tuned for a specific type of research. Pick one, or let Datavibes choose.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -884,7 +884,7 @@ export default function AboutPage() {
               Ready to <span className="font-pixel">think faster?</span>
             </h2>
             <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-              Join 100K+ users who research smarter and get things done with Scira.
+              Join 100K+ users who research smarter and get things done with Datavibes.
             </p>
             <div className="flex items-center justify-center gap-4">
               <Button className="rounded-full px-8 h-11" onClick={() => router.push('/')}>
@@ -1197,11 +1197,11 @@ export default function AboutPage() {
                 {[
                   'Unlimited research',
                   'All standard AI models',
-                  'Scira Apps (100+ integrations)',
+                  'Datavibes Apps (100+ integrations)',
                   'PDF analysis',
                   'Voice mode',
                   'XQL (X Query Language)',
-                  'Scira Lookout',
+                  'Datavibes Lookout',
                   'Priority support',
                 ].map((item) => (
                   <li key={item} className="flex items-center gap-3 text-sm text-foreground/80">
@@ -1287,8 +1287,8 @@ export default function AboutPage() {
               </h2>
               <p className="text-muted-foreground leading-relaxed mb-8">
                 Can&apos;t find what you need? Reach out at{' '}
-                <a href="mailto:zaid@scira.ai" className="text-foreground hover:underline underline-offset-2">
-                  zaid@scira.ai
+                <a href="mailto:support@mydatavibes.com" className="text-foreground hover:underline underline-offset-2">
+                  support@mydatavibes.com
                 </a>
               </p>
               <div className="flex gap-3">
@@ -1304,9 +1304,9 @@ export default function AboutPage() {
             <div className="lg:col-span-3">
               <ProAccordion type="single" collapsible className="w-full">
                 <ProAccordionItem value="item-1">
-                  <ProAccordionTrigger>What is Scira?</ProAccordionTrigger>
+                  <ProAccordionTrigger>What is Datavibes?</ProAccordionTrigger>
                   <ProAccordionContent>
-                    Scira is an open-source AI assistant built for research and action. It searches the web in depth,
+                    Datavibes is an open-source AI assistant built for research and action. It searches the web in depth,
                     cites its sources, and connects to 100+ apps via MCP so you can act on what you find without leaving
                     the conversation.
                   </ProAccordionContent>
@@ -1333,16 +1333,16 @@ export default function AboutPage() {
                   </ProAccordionContent>
                 </ProAccordionItem>
                 <ProAccordionItem value="item-5">
-                  <ProAccordionTrigger>What AI models does Scira use?</ProAccordionTrigger>
+                  <ProAccordionTrigger>What AI models does Datavibes use?</ProAccordionTrigger>
                   <ProAccordionContent>
-                    Scira uses a range of advanced models including Grok, Claude, GPT, Gemini, and more. Switch between
+                    Datavibes uses a range of advanced models including Grok, Claude, GPT, Gemini, and more. Switch between
                     them for each query based on what works best.
                   </ProAccordionContent>
                 </ProAccordionItem>
                 <ProAccordionItem value="item-6">
-                  <ProAccordionTrigger>How does Scira ensure accuracy?</ProAccordionTrigger>
+                  <ProAccordionTrigger>How does Datavibes ensure accuracy?</ProAccordionTrigger>
                   <ProAccordionContent>
-                    Scira grounds outputs in retrieved sources (RAG + search grounding) and includes inline citations so
+                    Datavibes grounds outputs in retrieved sources (RAG + search grounding) and includes inline citations so
                     you can audit the evidence. Agents cross-check multiple sources before synthesizing an answer.
                   </ProAccordionContent>
                 </ProAccordionItem>
@@ -1358,7 +1358,7 @@ export default function AboutPage() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-8">
             <div className="flex items-center gap-3">
               <SciraLogo className="size-4" />
-              <span className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} Scira</span>
+              <span className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} Datavibes</span>
             </div>
             <div className="flex items-center gap-6">
               <Link href="/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors">

@@ -5,7 +5,7 @@ import { xai } from '@ai-sdk/xai';
 
 const scira = customProvider({
   languageModels: {
-    'scira-default': xai('grok-4-1-fast-non-reasoning'),
+    'scira-default': xai('grok-4.3'),
   },
 });
 

@@ -201,8 +201,8 @@ export const models: Model[] = [
   },
   {
     value: 'scira-default',
-    label: 'Grok 4.1 Fast',
-    description: "xAI's greatest and fastest multimodel LLM",
+    label: 'Grok 4.3',
+    description: "xAI's current flagship model for agentic workflows and instruction following",
     vision: true,
     reasoning: false,
     experimental: false,
@@ -237,9 +237,9 @@ export const models: Model[] = [
     },
   },
   {
-    value: 'scira-grok4.1-fast-thinking',
-    label: 'Grok 4.1 Fast Thinking',
-    description: "xAI's greatest and fastest multimodel reasoning LLM",
+    value: 'scira-grok-4.3-thinking',
+    label: 'Grok 4.3 Thinking',
+    description: "xAI's current flagship model with reasoning enabled",
     vision: true,
     reasoning: true,
     experimental: false,
@@ -2643,8 +2643,12 @@ export const models: Model[] = [
 ];
 
 // Helper functions for model access checks
+const modelValueAliases: Record<string, string> = {
+  'scira-grok4.1-fast-thinking': 'scira-grok-4.3-thinking',
+};
+
 export function getModelConfig(modelValue: string) {
-  return models.find((model) => model.value === modelValue);
+  return models.find((model) => model.value === (modelValueAliases[modelValue] ?? modelValue));
 }
 
 export function requiresAuthentication(modelValue: string): boolean {

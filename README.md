@@ -118,7 +118,7 @@ Research at the speed of thought. The agentic research platform that plans, retr
 
 ## LLM Models Supported
 
-- **xAI**: Grok 3, Grok 3 Mini, Grok 4, Grok 4 Fast, Grok 4.1 Fast, Grok Code
+- **xAI**: Grok 3, Grok 3 Mini, Grok 4, Grok 4 Fast, Grok 4.3, Grok Code
 - **OpenAI**: GPT 4.1 (Nano/Mini/Standard), GPT 5 (Nano/Mini/Medium/Standard), GPT 5.1 (Instant/Thinking/Codex), GPT 5.2 (Instant/Thinking/Codex), o3, o4 mini, GPT OSS 20B/120B
 - **Anthropic**: Claude Haiku 4.5, Claude Sonnet 4.5, Claude 4.5 Opus, Claude 4.6 Opus
 - **Google**: Gemini 2.5 Flash (Lite/Standard), Gemini 2.5 Pro, Gemini 3 Flash, Gemini 3 Pro
