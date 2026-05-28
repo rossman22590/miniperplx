@@ -1,129 +1,154 @@
 import { getCurrentUser } from '@/app/actions';
-import {
-  convertToModelMessages,
-  streamText,
-  ToolSet,
-  tool,
-  hasToolCall,
-  UIMessage,
-  UIDataTypes,
-  InferUITools,
-  generateText,
-  stepCountIs,
-} from 'ai';
+import { generateObject, generateText, stepCountIs } from 'ai';
 import { ChatSDKError } from '@/lib/errors';
-
-import { markdownJoinerTransform } from '@/lib/parser';
-import { scira } from '@/ai/providers';
 
 import { z } from 'zod';
 import { xai } from '@ai-sdk/xai';
+import { getTweet, type Tweet } from 'react-tweet/api';
 
-const xqlTool = tool({
-  description:
-    'Search X posts for recent information and discussions with the ability to filter by X handles, date range, and post engagement metrics.',
-  inputSchema: z
-    .object({
-      query: z.string().describe('The new rephrased natural language query crafted by you.'),
-      startDate: z
-        .string()
-        .describe('The start date of the search in the format YYYY-MM-DD (default to 15 days ago if not specified)'),
-      endDate: z
-        .string()
-        .describe('The end date of the search in the format YYYY-MM-DD (default to today if not specified)'),
-      includeXHandles: z
-        .array(z.string())
-        .max(10)
-        .optional()
-        .describe('The X handles to include in the search (max 10). Cannot be used with excludeXHandles.'),
-      excludeXHandles: z
-        .array(z.string())
-        .max(10)
-        .optional()
-        .describe(
-          'The X handles to exclude in the search (max 10). Cannot be used with includeXHandles. Note: "grok" handle is excluded by default.',
-        ),
-    })
-    .refine(
-      (data) => {
-        // Ensure includeXHandles and excludeXHandles are not both specified with non-empty arrays
-        const hasInclude = data.includeXHandles && data.includeXHandles.length > 0;
-        const hasExclude = data.excludeXHandles && data.excludeXHandles.length > 0;
-        return !(hasInclude && hasExclude);
-      },
-      {
-        message: 'Cannot specify both includeXHandles and excludeXHandles - use one or the other',
-        path: ['includeXHandles', 'excludeXHandles'],
-      },
-    ),
-  async execute({
-    query,
-    startDate,
-    endDate,
-    includeXHandles,
-    excludeXHandles,
-  }) {
-    const sanitizeHandle = (handle: string) => handle.replace(/^@+/, '').trim();
-
-    const normalizedInclude = Array.isArray(includeXHandles)
-      ? includeXHandles.map(sanitizeHandle).filter(Boolean)
-      : undefined;
-    const normalizedExclude = Array.isArray(excludeXHandles)
-      ? excludeXHandles.map(sanitizeHandle).filter(Boolean)
-      : undefined;
-
-    const toYMD = (d: Date) => d.toISOString().slice(0, 10);
-    const today = new Date();
-    const daysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
-    const effectiveStart = startDate && startDate.trim().length > 0 ? startDate : toYMD(daysAgo);
-    const effectiveEnd = endDate && endDate.trim().length > 0 ? endDate : toYMD(today);
-
-    console.log('X search - includeHandles:', normalizedInclude, 'excludeHandles:', normalizedExclude);
-
-    const xSearchToolConfig: Parameters<typeof xai.tools.xSearch>[0] = {
-      fromDate: effectiveStart,
-      toDate: effectiveEnd,
-      enableImageUnderstanding: true,
-      enableVideoUnderstanding: true,
-    };
-
-    // Add allowedXHandles if includeXHandles is provided
-    if (normalizedInclude?.length) {
-      xSearchToolConfig.allowedXHandles = normalizedInclude;
-    }
-
-    const result = await generateText({
-      model: xai.responses('grok-4.3'),
-      prompt: query,
-      stopWhen: stepCountIs(1),
-      maxOutputTokens: 10,
-      tools: {
-        x_search: xai.tools.xSearch(xSearchToolConfig),
-      },
-    });
-
-    const citations =
-      result.sources?.map((source) => (source.sourceType === 'url' ? source.url : null)).filter((url) => url !== null) ||
-      [];
-
-    console.log('XQL Result: ', result);
-    console.log('XQL Sources: ', result.sources);
-
-    return citations;
-  },
+const xqlSearchSchema = z.object({
+  query: z.string().describe('The rephrased natural language search query.'),
+  startDate: z.string().describe('The start date of the search in the format YYYY-MM-DD.'),
+  endDate: z.string().describe('The end date of the search in the format YYYY-MM-DD.'),
+  includeXHandles: z
+    .array(z.string())
+    .max(10)
+    .optional()
+    .describe('The X handles to include in the search (max 10). Cannot be used with excludeXHandles.'),
+  excludeXHandles: z
+    .array(z.string())
+    .max(10)
+    .optional()
+    .describe('The X handles to exclude in the search (max 10). Cannot be used with includeXHandles.'),
 });
 
-const tools = {
-  xql: xqlTool,
-};
+export type XQLSearchInput = z.infer<typeof xqlSearchSchema>;
 
-export type XQLMessage = UIMessage<never, UIDataTypes, InferUITools<typeof tools>>;
+export interface XQLTweet {
+  id: string;
+  url: string;
+  data: Tweet | null;
+}
+
+export interface XQLSearchResponse {
+  input: XQLSearchInput;
+  citations: string[];
+  tweets: XQLTweet[];
+  analysis: string;
+  processingTime: number;
+}
+
+const toYMD = (date: Date) => date.toISOString().slice(0, 10);
+
+function normalizeSearchInput(input: XQLSearchInput): XQLSearchInput {
+  const sanitizeHandle = (handle: string) => handle.replace(/^@+/, '').trim();
+  const includeXHandles = input.includeXHandles?.map(sanitizeHandle).filter(Boolean);
+  const excludeXHandles = input.excludeXHandles?.map(sanitizeHandle).filter(Boolean);
+  const handles = [...(includeXHandles ?? []), ...(excludeXHandles ?? [])];
+  let query = input.query.trim();
+
+  for (const handle of handles) {
+    query = query.replace(new RegExp(`\\bfrom:${handle}\\b`, 'gi'), '').replace(new RegExp(`@${handle}\\b`, 'gi'), '');
+  }
+
+  query = query.replace(/\s+/g, ' ').trim() || input.query.trim();
+
+  return {
+    ...input,
+    query,
+    includeXHandles: includeXHandles?.length ? includeXHandles : undefined,
+    excludeXHandles: excludeXHandles?.length ? excludeXHandles : undefined,
+  };
+}
+
+async function runXSearch(input: XQLSearchInput): Promise<{ citations: string[]; analysis: string }> {
+  const sanitizeHandle = (handle: string) => handle.replace(/^@+/, '').trim();
+
+  const normalizedInclude = Array.isArray(input.includeXHandles)
+    ? input.includeXHandles.map(sanitizeHandle).filter(Boolean)
+    : undefined;
+  const normalizedExclude = Array.isArray(input.excludeXHandles)
+    ? input.excludeXHandles.map(sanitizeHandle).filter(Boolean)
+    : undefined;
+
+  const today = new Date();
+  const daysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+  const effectiveStart = input.startDate && input.startDate.trim().length > 0 ? input.startDate : toYMD(daysAgo);
+  const effectiveEnd = input.endDate && input.endDate.trim().length > 0 ? input.endDate : toYMD(today);
+
+  console.log('X search - includeHandles:', normalizedInclude, 'excludeHandles:', normalizedExclude);
+
+  const xSearchToolConfig: NonNullable<Parameters<typeof xai.tools.xSearch>[0]> = {
+    fromDate: effectiveStart,
+    toDate: effectiveEnd,
+    enableImageUnderstanding: true,
+    enableVideoUnderstanding: true,
+  };
+
+  if (normalizedInclude?.length) {
+    xSearchToolConfig.allowedXHandles = normalizedInclude;
+  }
+
+  if (normalizedExclude?.length) {
+    xSearchToolConfig.excludedXHandles = normalizedExclude;
+  }
+
+  const result = await generateText({
+    model: xai.responses('grok-4.20-non-reasoning'),
+    system: `You are a thorough X (Twitter) research analyst. Your job is to deeply investigate the user's query across the ENTIRE date range from ${effectiveStart} to ${effectiveEnd}.
+
+Instructions:
+- Run MULTIPLE x_search calls to cover the full time period — do NOT settle for the first batch of recent posts. Break the date range into chunks (e.g. by month) and search each, and try several query phrasings and related topics to surface as many distinct posts as possible.
+- Aim to gather a comprehensive set of posts spanning the whole range, not just the latest week.
+- Then write a detailed, well-structured Markdown analysis: organize by theme and/or chronologically, highlight key developments, trends, and notable posts, and cite specific posts inline.
+- Be exhaustive and analytical. Never ask clarifying questions — just search thoroughly and analyze.`,
+    prompt: input.query,
+    stopWhen: stepCountIs(10),
+    maxOutputTokens: 6000,
+    tools: {
+      x_search: xai.tools.xSearch(xSearchToolConfig),
+    },
+  });
+
+  const citations =
+    result.sources
+      ?.map((source) => (source.sourceType === 'url' ? source.url : null))
+      .filter((url): url is string => url !== null) ?? [];
+
+  console.log('XQL Sources: ', result.sources);
+
+  return { citations, analysis: result.text ?? '' };
+}
+
+async function fetchTweets(citations: string[]): Promise<XQLTweet[]> {
+  const seen = new Set<string>();
+  const entries: { id: string; url: string }[] = [];
+
+  for (const url of citations) {
+    const id = url?.match(/\/status\/(\d+)/)?.[1];
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    entries.push({ id, url });
+  }
+
+  return Promise.all(
+    entries.map(async ({ id, url }) => {
+      try {
+        const data = await getTweet(id);
+        return { id, url, data: data ?? null };
+      } catch (error) {
+        console.warn(`Failed to fetch tweet ${id}:`, error);
+        return { id, url, data: null };
+      }
+    }),
+  );
+}
 
 export async function POST(req: Request) {
-  console.log('🔍 Search API endpoint hit');
+  console.log('🔍 XQL API endpoint hit');
 
   const requestStartTime = Date.now();
-  const { messages } = await req.json();
+  const { query } = (await req.json().catch(() => ({}))) as { query?: string };
 
   const user = await getCurrentUser();
 
@@ -135,91 +160,49 @@ export async function POST(req: Request) {
     return new ChatSDKError('upgrade_required:auth', 'This feature requires a Pro subscription').toResponse();
   }
 
-  const result = streamText({
-    model: scira.languageModel('scira-default'),
-    messages: await convertToModelMessages(messages),
-    stopWhen: hasToolCall('xql'),
-    onAbort: ({ steps }) => {
-      console.log('Stream aborted after', steps.length, 'steps');
-    },
-    prepareStep: ({ stepNumber }) => {
-      if (stepNumber === 0) {
-        return {
-          toolChoice: { toolName: 'xql', type: 'tool' },
-          activeTools: ['xql'],
-        };
-      }
-    },
-    maxRetries: 10,
-    experimental_transform: markdownJoinerTransform(),
-    system: `You are a helpful assistant that searches for X posts, You will be given a search query and you will need to search for the posts and return the results in a structured format.
+  if (!query || query.trim().length === 0) {
+    return Response.json({ error: 'A search query is required.' }, { status: 400 });
+  }
 
-        Today's date is ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit', weekday: 'short' })}.
-        The date range is from 15 days ago to today unless the user specifies otherwise.
+  try {
+    const today = new Date();
+    const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
 
-        The tool to use is xql.
+    const { object: searchInput } = await generateObject({
+      model: xai('grok-4.20-non-reasoning'),
+      schema: xqlSearchSchema,
+      system: `You convert a natural language request into structured X (Twitter) search parameters.
 
-        The tool has the following parameters:
-        - query: The natural language query
-        - startDate: The start date of the search in the format YYYY-MM-DD (default to 15 days ago if not specified)
-        - endDate: The end date of the search in the format YYYY-MM-DD (default to today if not specified)
-        - includeXHandles: The X handles to include in the search (max 10 handles). Do not include the @ symbol. CANNOT be used together with excludeXHandles.
-        - excludeXHandles: The X handles to exclude in the search (max 10 handles). Do not include the @ symbol. CANNOT be used together with includeXHandles. Note: "grok" handle is automatically excluded by default.
-        - postFavoritesCount: The minimum number of favorites (likes) the post must have to be included
-        - postViewCount: The minimum number of views the post must have to be included
-        - maxResults: The maximum number of search results to return (default 15, max 100)
+Today's date is ${toYMD(today)}. Default the date range to ${toYMD(fifteenDaysAgo)} (15 days ago) through ${toYMD(today)} (today) unless the user specifies otherwise.
 
-        IMPORTANT CONSTRAINTS:
-        - Maximum 10 handles for include/exclude lists
-        - Cannot use both includeXHandles and excludeXHandles in the same query
-        - postFavoritesCount and postViewCount are minimum thresholds, not exact matches
+Rules:
+- query: a clean, rephrased version of the user's request suitable for searching X posts. Keep it faithful to what the user asked — do NOT substitute a different topic.
+- startDate / endDate: YYYY-MM-DD format.
+- includeXHandles: handles the user wants to search within (max 10, no @ symbol). CANNOT be combined with excludeXHandles.
+- excludeXHandles: handles to exclude (max 10, no @ symbol). CANNOT be combined with includeXHandles.
+- If the user mentions a handle like "@tsi_org", put "tsi_org" in includeXHandles.
+- Do NOT include "from:handle" or "@handle" tokens in query when includeXHandles is set. The handle filter belongs only in includeXHandles.`,
+      prompt: query,
+    });
 
-        The tools name is xql it doesnt meant you should write SQL in the input of the tool!
-        `,
-    tools: {
-      xql: xqlTool,
-    } as ToolSet,
-    onChunk(event) {
-      if (event.chunk.type === 'tool-call') {
-        console.log('Called Tool: ', event.chunk.toolName);
-      }
-    },
-    onStepFinish(event) {
-      if (event.warnings) {
-        console.log('Warnings: ', event.warnings);
-      }
-    },
-    onFinish: async (event) => {
-      console.log('Fin reason: ', event.finishReason);
-      console.log('Steps: ', event.steps);
-      console.log('Tool calls: ', event.toolCalls);
-      console.log('Tool Result: ', event.toolResults);
-      console.log('Response: ', event.response);
-      console.log('Provider metadata: ', event.providerMetadata);
-      console.log('Sources: ', event.sources);
-      console.log('Usage: ', event.usage);
-      console.log('Total Usage: ', event.totalUsage);
+    const normalizedSearchInput = normalizeSearchInput(searchInput);
+    const { citations, analysis } = await runXSearch(normalizedSearchInput);
 
-      const requestEndTime = Date.now();
-      const processingTime = (requestEndTime - requestStartTime) / 1000;
-      console.log('--------------------------------');
-      console.log(`Total request processing time: ${processingTime.toFixed(2)} seconds`);
-      console.log('--------------------------------');
-    },
-    onError(event) {
-      console.log('Error: ', event.error);
-      const requestEndTime = Date.now();
-      const processingTime = (requestEndTime - requestStartTime) / 1000;
-      console.log('--------------------------------');
-      console.log(`Request processing time (with error): ${processingTime.toFixed(2)} seconds`);
-      console.log('--------------------------------');
-    },
-  });
+    const tweets = await fetchTweets(citations);
 
-  result.consumeStream();
+    const processingTime = (Date.now() - requestStartTime) / 1000;
+    console.log(`XQL request processing time: ${processingTime.toFixed(2)}s`);
 
-  return result.toUIMessageStreamResponse({
-    sendReasoning: true,
-    sendSources: true,
-  });
+    return Response.json({
+      input: normalizedSearchInput,
+      citations,
+      tweets,
+      analysis,
+      processingTime,
+    } satisfies XQLSearchResponse);
+  } catch (error) {
+    console.error('XQL error: ', error);
+    const message = error instanceof Error ? error.message : 'Failed to run XQL search';
+    return Response.json({ error: message }, { status: 500 });
+  }
 }

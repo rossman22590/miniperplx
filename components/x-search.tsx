@@ -2,7 +2,6 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
-import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { XLogoIcon } from '@phosphor-icons/react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -10,16 +9,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { CustomUIDataTypes, DataQueryCompletionPart } from '@/lib/types';
 import type { DataUIPart } from 'ai';
-
-// Dynamically import Tweet component - it's a heavy library for Twitter embeds
-const Tweet = dynamic(() => import('react-tweet').then(mod => ({ default: mod.Tweet })), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-[200px] rounded-lg border border-border bg-muted/30 animate-pulse flex items-center justify-center">
-      <Spinner className="w-4 h-4" />
-    </div>
-  ),
-});
+import { XPostCard } from '@/components/x-post-card';
 
 // Custom Premium Icons
 const Icons = {
@@ -62,6 +52,7 @@ interface Citation {
 interface Source {
   text: string;
   link: string;
+  id?: string;
   title?: string;
 }
 
@@ -107,110 +98,133 @@ function extractTweetId(url?: string | null) {
   return url.match(/\/status\/(\d+)/)?.[1] ?? null;
 }
 
-const XSearchLoadingState: React.FC<{ queries: string[]; annotations: DataUIPart<CustomUIDataTypes>[] }> = React.memo(({ queries, annotations }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const loadingQueryTagsRef = React.useRef<HTMLDivElement>(null);
-  const totalSources = useMemo(
-    () => annotations.reduce((sum, a) => sum + (a.data.resultsCount || 0), 0),
-    [annotations]
-  );
+const XSearchLoadingState: React.FC<{ queries: string[]; annotations: DataUIPart<CustomUIDataTypes>[] }> = React.memo(
+  ({ queries, annotations }) => {
+    const [isExpanded, setIsExpanded] = useState(true);
+    const loadingQueryTagsRef = React.useRef<HTMLDivElement>(null);
+    const totalSources = useMemo(
+      () => annotations.reduce((sum, a) => sum + (a.data.resultsCount || 0), 0),
+      [annotations],
+    );
 
-  const handleWheelScroll = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
-    const container = e.currentTarget;
-    if (e.deltaY === 0) return;
-    const canScrollHorizontally = container.scrollWidth > container.clientWidth;
-    if (!canScrollHorizontally) return;
-    e.stopPropagation();
-    const isAtLeftEdge = container.scrollLeft <= 1;
-    const isAtRightEdge = container.scrollLeft >= container.scrollWidth - container.clientWidth - 1;
-    if (!isAtLeftEdge && !isAtRightEdge) {
-      e.preventDefault();
-      container.scrollLeft += e.deltaY;
-    } else if (isAtLeftEdge && e.deltaY > 0) {
-      e.preventDefault();
-      container.scrollLeft += e.deltaY;
-    } else if (isAtRightEdge && e.deltaY < 0) {
-      e.preventDefault();
-      container.scrollLeft += e.deltaY;
-    }
-  }, []);
+    const handleWheelScroll = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+      const container = e.currentTarget;
+      if (e.deltaY === 0) return;
+      const canScrollHorizontally = container.scrollWidth > container.clientWidth;
+      if (!canScrollHorizontally) return;
+      e.stopPropagation();
+      const isAtLeftEdge = container.scrollLeft <= 1;
+      const isAtRightEdge = container.scrollLeft >= container.scrollWidth - container.clientWidth - 1;
+      if (!isAtLeftEdge && !isAtRightEdge) {
+        e.preventDefault();
+        container.scrollLeft += e.deltaY;
+      } else if (isAtLeftEdge && e.deltaY > 0) {
+        e.preventDefault();
+        container.scrollLeft += e.deltaY;
+      } else if (isAtRightEdge && e.deltaY < 0) {
+        e.preventDefault();
+        container.scrollLeft += e.deltaY;
+      }
+    }, []);
 
-  return (
-    <div className="w-full my-3">
-      <div className="rounded-xl border border-border/60 overflow-hidden bg-card/30">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-muted/20 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <div className="p-1 rounded bg-background/80 shrink-0">
-              <XLogoIcon className="h-2.5 w-2.5 text-foreground" />
+    return (
+      <div className="w-full my-3">
+        <div className="rounded-xl border border-border/60 overflow-hidden bg-card/30">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-muted/20 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <div className="p-1 rounded bg-background/80 shrink-0">
+                <XLogoIcon className="h-2.5 w-2.5 text-foreground" />
+              </div>
+              <span className="font-pixel text-xs text-muted-foreground/80 uppercase tracking-wider">X Search</span>
             </div>
-            <span className="font-pixel text-xs text-muted-foreground/80 uppercase tracking-wider">X Search</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground/60 tabular-nums">{totalSources || 0}</span>
-            <Icons.ChevronDown
-              className={cn(
-                'h-3 w-3 text-muted-foreground/60 transition-transform duration-200',
-                isExpanded && 'rotate-180',
-              )}
-            />
-          </div>
-        </button>
-
-        {isExpanded && (
-          <div className="border-t border-border/40">
-            <div
-              ref={loadingQueryTagsRef}
-              className="px-3.5 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-border/30"
-              onWheel={handleWheelScroll}
-            >
-              {queries.length ? (
-                queries.map((query, i) => {
-                  const isCompleted = annotations.some((a) => a.data.query === query && a.data.status === 'completed');
-                  const annotation = annotations.find((a) => a.data.query === query);
-                  const sourcesCount = annotation?.data.resultsCount || 0;
-                  return (
-                    <span key={i} className="inline-flex items-center gap-1.5 text-[10px] shrink-0">
-                      {isCompleted ? (
-                        <svg className="w-2.5 h-2.5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M20 6L9 17l-5-5" />
-                        </svg>
-                      ) : (
-                        <Spinner className="w-2.5 h-2.5" />
-                      )}
-                      <span className={cn('font-medium', isCompleted ? 'text-foreground' : 'text-muted-foreground')}>{query}</span>
-                      {sourcesCount > 0 && <span className="text-[9px] text-muted-foreground/50 tabular-nums">({sourcesCount})</span>}
-                      {i < queries.length - 1 && <span className="text-muted-foreground/30 ml-1">/</span>}
-                    </span>
-                  );
-                })
-              ) : (
-                <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                  <Spinner className="w-2.5 h-2.5" />
-                  <span className="font-medium">Searching X...</span>
-                </span>
-              )}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground/60 tabular-nums">{totalSources || 0}</span>
+              <Icons.ChevronDown
+                className={cn(
+                  'h-3 w-3 text-muted-foreground/60 transition-transform duration-200',
+                  isExpanded && 'rotate-180',
+                )}
+              />
             </div>
+          </button>
 
-            <div className="divide-y divide-border/20">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="px-3.5 py-2 flex items-center gap-2.5">
-                  <div className="w-3.5 h-3.5 rounded-sm bg-muted/30 animate-pulse shrink-0" style={{ animationDelay: `${i * 100}ms` }} />
-                  <div className="flex-1 space-y-1">
-                    <div className="h-3 bg-muted/30 rounded animate-pulse w-3/4" style={{ animationDelay: `${i * 100 + 50}ms` }} />
-                    <div className="h-2 bg-muted/20 rounded animate-pulse w-1/2" style={{ animationDelay: `${i * 100 + 80}ms` }} />
+          {isExpanded && (
+            <div className="border-t border-border/40">
+              <div
+                ref={loadingQueryTagsRef}
+                className="px-3.5 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-border/30"
+                onWheel={handleWheelScroll}
+              >
+                {queries.length ? (
+                  queries.map((query, i) => {
+                    const isCompleted = annotations.some(
+                      (a) => a.data.query === query && a.data.status === 'completed',
+                    );
+                    const annotation = annotations.find((a) => a.data.query === query);
+                    const sourcesCount = annotation?.data.resultsCount || 0;
+                    return (
+                      <span key={i} className="inline-flex items-center gap-1.5 text-[10px] shrink-0">
+                        {isCompleted ? (
+                          <svg
+                            className="w-2.5 h-2.5 text-muted-foreground"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M20 6L9 17l-5-5" />
+                          </svg>
+                        ) : (
+                          <Spinner className="w-2.5 h-2.5" />
+                        )}
+                        <span className={cn('font-medium', isCompleted ? 'text-foreground' : 'text-muted-foreground')}>
+                          {query}
+                        </span>
+                        {sourcesCount > 0 && (
+                          <span className="text-[9px] text-muted-foreground/50 tabular-nums">({sourcesCount})</span>
+                        )}
+                        {i < queries.length - 1 && <span className="text-muted-foreground/30 ml-1">/</span>}
+                      </span>
+                    );
+                  })
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <Spinner className="w-2.5 h-2.5" />
+                    <span className="font-medium">Searching X...</span>
+                  </span>
+                )}
+              </div>
+
+              <div className="divide-y divide-border/20">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="px-3.5 py-2 flex items-center gap-2.5">
+                    <div
+                      className="w-3.5 h-3.5 rounded-sm bg-muted/30 animate-pulse shrink-0"
+                      style={{ animationDelay: `${i * 100}ms` }}
+                    />
+                    <div className="flex-1 space-y-1">
+                      <div
+                        className="h-3 bg-muted/30 rounded animate-pulse w-3/4"
+                        style={{ animationDelay: `${i * 100 + 50}ms` }}
+                      />
+                      <div
+                        className="h-2 bg-muted/20 rounded animate-pulse w-1/2"
+                        style={{ animationDelay: `${i * 100 + 80}ms` }}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 XSearchLoadingState.displayName = 'XSearchLoadingState';
 
@@ -253,12 +267,12 @@ const XSearch: React.FC<XSearchProps> = ({ result, args, annotations = [] }) => 
         const url = typeof citation === 'string' ? citation : citation.url;
         const tweetId = extractTweetId(url);
         let title = typeof citation === 'object' ? citation.title : '';
+        const matchingSource = uniqueSources.find((source) => {
+          const sourceId = extractTweetId(source.link);
+          return sourceId && sourceId === tweetId;
+        });
 
-        if (!title && uniqueSources.length) {
-          const matchingSource = uniqueSources.find((source) => {
-            const sourceId = extractTweetId(source.link);
-            return sourceId && sourceId === tweetId;
-          });
+        if (!title && matchingSource) {
           title = matchingSource?.title || '';
         }
 
@@ -266,6 +280,7 @@ const XSearch: React.FC<XSearchProps> = ({ result, args, annotations = [] }) => 
           url,
           title,
           description: typeof citation === 'object' ? citation.description : '',
+          text: matchingSource?.text,
           tweet_id: tweetId,
         };
       })
@@ -376,12 +391,16 @@ const XSearch: React.FC<XSearchProps> = ({ result, args, annotations = [] }) => 
                       initial={{ opacity: 0, scale: 0.96 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.03 }}
-                      className="shrink-0 w-[260px] sm:w-[300px]"
+                      className="shrink-0 w-[320px] sm:w-[360px]"
                     >
                       {citation.tweet_id && (
-                        <div className="tweet-wrapper">
-                          <Tweet id={citation.tweet_id} />
-                        </div>
+                        <XPostCard
+                          post={{
+                            id: citation.tweet_id,
+                            url: citation.url,
+                            text: citation.text || citation.title || citation.description,
+                          }}
+                        />
                       )}
                     </motion.div>
                   ))}
@@ -391,7 +410,7 @@ const XSearch: React.FC<XSearchProps> = ({ result, args, annotations = [] }) => 
                     <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                       <button
                         onClick={() => setIsSheetOpen(true)}
-                        className="shrink-0 w-[260px] sm:w-[300px] min-h-[160px] border border-dashed border-border/60 dark:border-2 dark:border-solid dark:border-border rounded-lg flex flex-col items-center justify-center hover:border-border dark:hover:border-border hover:bg-accent/20 transition-colors group"
+                        className="shrink-0 w-[320px] sm:w-[360px] min-h-[190px] border border-dashed border-border/60 dark:border-2 dark:border-solid dark:border-border rounded-xl flex flex-col items-center justify-center hover:border-border dark:hover:border-border hover:bg-accent/20 transition-colors group"
                       >
                         <div className="p-2 rounded-full bg-muted/50 mb-2 group-hover:bg-muted transition-colors">
                           <Icons.Messages className="h-4 w-4 text-muted-foreground" />
@@ -419,9 +438,13 @@ const XSearch: React.FC<XSearchProps> = ({ result, args, annotations = [] }) => 
                                   transition={{ delay: index * 0.015 }}
                                 >
                                   {citation.tweet_id && (
-                                    <div className="tweet-wrapper-sheet">
-                                      <Tweet id={citation.tweet_id} />
-                                    </div>
+                                    <XPostCard
+                                      post={{
+                                        id: citation.tweet_id,
+                                        url: citation.url,
+                                        text: citation.text || citation.title || citation.description,
+                                      }}
+                                    />
                                   )}
                                 </motion.div>
                               ))}

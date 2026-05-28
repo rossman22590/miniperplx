@@ -115,10 +115,7 @@ const SignInButton = ({ title, provider, loading, setLoading, callbackURL, icon,
 
 export default function AuthCard({ title, description, mode = 'sign-in' }: AuthCardProps) {
   const [redirect] = useQueryState('redirect', parseAsString.withDefault('/'));
-  const [githubLoading, setGithubLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [twitterLoading, setTwitterLoading] = useState(false);
-  const [microsoftLoading, setMicrosoftLoading] = useState(false);
 
   const lastMethod = authClient.getLastUsedLoginMethod();
   const callbackURL = redirect;
@@ -145,40 +142,13 @@ export default function AuthCard({ title, description, mode = 'sign-in' }: AuthC
       {/* Auth Buttons */}
       <div className="space-y-3">
         <SignInButton
-          title="Google"
+          title="Continue with Google"
           provider="google"
           loading={googleLoading}
           setLoading={setGoogleLoading}
           callbackURL={callbackURL}
           icon={<AuthIcons.Google className="w-4 h-4" />}
           isLastUsed={lastMethod === 'google'}
-        />
-        <SignInButton
-          title="GitHub"
-          provider="github"
-          loading={githubLoading}
-          setLoading={setGithubLoading}
-          callbackURL={callbackURL}
-          icon={<AuthIcons.Github className="w-4 h-4" />}
-          isLastUsed={lastMethod === 'github'}
-        />
-        <SignInButton
-          title="X"
-          provider="twitter"
-          loading={twitterLoading}
-          setLoading={setTwitterLoading}
-          callbackURL={callbackURL}
-          icon={<AuthIcons.Twitter className="w-4 h-4" />}
-          isLastUsed={lastMethod === 'twitter'}
-        />
-        <SignInButton
-          title="Microsoft"
-          provider="microsoft"
-          loading={microsoftLoading}
-          setLoading={setMicrosoftLoading}
-          callbackURL={callbackURL}
-          icon={<AuthIcons.Microsoft className="w-4 h-4" />}
-          isLastUsed={lastMethod === 'microsoft'}
         />
       </div>
 

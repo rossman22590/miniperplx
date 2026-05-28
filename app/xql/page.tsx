@@ -1,57 +1,133 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Play, Loader2, Copy, Check, X } from 'lucide-react';
 import { CodeIcon, XLogoIcon } from '@phosphor-icons/react';
 import { sileo } from 'sileo';
-import { Tweet } from 'react-tweet';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
 import { XQLProUpgradeScreen } from '@/components/xql-pro-upgrade-screen';
 import { BorderTrail } from '@/components/core/border-trail';
 import { TextShimmer } from '@/components/core/text-shimmer';
 import { cn } from '@/lib/utils';
-import { type XQLMessage } from '@/app/api/xql/route';
+import { type XQLSearchInput, type XQLSearchResponse } from '@/app/api/xql/route';
 import { highlight } from 'sugar-high';
 import { SciraLogo } from '@/components/logos/scira-logo';
+import { MarkdownRenderer } from '@/components/markdown';
 import { SidebarLayout } from '@/components/sidebar-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { v7 as uuidv7 } from 'uuid';
+import { XPostCard } from '@/components/x-post-card';
+
+function buildSQLQuery(input: XQLSearchInput) {
+  let sql = 'SELECT * FROM x_posts\n';
+  const conditions = [] as string[];
+
+  if (input.query) {
+    conditions.push(`  content LIKE '%${input.query}%'`);
+  }
+
+  const toYMD = (d: Date) => d.toISOString().slice(0, 10);
+  const today = new Date();
+  const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+  const startDate =
+    input.startDate && String(input.startDate).trim().length > 0 ? input.startDate : toYMD(fifteenDaysAgo);
+  const endDate = input.endDate && String(input.endDate).trim().length > 0 ? input.endDate : toYMD(today);
+
+  conditions.push(`  created_at >= '${startDate}'`);
+  conditions.push(`  created_at <= '${endDate}'`);
+
+  if (input.includeXHandles && Array.isArray(input.includeXHandles) && input.includeXHandles.length > 0) {
+    const handles = input.includeXHandles.map((handle) => `'${handle ?? ''}'`).join(', ');
+    conditions.push(`  author_handle IN (${handles})`);
+  }
+
+  if (input.excludeXHandles && Array.isArray(input.excludeXHandles) && input.excludeXHandles.length > 0) {
+    const handles = input.excludeXHandles.map((handle) => `'${handle ?? ''}'`).join(', ');
+    conditions.push(`  author_handle NOT IN (${handles})`);
+  }
+
+  if (conditions.length > 0) {
+    sql += 'WHERE\n' + conditions.join(' AND\n');
+  }
+
+  sql += '\nORDER BY created_at DESC';
+
+  return sql;
+}
+
+async function readErrorMessage(response: Response) {
+  const contentType = response.headers.get('content-type');
+
+  if (contentType?.includes('application/json')) {
+    const payload = (await response.json().catch(() => null)) as { error?: string; message?: string } | null;
+    return payload?.error || payload?.message || 'Query failed';
+  }
+
+  return (await response.text().catch(() => 'Query failed')) || 'Query failed';
+}
 
 function XQLPageContent() {
   const [input, setInput] = useState<string>('');
+  const [result, setResult] = useState<XQLSearchResponse | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
   const [copiedResult, setCopiedResult] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { user, isProUser, isLoading: isProStatusLoading } = useUser();
   const router = useRouter();
-
-  const { messages, sendMessage, status } = useChat<XQLMessage>({
-    transport: new DefaultChatTransport({
-      api: '/api/xql',
-    }),
-    generateId: () => uuidv7(),
-    onError: (error) => {
-      sileo.error({
-        title: 'Query failed',
-        description: error.message,
-      });
-    },
-  });
+  const hasActivity = isRunning || result !== null || errorMessage !== null;
+  const canSubmit = input.trim().length > 0 && !isRunning && !isProStatusLoading;
 
   const handleRun = useCallback(async () => {
-    if (!input.trim() || status !== 'ready') return;
+    const query = input.trim();
 
-    await sendMessage({
-      role: 'user',
-      parts: [{ type: 'text', text: `Convert this natural language query to SQL: ${input}` }],
-    });
-  }, [input, status, sendMessage]);
+    if (!query || isRunning) return;
+
+    setIsRunning(true);
+    setResult(null);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch('/api/xql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await readErrorMessage(response));
+      }
+
+      const payload = (await response.json()) as Partial<XQLSearchResponse>;
+
+      if (!payload.input || !Array.isArray(payload.citations)) {
+        throw new Error('XQL returned an invalid response.');
+      }
+
+      setResult({
+        input: payload.input,
+        citations: payload.citations,
+        tweets: Array.isArray(payload.tweets) ? payload.tweets : [],
+        analysis: typeof payload.analysis === 'string' ? payload.analysis : '',
+        processingTime: typeof payload.processingTime === 'number' ? payload.processingTime : 0,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Query failed';
+      setErrorMessage(message);
+      sileo.error({
+        title: 'Query failed',
+        description: message,
+      });
+    } finally {
+      setIsRunning(false);
+    }
+  }, [input, isRunning]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -80,8 +156,6 @@ function XQLPageContent() {
     }
   }, [user, router, isProStatusLoading]);
 
-  const lastMessage = messages[messages.length - 1];
-
   if (!isProStatusLoading && !isProUser) {
     return <XQLProUpgradeScreen />;
   }
@@ -90,17 +164,16 @@ function XQLPageContent() {
     <div
       className={cn(
         'min-h-screen bg-background overflow-x-hidden transition-[justify-content,align-items] duration-700 ease-in-out',
-        messages.length === 0 ? 'flex items-center justify-center' : '',
+        !hasActivity ? 'flex items-center justify-center' : '',
       )}
     >
       <div
         className={cn(
           'max-w-3xl w-full mx-auto px-4 transition-[padding] duration-700 ease-in-out',
-          messages.length === 0 ? 'py-12 sm:py-14' : 'pt-12 sm:pt-14 pb-12 sm:pb-10',
+          !hasActivity ? 'py-12 sm:py-14' : 'pt-12 sm:pt-14 pb-12 sm:pb-10',
         )}
       >
         <div className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 text-2xl sm:text-3xl md:text-5xl font-be-vietnam-pro -tracking-normal font-medium relative">
-          {/* Mobile sidebar trigger */}
           <div className="md:hidden absolute left-0">
             <SidebarTrigger />
           </div>
@@ -124,8 +197,8 @@ function XQLPageContent() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask in natural language…"
-              disabled={isProStatusLoading || status !== 'ready'}
+              placeholder="Ask in natural language..."
+              disabled={isProStatusLoading || isRunning}
               maxLength={200}
               className="w-full border-0 p-0 focus-visible:ring-0 text-sm sm:text-base bg-transparent! pr-12 sm:pr-14 shadow-none placeholder:text-muted-foreground"
             />
@@ -134,6 +207,7 @@ function XQLPageContent() {
                 variant="secondary"
                 size="sm"
                 onClick={() => setInput('')}
+                disabled={isRunning}
                 className="absolute size-8 sm:size-9 right-0 top-1/2 -translate-y-1/2 rounded-full p-0! m-0!"
               >
                 <X className="h-3 w-3" />
@@ -143,11 +217,11 @@ function XQLPageContent() {
           {input.trim() && <div className="w-px h-8 sm:h-9 bg-border shrink-0 self-center rounded" />}
           <Button
             onClick={handleRun}
-            disabled={!input.trim() || status !== 'ready' || isProStatusLoading}
+            disabled={!canSubmit}
             size="sm"
             className="h-8 sm:h-9 px-3 sm:px-4 rounded-full font-semibold text-xs sm:text-sm"
           >
-            {status === 'streaming' || status === 'submitted' ? (
+            {isRunning ? (
               <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
             ) : (
               <Play className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -178,16 +252,18 @@ function XQLPageContent() {
           </div>
         )}
 
-        {messages.length === 0 && status === 'ready' && !isProStatusLoading && (
+        {!hasActivity && !isProStatusLoading && (
           <div className="mt-8 space-y-4">
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-1">Try these queries</p>
-              <p className="font-pixel text-[11px] text-muted-foreground uppercase tracking-wider">Search X posts with natural language</p>
+              <p className="font-pixel text-[11px] text-muted-foreground uppercase tracking-wider">
+                Search X posts with natural language
+              </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {[
                 {
-                  query: '@DDATAVIBES updates from last week',
+                  query: '@tsi_org updates from last week',
                   description: 'Popular content with date range',
                 },
                 {
@@ -226,162 +302,82 @@ function XQLPageContent() {
                       </div>
                     </div>
                     <p className="text-sm text-foreground mb-1 font-medium leading-tight">{example.query}</p>
-                    <p className="font-pixel text-[9px] text-muted-foreground/50 uppercase tracking-wider leading-tight">{example.description}</p>
+                    <p className="font-pixel text-[9px] text-muted-foreground/50 uppercase tracking-wider leading-tight">
+                      {example.description}
+                    </p>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
             <p className="mt-6 text-center font-pixel text-[10px] text-muted-foreground/80 uppercase tracking-wider">
-              Dates · Handles · Engagement · Keywords
+              Dates / Handles / Engagement / Keywords
             </p>
           </div>
         )}
 
-        {messages.length > 0 && (
+        {hasActivity && (
           <div className="mt-8 space-y-4 animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
-            {lastMessage &&
-              (() => {
-                console.log('All message parts:', lastMessage.parts);
-                return null;
-              })()}
+            {result?.input && (
+              <Card className="rounded-xl border-border/60 p-0 shadow-none">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="grow min-w-0">
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <CodeIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <p className="font-pixel text-[12px] uppercase tracking-wider">Generated XQL</p>
+                      </div>
+                      <div className="relative">
+                        <pre className="text-xs sm:text-sm bg-muted/30 p-2 sm:p-3 rounded-lg border leading-relaxed overflow-x-auto w-full max-w-full">
+                          <code
+                            className="font-mono!"
+                            dangerouslySetInnerHTML={{ __html: highlight(buildSQLQuery(result.input)) }}
+                          />
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-            {lastMessage &&
-              lastMessage.parts.map((part, index) => {
-                if (
-                  part.type === 'tool-xql' &&
-                  'input' in part &&
-                  (part.state === 'input-streaming' ||
-                    part.state === 'input-available' ||
-                    part.state === 'output-available' ||
-                    part.state === 'output-error')
-                ) {
-                  console.log('Tool part found:', part); // Debug log
-                  const input = part.input;
+            {result?.analysis && result.analysis.trim().length > 0 && (
+              <Card className="rounded-xl border-border/60 p-0 shadow-none">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <SciraLogo className="size-5 text-foreground shrink-0" />
+                    <p className="font-pixel text-[12px] uppercase tracking-wider">Analysis</p>
+                  </div>
+                  <div className="text-sm leading-relaxed">
+                    <MarkdownRenderer content={result.analysis} />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-                  if (!input || typeof input !== 'object') {
-                    console.log('Input is invalid:', input);
-                    return null;
-                  }
-
-                  // Build SQL-like statement
-                  const buildSQLQuery = () => {
-                    let sql = 'SELECT * FROM x_posts\n';
-
-                    const conditions = [] as string[];
-
-                    if (input?.query) {
-                      conditions.push(`  content LIKE '%${input.query}%'`);
-                    }
-
-                    // Ensure dates are always shown (default: last 30 days to today)
-                    const toYMD = (d: Date) => d.toISOString().slice(0, 10);
-                    const today = new Date();
-                    const thirtyDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
-                    const startDate =
-                      input?.startDate && String(input.startDate).trim().length > 0
-                        ? input.startDate
-                        : toYMD(thirtyDaysAgo);
-                    const endDate =
-                      input?.endDate && String(input.endDate).trim().length > 0 ? input.endDate : toYMD(today);
-
-                    conditions.push(`  created_at >= '${startDate}'`);
-                    conditions.push(`  created_at <= '${endDate}'`);
-
-                    if (
-                      input?.includeXHandles &&
-                      Array.isArray(input.includeXHandles) &&
-                      input.includeXHandles.length > 0
-                    ) {
-                      const handles = input.includeXHandles.map((h) => `'${h ?? ''}'`).join(', ');
-                      conditions.push(`  author_handle IN (${handles})`);
-                    }
-
-                    if (
-                      input?.excludeXHandles &&
-                      Array.isArray(input.excludeXHandles) &&
-                      input.excludeXHandles.length > 0
-                    ) {
-                      const handles = input.excludeXHandles.map((h) => `'${h ?? ''}'`).join(', ');
-                      conditions.push(`  author_handle NOT IN (${handles})`);
-                    }
-
-                    if (conditions.length > 0) {
-                      sql += 'WHERE\n' + conditions.join(' AND\n');
-                    }
-
-                    sql += '\nORDER BY created_at DESC';
-
-                    return sql;
-                  };
-
-                  return (
-                    <Card key={index} className="rounded-xl border-border/60 p-0 shadow-none">
-                      <CardContent className="p-3 sm:p-4">
-                        <div className="flex items-start gap-3">
-                          <div className="grow min-w-0">
-                            <div className="flex items-center gap-2 mb-2.5">
-                              <CodeIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                              <p className="font-pixel text-[12px] uppercase tracking-wider">Generated XQL</p>
-                            </div>
-                            <div className="relative">
-                              <pre className="text-xs sm:text-sm bg-muted/30 p-2 sm:p-3 rounded-lg border leading-relaxed overflow-x-auto w-full max-w-full">
-                                <code className="font-mono!" dangerouslySetInnerHTML={{ __html: highlight(buildSQLQuery()) }} />
-                              </pre>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                }
-                return null;
-              })}
-
-            {/* Show loading state */}
-            {(status === 'streaming' || status === 'submitted') && (
+            {isRunning && (
               <Card className="relative w-full h-[80px] sm:h-[100px] my-4 overflow-hidden shadow-none p-0">
                 <BorderTrail className={cn('bg-linear-to-r from-primary/20 via-primary to-primary/20')} size={80} />
                 <CardContent className="px-4 py-4 sm:px-6 sm:py-6">
                   <div className="relative flex items-center gap-2 sm:gap-3">
-                    <div
-                      className={cn(
-                        'relative h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-primary/10 shrink-0',
-                      )}
-                    >
+                    <div className="relative h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-primary/10 shrink-0">
                       <BorderTrail
                         className={cn('bg-linear-to-r from-primary/20 via-primary to-primary/20')}
                         size={40}
                       />
-                      {lastMessage &&
-                      lastMessage.parts.some(
-                        (part) =>
-                          part.type === 'tool-xql' &&
-                          (part.state === 'input-streaming' || part.state === 'input-available'),
-                      ) ? (
-                        <CodeIcon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                      ) : (
-                        <XLogoIcon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                      )}
+                      <XLogoIcon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     </div>
                     <div className="space-y-1 sm:space-y-2 min-w-0 flex-1">
                       <TextShimmer className="text-sm sm:text-base font-medium" duration={2}>
-                        {lastMessage &&
-                        lastMessage.parts.some(
-                          (part) =>
-                            part.type === 'tool-xql' &&
-                            (part.state === 'input-streaming' || part.state === 'input-available'),
-                        )
-                          ? 'Executing XQL...'
-                          : 'Writing XQL code...'}
+                        Writing XQL code...
                       </TextShimmer>
                       <div className="flex gap-1 sm:gap-2">
-                        {[...Array(3)].map((_, i) => (
+                        {[32, 24, 42].map((width, i) => (
                           <div
                             key={i}
                             className="h-1 sm:h-1.5 rounded-full bg-muted animate-pulse"
                             style={{
-                              width: `${Math.random() * 30 + 15}px`,
+                              width: `${width}px`,
                               animationDelay: `${i * 0.2}s`,
                             }}
                           />
@@ -393,117 +389,88 @@ function XQLPageContent() {
               </Card>
             )}
 
-            {/* Show the citations */}
-            {lastMessage &&
-              lastMessage.parts.map((part, index) => {
-                if (part.type === 'tool-xql' && part.state === 'output-available') {
-                  const citations = 'output' in part && Array.isArray(part.output) ? part.output : [];
-                  return (
-                    <Card key={index} className="p-0 shadow-none">
-                      <CardContent className="p-0">
-                        <div className="flex flex-wrap items-center justify-between gap-2 p-3 sm:p-4">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <SciraLogo className="size-5 text-foreground shrink-0" />
-                            <span className="text-sm font-semibold text-foreground">
-                              {citations.length} Posts
-                            </span>
+            {result &&
+              (() => {
+                const tweets = result.tweets ?? [];
+
+                return (
+                  <Card className="p-0 shadow-none">
+                    <CardContent className="p-0">
+                      <div className="flex flex-wrap items-center justify-between gap-2 p-3 sm:p-4">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <SciraLogo className="size-5 text-foreground shrink-0" />
+                          <span className="text-sm font-semibold text-foreground">{tweets.length} Posts</span>
+                        </div>
+
+                        {result.citations.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(result.citations.join('\n'))}
+                            className="rounded-full h-8 w-8 sm:h-9 sm:w-9 p-0 shrink-0"
+                          >
+                            {copiedResult ? (
+                              <Check className="h-3 w-3 sm:h-4 sm:w-4" />
+                            ) : (
+                              <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+                        {tweets.length > 0 ? (
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            {tweets.map(({ id, url, data }) => (
+                              <XPostCard
+                                key={id}
+                                post={{
+                                  id,
+                                  url,
+                                  text: data?.text,
+                                  authorName: data?.user?.name,
+                                  authorHandle: data?.user?.screen_name,
+                                  avatarUrl: data?.user?.profile_image_url_https,
+                                  createdAt: data?.created_at,
+                                  likeCount: data?.favorite_count,
+                                  replyCount: data?.conversation_count,
+                                  mediaUrl:
+                                    data?.photos?.[0]?.url ||
+                                    data?.mediaDetails?.find((media) => media.type === 'photo')?.media_url_https,
+                                }}
+                              />
+                            ))}
                           </div>
-
-                          {citations.length > 0 && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyToClipboard(citations.join('\n'))}
-                              className="rounded-full h-8 w-8 sm:h-9 sm:w-9 p-0 shrink-0"
-                            >
-                              {copiedResult ? (
-                                <Check className="h-3 w-3 sm:h-4 sm:w-4" />
-                              ) : (
-                                <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
-                              )}
-                            </Button>
-                          )}
-                        </div>
-
-                        <div className="px-3 sm:px-4 pb-3 sm:pb-4">
-                          {citations.length > 0 ? (
-                            <div className="flex flex-col items-center gap-2">
-                              {citations.map((url: string | null, i: number) => {
-                                if (!url) {
-                                  return null;
-                                }
-                                // Extract tweet ID from URL
-                                const tweetIdMatch = url?.match(/\/status\/(\d+)/);
-                                const tweetId = tweetIdMatch ? tweetIdMatch[1] : null;
-
-                                if (tweetId) {
-                                  return (
-                                    <div key={i} className="w-full max-w-lg sm:max-w-xl tweet-wrapper-sheet">
-                                      <Tweet id={tweetId} />
-                                    </div>
-                                  );
-                                }
-
-                                // Fallback for URLs that don't match tweet pattern
-                                return (
-                                  <a
-                                    key={i}
-                                    href={url}
-                                    target="_blank"
-                                    className="flex items-center gap-3 p-3 sm:p-4 bg-muted/20 hover:bg-muted/30 border border-border rounded-lg group max-w-lg sm:max-w-xl w-full transition-colors"
-                                  >
-                                    <XLogoIcon className="h-4 w-4 text-muted-foreground group-hover:text-foreground shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium text-foreground group-hover:text-primary truncate">
-                                        {url.replace('https://x.com/', '').replace('https://twitter.com/', '')}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {url.startsWith('https://x.com') ? 'x.com' : 'twitter.com'}
-                                      </p>
-                                    </div>
-                                  </a>
-                                );
-                              })}
+                        ) : (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <div className="w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                              <XLogoIcon className="h-5 w-5 opacity-50" />
                             </div>
-                          ) : (
-                            <div className="text-center py-8 text-muted-foreground">
-                              <div className="w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
-                                <XLogoIcon className="h-5 w-5 opacity-50" />
-                              </div>
-                              <p className="text-sm mb-1">No posts found</p>
-                              <p className="font-pixel text-[10px] text-muted-foreground/50 uppercase tracking-wider">Try a different query</p>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                }
-                return null;
-              })}
-
-            {/* Show errors */}
-            {lastMessage &&
-              lastMessage.parts.map((part, index) => {
-                if (part.type === 'tool-xql' && part.state === 'output-error') {
-                  return (
-                    <Card key={index} className="border-destructive shadow-none">
-                      <CardContent className="p-3 sm:p-4">
-                        <div className="flex items-start gap-2 sm:gap-3 text-destructive">
-                          <XLogoIcon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 mt-0.5" />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-sm sm:text-base">Search Error</p>
-                            <p className="text-xs sm:text-sm leading-relaxed">
-                              {'errorText' in part ? part.errorText : 'Unknown error occurred'}
+                            <p className="text-sm mb-1">No posts found</p>
+                            <p className="font-pixel text-[10px] text-muted-foreground/50 uppercase tracking-wider">
+                              Try a different query
                             </p>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                }
-                return null;
-              })}
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+
+            {errorMessage && (
+              <Card className="border-destructive shadow-none">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-start gap-2 sm:gap-3 text-destructive">
+                    <XLogoIcon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm sm:text-base">Search Error</p>
+                      <p className="text-xs sm:text-sm leading-relaxed">{errorMessage}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
       </div>
