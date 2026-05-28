@@ -84,11 +84,19 @@ async function checkDodoSubscriptionProStatus(userId: string): Promise<boolean> 
     // Check cache for subscriptions to avoid DB hit
     let userSubscriptions = getDodoSubscriptions(userId);
     if (!userSubscriptions) {
-      // Use maindb to avoid replication lag for immediate subscription recognition
-      userSubscriptions = await maindb
-        .select()
-        .from(dodosubscription)
-        .where(eq(dodosubscription.userId, userId));
+      if (process.env.BILLING_OFF === 'true') {
+        userSubscriptions = [];
+      } else {
+        try {
+          // Use maindb to avoid replication lag for immediate subscription recognition
+          userSubscriptions = await maindb
+            .select()
+            .from(dodosubscription)
+            .where(eq(dodosubscription.userId, userId));
+        } catch {
+          userSubscriptions = [];
+        }
+      }
       setDodoSubscriptions(userId, userSubscriptions);
     }
 
@@ -148,9 +156,13 @@ async function getComprehensiveProStatus(
 
           const cached = getDodoSubscriptions(userId);
           const subs = cached ?? await (async () => {
-            const data = await maindb.select().from(dodosubscription).where(eq(dodosubscription.userId, userId));
-            setDodoSubscriptions(userId, data);
-            return data;
+            try {
+              const data = await maindb.select().from(dodosubscription).where(eq(dodosubscription.userId, userId));
+              setDodoSubscriptions(userId, data);
+              return data;
+            } catch {
+              return [];
+            }
           })();
           const now = new Date();
           const active = subs.find((sub: any) => {
@@ -433,11 +445,19 @@ export async function getDodoSubscriptionExpirationDate(): Promise<Date | null> 
     // Check cache for subscriptions to avoid DB hit
     let userSubscriptions = getDodoSubscriptions(session.user.id);
     if (!userSubscriptions) {
-      // Use maindb to avoid replication lag
-      userSubscriptions = await maindb
-        .select()
-        .from(dodosubscription)
-        .where(eq(dodosubscription.userId, session.user.id));
+      if (process.env.BILLING_OFF === 'true') {
+        userSubscriptions = [];
+      } else {
+        try {
+          // Use maindb to avoid replication lag
+          userSubscriptions = await maindb
+            .select()
+            .from(dodosubscription)
+            .where(eq(dodosubscription.userId, session.user.id));
+        } catch {
+          userSubscriptions = [];
+        }
+      }
       setDodoSubscriptions(session.user.id, userSubscriptions);
     }
 

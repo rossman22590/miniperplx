@@ -276,6 +276,8 @@ export function invalidateUserCaches(userId: string) {
   subscriptionCache.delete(createSubscriptionKey(userId));
   usageCountCache.delete(createMessageCountKey(userId));
   usageCountCache.delete(createExtremeCountKey(userId));
+  usageCountCache.delete(createAnthropicCountKey(userId));
+  usageCountCache.delete(createGoogleCountKey(userId));
   usageCountCache.delete(createAgentModeCountKey(userId));
   proUserStatusCache.delete(createProUserKey(userId));
   // Invalidate Dodo Subscription caches

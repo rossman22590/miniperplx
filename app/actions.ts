@@ -157,14 +157,15 @@ export async function suggestQuestions(history: any[]) {
 
   console.log(history);
 
-  const { output } = await generateText({
-    model: scira.languageModel('scira-follow-up'),
-    providerOptions: {
-      google: {
-        structuredOutputs: true,
-      } satisfies GoogleGenerativeAIProviderOptions,
-    },
-    system: `You are a search engine follow up query/questions generator. You MUST create between 3 and 5 questions for the search engine based on the conversation history.
+  try {
+    const { output } = await generateText({
+      model: scira.languageModel('scira-follow-up'),
+      providerOptions: {
+        google: {
+          structuredOutputs: true,
+        } satisfies GoogleGenerativeAIProviderOptions,
+      },
+      system: `You are a search engine follow up query/questions generator. You MUST create between 3 and 5 questions for the search engine based on the conversation history.
 
 ### Question Generation Guidelines:
 - Create 3-5 questions that are open-ended and encourage further discussion
@@ -209,21 +210,27 @@ JSON Output Schema:
   ]
 }
 `,
-    messages: history,
-    output: Output.object({
-      schema: z.object({
-        questions: z
-          .array(z.string().max(150))
-          .describe('The generated questions based on the message history.')
-          .min(3)
-          .max(5),
+      messages: history,
+      output: Output.object({
+        schema: z.object({
+          questions: z
+            .array(z.string().max(150))
+            .describe('The generated questions based on the message history.')
+            .min(3)
+            .max(5),
+        }),
       }),
-    }),
-  });
+    });
 
-  return {
-    questions: output.questions,
-  };
+    if (!output?.questions?.length) {
+      return { questions: [] };
+    }
+
+    return { questions: output.questions };
+  } catch (error) {
+    console.error('Error generating suggested questions:', error);
+    return { questions: [] };
+  }
 }
 
 export async function checkImageModeration(images: string[]) {

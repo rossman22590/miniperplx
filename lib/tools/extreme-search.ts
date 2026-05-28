@@ -744,7 +744,6 @@ ${hasFilesForPlanning ? '- Include file search steps when the uploaded files are
     console.error('[ExtremeSearch] Failed to generate structured research plan; using fallback plan:', error);
     plan = createFallbackResearchPlan(prompt, hasFilesForPlanning, fileNames);
   }
-
   console.log(plan);
 
   // calculate the total number of todos
@@ -1947,6 +1946,45 @@ ${JSON.stringify(plan)}
         };
       }
 
+      // Count how many searches/actions have been performed (non-thinking, non-done steps)
+      const actionToolNames = new Set(['webSearch', 'browsePage', 'xSearch', 'codeRunner', 'fileQuery']);
+      const actionCount = steps.reduce(
+        (count, step) => count + step.toolCalls.filter((tc) => actionToolNames.has(tc?.toolName)).length,
+        0,
+      );
+
+      // Determine the last tool called
+      const lastStep = steps[steps.length - 1];
+      const lastToolName = lastStep?.toolCalls?.[0]?.toolName;
+
+      // If last tool was 'thinking', force an action tool next to prevent thinking loops
+      if (lastToolName === 'thinking') {
+        const actionTools = (
+          hasFiles
+            ? ['codeRunner', 'webSearch', 'browsePage', 'xSearch', 'fileQuery', 'done']
+            : ['codeRunner', 'webSearch', 'browsePage', 'xSearch', 'done']
+        ) as any;
+        console.log('[ExtremeSearch] Last tool was thinking, forcing action tool next');
+        return {
+          toolChoice: 'required' as const,
+          activeTools: actionTools,
+        };
+      }
+
+      // If no action tools have been called yet (model is stalling), restrict to action tools only
+      if (actionCount === 0 && steps.length >= 3) {
+        const actionTools = (
+          hasFiles
+            ? ['codeRunner', 'webSearch', 'browsePage', 'xSearch', 'fileQuery', 'done']
+            : ['codeRunner', 'webSearch', 'browsePage', 'xSearch', 'done']
+        ) as any;
+        console.log('[ExtremeSearch] No searches performed yet after 3+ steps, forcing action tool');
+        return {
+          toolChoice: 'required' as const,
+          activeTools: actionTools,
+        };
+      }
+
       // Force the model to always call a tool — it cannot stop by returning plain text.
       // done is always available; the model decides when research is complete.
       return {
@@ -2021,16 +2059,36 @@ export function extremeSearchTool(
     execute: async ({ prompt }) => {
       console.log({ prompt, filesCount: files.length, modelId });
 
-      const research = await extremeSearch(prompt, dataStream, files, modelId, mcpDynamicTools);
+      try {
+        const research = await extremeSearch(prompt, dataStream, files, modelId, mcpDynamicTools);
 
-      return {
-        research: {
-          // text: research.text,
-          // toolResults: research.toolResults,
-          sources: research.sources,
-          charts: research.charts,
-        },
-      };
+        return {
+          research: {
+            sources: research.sources,
+            charts: research.charts,
+          },
+        };
+      } catch (error) {
+        console.error('[extremeSearchTool] Research failed:', error);
+
+        if (dataStream) {
+          dataStream.write({
+            type: 'data-extreme_search',
+            data: {
+              kind: 'done',
+              summary: 'Research encountered an error and could not be completed.',
+            },
+          });
+        }
+
+        return {
+          research: {
+            sources: [],
+            charts: [],
+            error: error instanceof Error ? error.message : String(error),
+          },
+        };
+      }
     },
   });
 }

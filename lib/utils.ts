@@ -75,6 +75,8 @@ export function getWebSearchDescription(provider: SearchProvider = 'exa'): strin
 
 // Function to get search groups with dynamic descriptions
 export function getSearchGroups(searchProvider: SearchProvider = 'exa') {
+  const connectorsEnabled = process.env.NEXT_PUBLIC_CONNECTORS_ENABLED === 'true';
+
   return [
     {
       id: 'web' as const,
@@ -109,7 +111,7 @@ export function getSearchGroups(searchProvider: SearchProvider = 'exa') {
       name: 'Connectors',
       description: 'Search Google Drive, Notion and OneDrive documents',
       icon: ConnectIcon,
-      show: true,
+      show: connectorsEnabled,
       requireAuth: true,
       requirePro: true,
     },

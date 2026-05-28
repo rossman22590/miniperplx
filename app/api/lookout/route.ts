@@ -25,7 +25,7 @@ import { eq } from 'drizzle-orm';
 import { all, flow } from 'better-all';
 import { getBetterAllOptions } from '@/lib/better-all';
 import { getCachedUserPreferencesByUserId } from '@/lib/user-data-server';
-import { isBillingOff, isDodoBillingEnabled } from '@/lib/billing-mode';
+import { isAdminEmail } from '@/lib/admin';
 
 // Import search tools
 import {
@@ -536,23 +536,27 @@ You are an advanced research assistant focused on deep analysis and comprehensiv
 
 // Helper function to check if a user is pro by userId.
 // Uses flow() to race both queries — exits as soon as either finds an active subscription.
-async function checkUserIsProById(userId: string): Promise<boolean> {
+async function checkUserIsProOrMaxById(userId: string, userEmail?: string | null): Promise<boolean> {
   try {
-    if (isBillingOff()) return true;
-
-    const dodoBillingEnabled = isDodoBillingEnabled();
+    // Admin email always has pro/max access
+    if (userEmail && isAdminEmail(userEmail)) return true;
 
     const result = await flow<boolean>(
       {
         async polarSubscriptions() {
           const subs = await db.select().from(subscription).where(eq(subscription.userId, userId));
           const now = new Date();
-          const active = subs.find((sub) => sub.status === 'active' && new Date(sub.currentPeriodEnd) > now);
+          // admin-max is a manual override product that grants max access
+          const active = subs.find(
+            (sub) =>
+              sub.productId === 'admin-max' ||
+              (sub.status === 'active' && new Date(sub.currentPeriodEnd) > now),
+          );
           if (active) this.$end(true);
           return subs;
         },
         async dodoSubscriptions() {
-          if (!dodoBillingEnabled) return [];
+          if (process.env.BILLING_OFF === 'true') return [];
 
           const subs = await db.select().from(dodosubscription).where(eq(dodosubscription.userId, userId));
           const now = new Date();
@@ -567,7 +571,7 @@ async function checkUserIsProById(userId: string): Promise<boolean> {
     );
     return result ?? false;
   } catch (error) {
-    console.error('Error checking pro status:', error);
+    console.error('Error checking pro/max status:', error);
     return false; // Fail closed - don't allow access if we can't verify
   }
 }
@@ -612,13 +616,10 @@ export async function POST(req: Request) {
     }
 
     // Get user details, check pro status, and fetch preferences in parallel (eliminate waterfall)
-    const { userResult, isUserPro, userPrefs } = await all(
+    const { userResult, userPrefs } = await all(
       {
         async userResult() {
           return getUserById(userId);
-        },
-        async isUserPro() {
-          return checkUserIsProById(userId);
         },
         async userPrefs() {
           return getCachedUserPreferencesByUserId(userId);
@@ -632,9 +633,10 @@ export async function POST(req: Request) {
       return new Response('User not found', { status: 404 });
     }
 
-    if (!isUserPro) {
-      console.error('User is not pro, cannot run lookout:', userId);
-      return new Response('Lookouts require a Pro subscription', { status: 403 });
+    const isUserProOrMax = await checkUserIsProOrMaxById(userId, userResult.email);
+    if (!isUserProOrMax) {
+      console.error('User is not pro or max, cannot run lookout:', userId);
+      return new Response('Lookouts require a Pro or Max subscription', { status: 403 });
     }
 
     // Generate a new chat ID for this scheduled search

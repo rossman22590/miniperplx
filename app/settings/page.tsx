@@ -43,7 +43,9 @@ function SettingsContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const defaultTab = searchParams.get('tab') || 'usage';
+  const connectorsEnabled = process.env.NEXT_PUBLIC_CONNECTORS_ENABLED === 'true';
+  const requestedTab = searchParams.get('tab') || 'usage';
+  const defaultTab = !connectorsEnabled && requestedTab === 'connectors' ? 'usage' : requestedTab;
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [isCustomInstructionsEnabled, setIsCustomInstructionsEnabled] = useSyncedPreferences<boolean>(
     'scira-custom-instructions-enabled',
@@ -55,7 +57,7 @@ function SettingsContent() {
     { value: 'usage', label: 'Usage', icon: Analytics01Icon },
     { value: 'subscription', label: 'Subscription', icon: Crown02Icon },
     { value: 'preferences', label: 'Preferences', icon: Settings02Icon },
-    { value: 'connectors', label: 'Connectors', icon: ConnectIcon },
+    ...(connectorsEnabled ? [{ value: 'connectors', label: 'Connectors', icon: ConnectIcon }] : []),
     { value: 'memories', label: 'Memories', icon: Brain02Icon },
     { value: 'uploads', label: 'Uploads', icon: Attachment01Icon },
   ].map((item, index) => ({ ...item, number: String(index + 1).padStart(2, '0') }));
@@ -304,18 +306,20 @@ function SettingsContent() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="connectors" className="m-0">
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-pixel-grid text-xs text-muted-foreground/30">04</span>
-                      <h2 className="text-lg font-semibold">Connectors</h2>
+              {connectorsEnabled && (
+                <TabsContent value="connectors" className="m-0">
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-pixel-grid text-xs text-muted-foreground/30">04</span>
+                        <h2 className="text-lg font-semibold">Connectors</h2>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Connect your external services and data sources</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">Connect your external services and data sources</p>
+                    <ConnectorsSection user={user} />
                   </div>
-                  <ConnectorsSection user={user} />
-                </div>
-              </TabsContent>
+                </TabsContent>
+              )}
 
               <TabsContent value="memories" className="m-0">
                 <div className="space-y-4">

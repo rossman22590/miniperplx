@@ -1790,7 +1790,6 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
                       { title: 'Voice mode', desc: 'Hands-free conversations' },
                       { title: 'XQL', desc: 'Natural language X search' },
                       { title: 'Lookout', desc: 'Scheduled monitoring' },
-                      { title: 'Connectors', desc: 'Drive, Notion, OneDrive' },
                       { title: 'Prompt enhance', desc: 'AI-powered optimization' },
                     ]
                 ).map((f, i) => (
@@ -3400,6 +3399,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
   const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
   const canvasEnabled = process.env.NEXT_PUBLIC_CANVAS_ENABLED === 'true';
   const mcpEnabled = process.env.NEXT_PUBLIC_MCP_ENABLED === 'true';
+  const connectorsEnabled = process.env.NEXT_PUBLIC_CONNECTORS_ENABLED === 'true';
   const formQueryClient = useQueryClient();
   const isMounted = useRef(true);
   const isCompositionActive = useRef(false);
@@ -3446,6 +3446,13 @@ const FormComponent: React.FC<FormComponentProps> = ({
   useEffect(() => {
     latestInputRef.current = input;
   }, [input]);
+
+  useEffect(() => {
+    if (connectorsEnabled || selectedGroup !== 'connectors') return;
+
+    setSelectedGroup('web');
+    setSelectedConnectors?.([]);
+  }, [connectorsEnabled, selectedGroup, setSelectedConnectors, setSelectedGroup]);
 
   const handlePlusMenuScroll = useCallback(() => {
     const el = plusMenuScrollRef.current;
@@ -6227,8 +6234,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                     );
                   })()}
 
-                  {/* Inline connector selector when connectors mode is active */}
-                  {selectedGroup === 'connectors' && setSelectedConnectors && (
+                  {connectorsEnabled && selectedGroup === 'connectors' && setSelectedConnectors && (
                     <ConnectorSelector
                       selectedConnectors={selectedConnectors}
                       onConnectorToggle={handleConnectorToggle}

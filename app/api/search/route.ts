@@ -60,6 +60,13 @@ import {
   getLightweightUser,
   getMessageCountAndExtremeSearchByUserIdAction,
 } from '@/lib/search/server-helpers';
+import {
+  usageCountCache,
+  createMessageCountKey,
+  createAnthropicCountKey,
+  createGoogleCountKey,
+  createExtremeCountKey,
+} from '@/lib/performance-cache';
 import { getCachedCustomInstructionsByUserId, getCachedUserPreferencesByUserId } from '@/lib/user-data-server';
 import { GoogleGenerativeAIProviderOptions, GoogleLanguageModelOptions } from '@ai-sdk/google';
 import { unauthenticatedRateLimit, getClientIdentifier } from '@/lib/rate-limit';
@@ -1573,21 +1580,25 @@ export async function POST(req: Request) {
                       async messageUsage() {
                         if (!shouldTrackMessageUsage) return false;
                         await incrementMessageUsage({ userId: lightweightUser.userId });
+                        usageCountCache.delete(createMessageCountKey(lightweightUser.userId));
                         return true;
                       },
                       async extremeSearchUsage() {
                         if (!shouldTrackExtremeSearchUsage) return false;
                         await incrementExtremeSearchUsage({ userId: lightweightUser.userId });
+                        usageCountCache.delete(createExtremeCountKey(lightweightUser.userId));
                         return true;
                       },
                       async anthropicUsage() {
                         if (!shouldTrackAnthropicUsage) return false;
                         await incrementAnthropicUsage({ userId: lightweightUser.userId, model });
+                        usageCountCache.delete(createAnthropicCountKey(lightweightUser.userId));
                         return true;
                       },
                       async googleUsage() {
                         if (!shouldTrackGoogleUsage) return false;
                         await incrementGoogleUsage({ userId: lightweightUser.userId, model });
+                        usageCountCache.delete(createGoogleCountKey(lightweightUser.userId));
                         return true;
                       },
                     },

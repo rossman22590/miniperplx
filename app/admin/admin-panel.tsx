@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { clearUserSessionsAction, setUserBanStatusAction, setUserProStatusAction } from '@/app/admin/actions';
+import { clearUserSessionsAction, setUserBanStatusAction, setUserMaxStatusAction, setUserProStatusAction } from '@/app/admin/actions';
 import type { AdminUserRecord } from '@/lib/admin';
 import { cn } from '@/lib/utils';
 
@@ -69,7 +69,9 @@ function UserRow({
             <div className="flex items-center gap-2">
               <p className="truncate font-medium">{record.name}</p>
               {record.email === adminEmail && <Badge variant="secondary">Admin</Badge>}
-              {record.isPro ? (
+              {record.isMax ? (
+                <Badge className="bg-purple-600 text-white">Max</Badge>
+              ) : record.isPro ? (
                 <Badge className="bg-primary text-primary-foreground">Pro</Badge>
               ) : (
                 <Badge variant="outline">Free</Badge>
@@ -121,6 +123,21 @@ function UserRow({
             >
               <HugeiconsIcon icon={Crown02Icon} size={16} strokeWidth={1.5} />
               {record.isPro ? 'Revoke Pro' : 'Make Pro'}
+            </Button>
+            <Button
+              size="sm"
+              variant={record.isMax ? 'outline' : 'default'}
+              className={!record.isMax ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}
+              disabled={pending || isSelf}
+              onClick={() =>
+                runAction(
+                  () => setUserMaxStatusAction(record.id, !record.isMax).then(() => Promise.resolve()),
+                  record.isMax ? 'Max access removed' : 'Max access granted',
+                )
+              }
+            >
+              <HugeiconsIcon icon={Crown02Icon} size={16} strokeWidth={1.5} />
+              {record.isMax ? 'Revoke Max' : 'Make Max'}
             </Button>
             <Button
               size="sm"

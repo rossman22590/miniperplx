@@ -8,12 +8,10 @@ import {
   GearIcon,
   SignIn,
   XLogoIcon,
-  GithubLogoIcon,
   InfoIcon,
   BookIcon,
   FileTextIcon,
   ShieldIcon,
-  BugIcon,
   UsersIcon,
 } from '@phosphor-icons/react';
 import {
@@ -24,7 +22,6 @@ import {
 } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@/components/ui/hugeicons';
 import {
-  RocketIcon as VercelIcon,
   Globe,
   ChevronsUpDown,
   ChevronDown,
@@ -135,7 +132,6 @@ function UserDropdownContent({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [themeOpen, setThemeOpen] = React.useState(false);
-  const [infoOpen, setInfoOpen] = React.useState(false);
 
   const handleSignOut = async () => {
     closeMobileSidebar();
@@ -209,7 +205,6 @@ function UserDropdownContent({
           <button
             onClick={() => {
               setThemeOpen((prev) => !prev);
-              setInfoOpen(false);
             }}
             className="w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm outline-none hover:bg-accent hover:text-accent-foreground cursor-default"
           >
@@ -288,107 +283,6 @@ function UserDropdownContent({
           </div>
         </div>
       </DropdownMenuGroup>
-
-      <DropdownMenuSeparator />
-
-      {/* Info & Community - accordion */}
-      <div>
-        <button
-          onClick={() => {
-            setInfoOpen((prev) => !prev);
-            setThemeOpen(false);
-          }}
-          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm outline-none hover:bg-accent hover:text-accent-foreground cursor-default"
-        >
-          <InfoIcon size={16} weight="regular" />
-          <span className="text-sm">Info & Links</span>
-          <ChevronDown
-            size={14}
-            className={cn('ml-auto text-muted-foreground transition-transform duration-200', infoOpen && 'rotate-180')}
-          />
-        </button>
-        <div
-          className={cn(
-            'grid transition-all duration-200 ease-in-out',
-            infoOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
-          )}
-        >
-          <div className="overflow-hidden">
-            <div
-              className={cn(
-                'flex flex-col gap-0.5 pt-1 pb-0.5 ml-[17px] pl-3 border-l transition-colors duration-200',
-                infoOpen ? 'border-border/60' : 'border-transparent',
-              )}
-            >
-              <Link
-                href="/about"
-                onClick={closeMobileSidebar}
-                className="flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/30 hover:text-foreground transition-colors duration-150"
-              >
-                <InfoIcon size={16} weight="regular" />
-                <span>About</span>
-              </Link>
-              <Link
-                href="/blog"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={closeMobileSidebar}
-                className="flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/30 hover:text-foreground transition-colors duration-150"
-              >
-                <BookIcon size={16} weight="regular" />
-                <span>Blog</span>
-              </Link>
-              <Link
-                href="/terms"
-                onClick={closeMobileSidebar}
-                className="flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/30 hover:text-foreground transition-colors duration-150"
-              >
-                <FileTextIcon size={16} weight="regular" />
-                <span>Terms</span>
-              </Link>
-              <Link
-                href="/privacy-policy"
-                onClick={closeMobileSidebar}
-                className="flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/30 hover:text-foreground transition-colors duration-150"
-              >
-                <ShieldIcon size={16} weight="regular" />
-                <span>Privacy</span>
-              </Link>
-              <div className="h-px bg-border/40 my-1" />
-              <a
-                href="https://github.com/rossman22590/miniperplx"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={closeMobileSidebar}
-                className="flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/30 hover:text-foreground transition-colors duration-150"
-              >
-                <GithubLogoIcon size={16} weight="regular" />
-                <span>GitHub</span>
-              </a>
-              <a
-                href="mailto:support@mydatavibes.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={closeMobileSidebar}
-                className="flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/30 hover:text-foreground transition-colors duration-150"
-              >
-                <BugIcon size={16} weight="regular" />
-                <span>Feedback</span>
-              </a>
-              <a
-                href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frossman22590%2Fminiperplx"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={closeMobileSidebar}
-                className="flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/30 hover:text-foreground transition-colors duration-150"
-              >
-                <VercelIcon size={16} />
-                <span>Deploy</span>
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <DropdownMenuSeparator />
 

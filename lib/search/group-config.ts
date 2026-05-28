@@ -2433,6 +2433,10 @@ export async function getGroupConfig(
   lightweightUser?: { userId: string; email: string; isProUser: boolean } | null,
   fullUserPromise?: Promise<ComprehensiveUserData | null>,
 ) {
+  if (groupId === 'connectors' && process.env.NEXT_PUBLIC_CONNECTORS_ENABLED !== 'true') {
+    groupId = 'web';
+  }
+
   if (
     groupId === 'memory' ||
     groupId === 'buddy' ||

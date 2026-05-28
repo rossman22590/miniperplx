@@ -12,6 +12,7 @@ import { upsertUserPreferences } from '@/lib/db/queries';
 
 const ADMIN_EMAIL = 'rcohen@mytsi.org';
 const MANUAL_PRO_PRODUCT_ID = 'admin-pro';
+const MANUAL_MAX_PRODUCT_ID = 'admin-max';
 const MANUAL_PRO_INTERVAL = 'manual';
 const MANUAL_PRO_DURATION_YEARS = 50;
 
@@ -38,6 +39,7 @@ export type AdminUserRecord = {
   lookoutCount: number;
   sessionCount: number;
   isPro: boolean;
+  isMax: boolean;
   subscriptionStatus: string;
   subscriptionEndsAt: Date | null;
   isBanned: boolean;
@@ -146,6 +148,7 @@ export async function getAdminUsers(): Promise<AdminUserRecord[]> {
       lookoutCount: lookoutCounts.get(record.id) ?? 0,
       sessionCount: sessionCounts.get(record.id) ?? 0,
       isPro: Boolean(activeSubscription),
+      isMax: Boolean(activeSubscription && activeSubscription.productId === MANUAL_MAX_PRODUCT_ID),
       subscriptionStatus: activeSubscription?.status ?? latestSubscription?.status ?? 'none',
       subscriptionEndsAt: activeSubscription?.currentPeriodEnd ?? latestSubscription?.currentPeriodEnd ?? null,
       isBanned: adminFlags.isBanned,
@@ -245,6 +248,93 @@ export async function setManualProStatus(userId: string, makePro: boolean, admin
             revokedBy: adminEmail,
             revokedAt: now.toISOString(),
           }),
+        })
+        .where(eq(subscription.id, record.id));
+    }
+  }
+
+  invalidateAdminManagedUserState(userId);
+}
+
+export async function setManualMaxStatus(userId: string, makeMax: boolean, adminEmail: string) {
+  const now = new Date();
+  const [targetUser] = await maindb.select().from(user).where(eq(user.id, userId)).limit(1);
+
+  if (!targetUser) {
+    throw new Error('User not found');
+  }
+
+  const existingSubscriptions = await maindb
+    .select()
+    .from(subscription)
+    .where(eq(subscription.userId, userId))
+    .orderBy(desc(subscription.currentPeriodEnd));
+
+  if (makeMax) {
+    const activeMaxSubscription = existingSubscriptions.find(
+      (record) =>
+        record.productId === MANUAL_MAX_PRODUCT_ID &&
+        isActiveSubscriptionStatus(record.status) &&
+        new Date(record.currentPeriodEnd) > now,
+    );
+
+    if (activeMaxSubscription) {
+      await db
+        .update(subscription)
+        .set({
+          status: 'active',
+          modifiedAt: now,
+          cancelAtPeriodEnd: false,
+          canceledAt: null,
+          endsAt: null,
+          endedAt: null,
+          currentPeriodEnd: new Date(now.getFullYear() + MANUAL_PRO_DURATION_YEARS, now.getMonth(), now.getDate()),
+          metadata: JSON.stringify({ source: 'admin', updatedBy: adminEmail, updatedAt: now.toISOString() }),
+        })
+        .where(eq(subscription.id, activeMaxSubscription.id));
+    } else {
+      await db.insert(subscription).values({
+        id: `admin_${uuidv7()}`,
+        createdAt: now,
+        modifiedAt: now,
+        amount: 0,
+        currency: 'usd',
+        recurringInterval: MANUAL_PRO_INTERVAL,
+        status: 'active',
+        currentPeriodStart: now,
+        currentPeriodEnd: new Date(now.getFullYear() + MANUAL_PRO_DURATION_YEARS, now.getMonth(), now.getDate()),
+        cancelAtPeriodEnd: false,
+        canceledAt: null,
+        startedAt: now,
+        endsAt: null,
+        endedAt: null,
+        customerId: `admin_${userId}`,
+        productId: MANUAL_MAX_PRODUCT_ID,
+        discountId: null,
+        checkoutId: `admin_max_grant_${uuidv7()}`,
+        customerCancellationReason: null,
+        customerCancellationComment: null,
+        metadata: JSON.stringify({ source: 'admin', grantedBy: adminEmail, grantedAt: now.toISOString() }),
+        customFieldData: null,
+        userId,
+      });
+    }
+  } else {
+    for (const record of existingSubscriptions) {
+      if (record.productId !== MANUAL_MAX_PRODUCT_ID) continue;
+      if (!isActiveSubscriptionStatus(record.status) && new Date(record.currentPeriodEnd) <= now) continue;
+
+      await db
+        .update(subscription)
+        .set({
+          status: 'canceled',
+          modifiedAt: now,
+          cancelAtPeriodEnd: true,
+          canceledAt: now,
+          endsAt: now,
+          endedAt: now,
+          currentPeriodEnd: now,
+          metadata: JSON.stringify({ source: 'admin', revokedBy: adminEmail, revokedAt: now.toISOString() }),
         })
         .where(eq(subscription.id, record.id));
     }

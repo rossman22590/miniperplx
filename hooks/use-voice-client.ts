@@ -131,9 +131,7 @@ Then: Continue the conversation naturally
 - If you're unsure which tool to use, default to web_search
 - Talk naturally and conversationally - don't sound like you're reading a manual`;
 
-// External XAI voice backend (../xai-voice/xai/backend-nodejs)
-const VOICE_BACKEND_URL =
-  process.env.NEXT_PUBLIC_VOICE_BACKEND_URL ?? "http://localhost:8000";
+const VOICE_SESSION_URL = "/api/voice/session";
 
 interface SessionResponse {
   client_secret: {
@@ -561,22 +559,32 @@ export function useVoiceClient(
         );
       });
 
-      const sessionResponse = await fetch(`${VOICE_BACKEND_URL}/session`, {
+      const sessionResponse = await fetch(VOICE_SESSION_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
       });
 
+      const data = (await sessionResponse.json().catch(() => null)) as
+        | SessionResponse
+        | null;
+
       if (!sessionResponse.ok) {
         throw new Error(
-          `Failed to create session (${sessionResponse.status})`
+          data?.error ?? `Failed to create session (${sessionResponse.status})`
         );
       }
 
-      const data: SessionResponse = await sessionResponse.json();
+      if (!data) {
+        throw new Error("Voice session response was empty");
+      }
       if (data.error) {
         throw new Error(data.error);
+      }
+
+      if (!data.client_secret?.value) {
+        throw new Error("Voice session response missing client secret");
       }
 
       const ephemeralToken = data.client_secret.value;

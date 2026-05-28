@@ -1164,7 +1164,7 @@ export function UsageSection({ user }: any) {
         subscriptionDetails,
       };
     },
-    staleTime: 1000 * 60 * 3,
+    staleTime: 1000 * 30,
     enabled: !!user,
   });
 
@@ -3846,15 +3846,17 @@ export function SettingsDialog({
   setIsCustomInstructionsEnabledAction,
   initialTab = 'profile',
 }: SettingsDialogProps) {
-  const [currentTab, setCurrentTab] = useState(initialTab);
+  const connectorsEnabled = process.env.NEXT_PUBLIC_CONNECTORS_ENABLED === 'true';
+  const visibleInitialTab = !connectorsEnabled && initialTab === 'connectors' ? 'profile' : initialTab;
+  const [currentTab, setCurrentTab] = useState(visibleInitialTab);
   const isMobile = useMediaQuery('(max-width: 768px)');
 
   // Reset tab when initialTab changes or when dialog opens
   useEffect(() => {
     if (open) {
-      setCurrentTab(initialTab);
+      setCurrentTab(!connectorsEnabled && initialTab === 'connectors' ? 'profile' : initialTab);
     }
-  }, [open, initialTab]);
+  }, [open, initialTab, connectorsEnabled]);
   // Dynamically stabilize drawer height on mobile when the virtual keyboard opens (PWA/iOS)
   const [mobileDrawerPxHeight, setMobileDrawerPxHeight] = useState<number | null>(null);
 
@@ -3909,11 +3911,15 @@ export function SettingsDialog({
       label: 'Preferences',
       icon: ({ className }: { className?: string }) => <HugeiconsIcon icon={Settings02Icon} className={className} />,
     },
-    {
-      value: 'connectors',
-      label: 'Connectors',
-      icon: ({ className }: { className?: string }) => <HugeiconsIcon icon={ConnectIcon} className={className} />,
-    },
+    ...(connectorsEnabled
+      ? [
+          {
+            value: 'connectors',
+            label: 'Connectors',
+            icon: ({ className }: { className?: string }) => <HugeiconsIcon icon={ConnectIcon} className={className} />,
+          },
+        ]
+      : []),
     ...(mcpEnabled
       ? [
           {
@@ -3960,7 +3966,7 @@ export function SettingsDialog({
         />
       )}
 
-      {currentTab === 'connectors' && <ConnectorsSection user={user} />}
+      {connectorsEnabled && currentTab === 'connectors' && <ConnectorsSection user={user} />}
 
       {currentTab === 'mcp' && <McpSection user={user} isProUser={isProUser} />}
 
@@ -4003,7 +4009,7 @@ export function SettingsDialog({
               <div
                 className={cn(
                   'border-t border-border/40 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 shrink-0',
-                  currentTab === 'preferences' || currentTab === 'connectors' || currentTab === 'mcp'
+                  currentTab === 'preferences' || (connectorsEnabled && currentTab === 'connectors') || currentTab === 'mcp'
                     ? 'pb-[calc(env(safe-area-inset-bottom)+2.5rem)]'
                     : 'pb-[calc(env(safe-area-inset-bottom)+1rem)]',
                 )}

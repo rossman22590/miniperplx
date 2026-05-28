@@ -13,6 +13,14 @@ import { getDodoProStatus, setDodoProStatus, sessionCache, createSessionKey } fr
 // Reverse mapping: userId → Set of session tokens, so we can invalidate all sessions when user data changes
 const userSessionTokens = new Map<string, Set<string>>();
 
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? 'rcohen@mytsi.org')
+  .split(',')
+  .map((e) => e.trim().toLowerCase());
+
+function isAdminEmail(email: string): boolean {
+  return ADMIN_EMAILS.includes(email.toLowerCase());
+}
+
 function createLightweightAuthSessionKey(token: string): string {
   return `lightweight-auth:${token}`;
 }
@@ -394,7 +402,7 @@ export const getLightweightUserAuth = cache(async (): Promise<LightweightUserAut
           if (!rows.length) return null;
 
           const hasActive = rows.some((row) => row.subscriptionStatus === 'active');
-          if (billingOff || hasActive) this.$end({ email: rows[0].email, isProUser: true, isMaxUser: false });
+          if (hasActive) this.$end({ email: rows[0].email, isProUser: true, isMaxUser: false });
           return rows;
         },
         async dodoCheck() {
@@ -413,7 +421,7 @@ export const getLightweightUserAuth = cache(async (): Promise<LightweightUserAut
           }
 
           // Cache miss: query Dodo DB in parallel with polar
-          const recentDodoSubscription = await maindb
+          const recentDodoSubscription = process.env.BILLING_OFF === 'true' ? [] : await maindb
             .select({
               currentPeriodEnd: dodosubscription.currentPeriodEnd,
               status: dodosubscription.status,
@@ -423,7 +431,8 @@ export const getLightweightUserAuth = cache(async (): Promise<LightweightUserAut
             .from(dodosubscription)
             .where(eq(dodosubscription.userId, userId))
             .orderBy(desc(dodosubscription.createdAt))
-            .limit(1);
+            .limit(1)
+            .catch(() => [] as never[]);
 
           let isDodoActive = false;
           let isMaxUser = false;
@@ -455,11 +464,13 @@ export const getLightweightUserAuth = cache(async (): Promise<LightweightUserAut
       return null; // user not found in DB
     }
 
+    const resolvedEmail = flowResult?.email ?? capturedPolarRows[0]?.email ?? '';
+    const adminOverride = isAdminEmail(resolvedEmail);
     const lightweightData: LightweightUserAuth = {
       userId,
-      email: flowResult?.email ?? capturedPolarRows[0]?.email ?? '',
-      isProUser: flowResult?.isProUser ?? false,
-      isMaxUser: flowResult?.isMaxUser ?? false,
+      email: resolvedEmail,
+      isProUser: adminOverride || (flowResult?.isProUser ?? false),
+      isMaxUser: adminOverride || (flowResult?.isMaxUser ?? false),
     };
 
     // Cache by userId (for cross-request reuse)
@@ -525,29 +536,31 @@ export const getComprehensiveUserData = cache(async (): Promise<ComprehensiveUse
             .where(eq(user.id, userId));
         },
         async dodoSubscriptions() {
-          if (!dodoBillingEnabled) {
-            return [];
-          }
+          if (process.env.BILLING_OFF === 'true') return [];
 
           // IMPORTANT: Use maindb for critical subscription queries to avoid replication lag
-          return maindb
-            .select({
-              id: dodosubscription.id,
-              createdAt: dodosubscription.createdAt,
-              status: dodosubscription.status,
-              amount: dodosubscription.amount,
-              currency: dodosubscription.currency,
-              interval: dodosubscription.interval,
-              intervalCount: dodosubscription.intervalCount,
-              currentPeriodStart: dodosubscription.currentPeriodStart,
-              currentPeriodEnd: dodosubscription.currentPeriodEnd,
-              cancelledAt: dodosubscription.cancelledAt,
-              cancelAtPeriodEnd: dodosubscription.cancelAtPeriodEnd,
-              endedAt: dodosubscription.endedAt,
-              productId: dodosubscription.productId,
-            })
-            .from(dodosubscription)
-            .where(eq(dodosubscription.userId, userId));
+          try {
+            return await maindb
+              .select({
+                id: dodosubscription.id,
+                createdAt: dodosubscription.createdAt,
+                status: dodosubscription.status,
+                amount: dodosubscription.amount,
+                currency: dodosubscription.currency,
+                interval: dodosubscription.interval,
+                intervalCount: dodosubscription.intervalCount,
+                currentPeriodStart: dodosubscription.currentPeriodStart,
+                currentPeriodEnd: dodosubscription.currentPeriodEnd,
+                cancelledAt: dodosubscription.cancelledAt,
+                cancelAtPeriodEnd: dodosubscription.cancelAtPeriodEnd,
+                endedAt: dodosubscription.endedAt,
+                productId: dodosubscription.productId,
+              })
+              .from(dodosubscription)
+              .where(eq(dodosubscription.userId, userId));
+          } catch {
+            return [];
+          }
         },
       },
       getBetterAllOptions(),
@@ -611,16 +624,16 @@ export const getComprehensiveUserData = cache(async (): Promise<ComprehensiveUse
     let proSource: 'polar' | 'dodo' | 'none' = 'none';
     let subscriptionStatus: 'active' | 'canceled' | 'expired' | 'none' = 'none';
 
-    if (billingOff) {
-      isProUser = true;
-      subscriptionStatus = 'active';
-    } else if (isDodoActive && isDodoMax) {
+    const isAdminMaxPolar = activePolarSubscription?.productId === 'admin-max';
+
+    if (isDodoActive && isDodoMax) {
       isProUser = true;
       isMaxUser = true;
       proSource = 'dodo';
       subscriptionStatus = 'active';
     } else if (activePolarSubscription) {
       isProUser = true;
+      isMaxUser = isAdminMaxPolar;
       proSource = 'polar';
       subscriptionStatus = 'active';
     } else if (isDodoActive) {
@@ -645,6 +658,14 @@ export const getComprehensiveUserData = cache(async (): Promise<ComprehensiveUse
           subscriptionStatus = 'expired';
         }
       }
+    }
+
+    // Admin email always gets max tier regardless of subscription state
+    if (isAdminEmail(userData.email)) {
+      isProUser = true;
+      isMaxUser = true;
+      if (proSource === 'none') proSource = 'polar';
+      subscriptionStatus = 'active';
     }
 
     // Build comprehensive user data
