@@ -52,6 +52,18 @@ async function createCheckoutSession(input: { isIndianUser?: boolean }) {
   };
 }
 
+type DodoCheckoutSessionInput = {
+  slug?: string;
+  customer?: {
+    email?: string;
+    name?: string;
+  };
+  billing_currency?: string;
+  allowed_payment_method_types?: string[];
+  referenceId?: string;
+  discount_code?: string;
+};
+
 type CompatibilityClient = typeof baseAuthClient & {
   customer: {
     portal: () => Promise<void>;
@@ -60,7 +72,7 @@ type CompatibilityClient = typeof baseAuthClient & {
     };
   };
   dodopayments: {
-    checkoutSession: (input: { billing_currency?: string }) => Promise<{
+    checkoutSession: (input: DodoCheckoutSessionInput) => Promise<{
       data: { url: string } | null;
       error: { message: string } | null;
     }>;
@@ -87,7 +99,7 @@ export const authClient: CompatibilityClient = Object.assign(baseAuthClient, {
     },
   },
   dodopayments: {
-    checkoutSession: async (input: { billing_currency?: string }) =>
+    checkoutSession: async (input: DodoCheckoutSessionInput) =>
       createCheckoutSession({
         isIndianUser: input.billing_currency === 'INR',
       }),
