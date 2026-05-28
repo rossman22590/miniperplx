@@ -1949,7 +1949,7 @@ ${JSON.stringify(plan)}
       // Count how many searches/actions have been performed (non-thinking, non-done steps)
       const actionToolNames = new Set(['webSearch', 'browsePage', 'xSearch', 'codeRunner', 'fileQuery']);
       const actionCount = steps.reduce(
-        (count, step) => count + step.toolCalls.filter((tc) => actionToolNames.has(tc?.toolName)).length,
+        (count, step) => count + step.toolCalls.filter((tc) => tc?.toolName != null && actionToolNames.has(tc.toolName)).length,
         0,
       );
 
