@@ -175,6 +175,7 @@
     "sharp": "^0.34.5",
     "sileo": "^0.1.5",
     "sonner": "^2.0.7",
+    "stripe": "^18.5.0",
     "sugar-high": "^0.9.5",
     "supermemory": "^4.17.0",
     "tailwind-merge": "^3.5.0",
