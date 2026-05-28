@@ -25,6 +25,7 @@ import { eq } from 'drizzle-orm';
 import { all, flow } from 'better-all';
 import { getBetterAllOptions } from '@/lib/better-all';
 import { getCachedUserPreferencesByUserId } from '@/lib/user-data-server';
+import { isBillingOff, isDodoBillingEnabled } from '@/lib/billing-mode';
 
 // Import search tools
 import {
@@ -336,7 +337,7 @@ function getSystemPromptForSearchMode(searchMode: string): string {
 - ⚠️ **NO PIPE CHARACTERS**: Never use pipe characters (|) between links or inside citation text
 `;
 
-  const basePrompt = `# Scira AI Scheduled Research Assistant
+  const basePrompt = `# Datavibes AI Scheduled Research Assistant
 
 You are an advanced research assistant focused on deep analysis and comprehensive understanding, with a focus on being backed by citations.
 
@@ -537,6 +538,10 @@ You are an advanced research assistant focused on deep analysis and comprehensiv
 // Uses flow() to race both queries — exits as soon as either finds an active subscription.
 async function checkUserIsProById(userId: string): Promise<boolean> {
   try {
+    if (isBillingOff()) return true;
+
+    const dodoBillingEnabled = isDodoBillingEnabled();
+
     const result = await flow<boolean>(
       {
         async polarSubscriptions() {
@@ -547,6 +552,8 @@ async function checkUserIsProById(userId: string): Promise<boolean> {
           return subs;
         },
         async dodoSubscriptions() {
+          if (!dodoBillingEnabled) return [];
+
           const subs = await db.select().from(dodosubscription).where(eq(dodosubscription.userId, userId));
           const now = new Date();
           const active = subs.find(

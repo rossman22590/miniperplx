@@ -74,21 +74,21 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const chat = await getChatById({ id });
 
   if (!chat) {
-    return { title: 'Scira Chat' };
+    return { title: 'Datavibes Chat' };
   }
 
   const title = chat.title;
   return {
     title: title,
-    description: 'A search in scira.ai',
+    description: 'A search in mydatavibes.com',
     openGraph: {
       title: title,
-      url: `https://scira.ai/search/${id}`,
-      description: 'A search in scira.ai',
-      siteName: 'scira.ai',
+      url: `https://mydatavibes.com/search/${id}`,
+      description: 'A search in mydatavibes.com',
+      siteName: 'mydatavibes.com',
       images: [
         {
-          url: `https://scira.ai/api/og/chat/${id}`,
+          url: `https://mydatavibes.com/api/og/chat/${id}`,
           width: 1200,
           height: 630,
         },
@@ -97,20 +97,20 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     twitter: {
       card: 'summary_large_image',
       title: title,
-      url: `https://scira.ai/search/${id}`,
-      description: 'A search in scira.ai',
-      siteName: 'scira.ai',
-      creator: '@sciraai',
+      url: `https://mydatavibes.com/search/${id}`,
+      description: 'A search in mydatavibes.com',
+      siteName: 'mydatavibes.com',
+      creator: '@ddatavibes',
       images: [
         {
-          url: `https://scira.ai/api/og/chat/${id}`,
+          url: `https://mydatavibes.com/api/og/chat/${id}`,
           width: 1200,
           height: 630,
         },
       ],
     },
     alternates: {
-      canonical: `https://scira.ai/search/${id}`,
+      canonical: `https://mydatavibes.com/search/${id}`,
     },
   } as Metadata;
 }

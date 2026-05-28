@@ -87,8 +87,8 @@ const comparisonFeatures = [
   { name: 'Voice mode', free: false, pro: true, max: true },
   { name: 'XQL (X Query Language)', free: false, pro: true, max: true },
   { name: 'Canvas (visualization mode)', free: false, pro: true, max: true },
-  { name: 'Scira Apps (100+ MCP integrations)', free: false, pro: true, max: true },
-  { name: 'Scira Lookout', free: false, pro: true, max: true },
+  { name: 'Datavibes Apps (100+ MCP integrations)', free: false, pro: true, max: true },
+  { name: 'Datavibes Lookout', free: false, pro: true, max: true },
   { name: 'Priority support', free: false, pro: true, max: true },
 ];
 
@@ -328,7 +328,7 @@ export default function PricingTable({ subscriptionDetails, user }: PricingTable
           <div className="flex items-center justify-between h-14 px-6">
             <Link href="/" className="flex items-center gap-2.5 group">
               <SciraLogo className="size-5 transition-transform duration-300 group-hover:scale-110" />
-              <span className="text-lg font-light tracking-tighter font-be-vietnam-pro">scira</span>
+              <span className="text-lg font-light tracking-tighter font-be-vietnam-pro">Datavibes</span>
             </Link>
             <div className="flex items-center gap-3">
               <ThemeSwitcher />
@@ -578,13 +578,13 @@ export default function PricingTable({ subscriptionDetails, user }: PricingTable
               {[
                 'Unlimited searches',
                 'All base AI models',
-                'Scira Apps (100+ integrations)',
+                'Datavibes Apps (100+ integrations)',
                 'Extreme deep research',
                 'PDF analysis',
                 'Voice mode',
                 'XQL (X Query Language)',
                 'Canvas (visualization mode)',
-                'Scira Lookout',
+                'Datavibes Lookout',
                 'Priority support',
               ].map((item) => (
                 <li
@@ -1160,12 +1160,12 @@ export default function PricingTable({ subscriptionDetails, user }: PricingTable
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
               {
-                content: 'Scira is better than Grok at digging up information from X. Insanely accurate answers!',
+                content: 'Datavibes is better than Grok at digging up information from X. Insanely accurate answers!',
                 author: 'Chris Universe',
                 handle: '@chrisuniverseb',
               },
               {
-                content: 'Read nothing the whole sem and here I am with Scira to top my mid sems!',
+                content: 'Read nothing the whole sem and here I am with Datavibes to top my mid sems!',
                 author: 'Rajnandinit',
                 handle: '@itsRajnandinit',
               },
@@ -1231,7 +1231,7 @@ export default function PricingTable({ subscriptionDetails, user }: PricingTable
             Ready to unlock <span className="font-pixel text-2xl">unlimited</span> research?
           </h2>
           <p className="text-sm text-muted-foreground mb-8 max-w-md mx-auto">
-            Join 100K+ users who research and get things done with Scira.
+            Join 100K+ users who research and get things done with Datavibes.
           </p>
           <div className="flex items-center justify-center gap-3">
             <Button
@@ -1252,8 +1252,8 @@ export default function PricingTable({ subscriptionDetails, user }: PricingTable
               Privacy Policy
             </Link>
             . Questions?{' '}
-            <a href="mailto:zaid@scira.ai" className="text-foreground hover:underline underline-offset-2">
-              zaid@scira.ai
+            <a href="mailto:support@mydatavibes.com" className="text-foreground hover:underline underline-offset-2">
+              support@mydatavibes.com
             </a>
           </p>
         </div>

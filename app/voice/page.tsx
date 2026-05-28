@@ -412,7 +412,7 @@ export default function VoicePage() {
                           transition={{ duration: 0.2 }}
                           className={cn("flex items-start gap-2 pt-2", turn.interrupted && "opacity-50")}
                         >
-                          <span className="font-pixel text-[9px] text-muted-foreground/40 tracking-wider pt-0.5 shrink-0 w-6 text-right">Scira</span>
+                          <span className="font-pixel text-[9px] text-muted-foreground/40 tracking-wider pt-0.5 shrink-0 w-16 text-right">Datavibes</span>
                           <p className="text-xs leading-relaxed text-foreground/70">
                             {turn.text}
                             {turn.interrupted && <span className="ml-1 text-muted-foreground/60 italic">— interrupted</span>}

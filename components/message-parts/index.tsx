@@ -2560,7 +2560,7 @@ export const MessagePartRenderer = memo<MessagePartRendererProps>(
         const entries = await Promise.all(
           sourceItems.map(async (source) => {
             try {
-              const response = await fetch(`https://metadata.scira.app/?url=${encodeURIComponent(source.url)}`, {
+              const response = await fetch(`https://metadata.mydatavibes.com/?url=${encodeURIComponent(source.url)}`, {
                 cache: 'force-cache',
               });
 
@@ -2998,7 +2998,7 @@ export const MessagePartRenderer = memo<MessagePartRendererProps>(
                             }
 
                             const payload = {
-                              title: 'Scira AI',
+                              title: 'Datavibes AI',
                               content,
                               meta: {
                                 modelLabel: modelLabel || null,

@@ -26,6 +26,7 @@ import { db, maindb } from './index';
 import { getDodoSubscriptions, setDodoSubscriptions, getDodoProStatus, setDodoProStatus } from '../performance-cache';
 import { all } from 'better-all';
 import { getBetterAllOptions } from '@/lib/better-all';
+import { isDodoBillingEnabled } from '@/lib/billing-mode';
 
 type VisibilityType = 'public' | 'private';
 type DodoSubscriptionRow = typeof dodosubscription.$inferSelect;
@@ -57,6 +58,8 @@ function isActiveDodoSubscriptionRecord(
 }
 
 async function getCachedOrFreshDodoSubscriptions(userId: string) {
+  if (!isDodoBillingEnabled()) return [];
+
   const cachedSubscriptions = getDodoSubscriptions(userId);
   if (cachedSubscriptions) return cachedSubscriptions as DodoSubscriptionRow[];
 
@@ -1425,6 +1428,8 @@ export async function getDodoSubscriptionsByUserId({ userId }: { userId: string 
 
 export async function getDodoSubscriptionById({ subscriptionId }: { subscriptionId: string }) {
   try {
+    if (!isDodoBillingEnabled()) return null;
+
     const [selectedSubscription] = await maindb
       .select()
       .from(dodosubscription)

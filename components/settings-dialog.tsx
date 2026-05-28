@@ -1654,7 +1654,7 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
         currency: subscription.currency,
         status: subscription.status,
         product: {
-          name: 'Scira Pro',
+          name: 'Datavibes Pro',
         },
       },
     ];
@@ -1724,7 +1724,7 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
       if (proSource === 'dodo') {
         sileo.error({
           title: 'Unable to access DodoPayments portal',
-          description: 'Please contact support at zaid@scira.ai',
+          description: 'Please contact support at support@mydatavibes.com',
           icon: <AlertCircle className="h-4 w-4" />,
         });
       } else {
@@ -1771,7 +1771,7 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
                 </div>
                 <div>
                   <h3 className={cn('font-semibold', isMobile ? 'text-sm' : 'text-base')}>
-                    Scira{' '}
+                    Datavibes{' '}
                     <span className="font-pixel text-xs uppercase tracking-wider">
                       {user?.isMaxUser ? 'Max' : 'Pro'}
                     </span>
@@ -1951,7 +1951,7 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <p className={cn('font-medium truncate', isMobile ? 'text-xs' : 'text-sm')}>
-                          Scira Pro (DodoPayments)
+                          Datavibes Pro (DodoPayments)
                         </p>
                         <div className="flex items-center gap-2">
                           <p className={cn('text-muted-foreground', isMobile ? 'text-[10px]' : 'text-xs')}>

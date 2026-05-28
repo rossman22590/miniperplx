@@ -34,6 +34,7 @@ const OPENROUTER_MODEL_IDS = {
   'scira-name': 'google/gemini-2.5-flash-lite',
   'scira-follow-up': 'google/gemini-2.5-flash-lite',
   'scira-nano': 'meta-llama/llama-3.3-70b-instruct',
+  'scira-llama-guard': 'meta-llama/llama-guard-4-12b',
   'scira-enhance': 'moonshotai/kimi-k2-0905',
   'scira-code': 'x-ai/grok-code-fast-1',
   'scira-grok-3': 'x-ai/grok-3',

@@ -40,6 +40,7 @@ export function invalidateSessionCacheForToken(token: string): void {
 }
 import { all, flow } from 'better-all';
 import { getBetterAllOptions } from '@/lib/better-all';
+import { isBillingOff, isDodoBillingEnabled } from './billing-mode';
 
 // Status type literals
 export type DodoSubscriptionStatus = 'active' | 'on_hold' | 'cancelled' | 'expired' | 'failed';
@@ -335,6 +336,8 @@ export const getLightweightUserAuth = cache(async (): Promise<LightweightUserAut
     }
 
     const userId = session.user.id;
+    const billingOff = isBillingOff();
+    const dodoBillingEnabled = isDodoBillingEnabled();
 
     // Check lightweight cache first
     const cached = getCachedLightweightAuth(userId);
@@ -356,7 +359,7 @@ export const getLightweightUserAuth = cache(async (): Promise<LightweightUserAut
     }
 
     // Check dodo status from cache synchronously before starting any DB queries.
-    const cachedDodoStatus = getDodoProStatus(userId);
+    const cachedDodoStatus = dodoBillingEnabled ? getDodoProStatus(userId) : null;
 
     // Capture the polar rows via closure so we can use the email after flow() completes,
     // even when no task calls $end() (i.e. neither source is Pro).
@@ -389,10 +392,14 @@ export const getLightweightUserAuth = cache(async (): Promise<LightweightUserAut
           if (!rows.length) return null;
 
           const hasActive = rows.some((row) => row.subscriptionStatus === 'active');
-          if (hasActive) this.$end({ email: rows[0].email, isProUser: true, isMaxUser: false });
+          if (billingOff || hasActive) this.$end({ email: rows[0].email, isProUser: true, isMaxUser: false });
           return rows;
         },
         async dodoCheck() {
+          if (!dodoBillingEnabled) {
+            return false;
+          }
+
           if (cachedDodoStatus !== null) {
             const isDodoActive = cachedDodoStatus.isProUser ?? cachedDodoStatus.hasSubscriptions ?? false;
             if (isDodoActive) {
@@ -475,6 +482,8 @@ export const getComprehensiveUserData = cache(async (): Promise<ComprehensiveUse
     }
 
     const userId = session.user.id;
+    const billingOff = isBillingOff();
+    const dodoBillingEnabled = isDodoBillingEnabled();
 
     // Check cache first
     const cached = getCachedUserData(userId);
@@ -514,6 +523,10 @@ export const getComprehensiveUserData = cache(async (): Promise<ComprehensiveUse
             .where(eq(user.id, userId));
         },
         async dodoSubscriptions() {
+          if (!dodoBillingEnabled) {
+            return [];
+          }
+
           // IMPORTANT: Use maindb for critical subscription queries to avoid replication lag
           return maindb
             .select({
@@ -596,7 +609,10 @@ export const getComprehensiveUserData = cache(async (): Promise<ComprehensiveUse
     let proSource: 'polar' | 'dodo' | 'none' = 'none';
     let subscriptionStatus: 'active' | 'canceled' | 'expired' | 'none' = 'none';
 
-    if (isDodoActive && isDodoMax) {
+    if (billingOff) {
+      isProUser = true;
+      subscriptionStatus = 'active';
+    } else if (isDodoActive && isDodoMax) {
       isProUser = true;
       isMaxUser = true;
       proSource = 'dodo';

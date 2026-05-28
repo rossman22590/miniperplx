@@ -43,6 +43,7 @@ creds.ts
 
 # local SQL scripts
 *.sql
+!drizzle/migrations/*.sql
 
 
 # IDE / AI tools

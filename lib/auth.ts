@@ -35,6 +35,7 @@ import DodoPayments from 'dodopayments';
 import { eq, and } from 'drizzle-orm';
 import { invalidateUserCaches } from './performance-cache';
 import { clearUserDataCache, invalidateSessionCacheForToken } from './user-data-server';
+import { isDodoBillingEnabled } from './billing-mode';
 
 config({
   path: '.env.local',
@@ -205,7 +206,7 @@ async function handleSubscriptionWebhook(payload: any, status: string) {
 }
 
 export const auth = betterAuth({
-  appName: 'scira',
+  appName: 'Datavibes',
   baseURL: process.env.NODE_ENV === 'production' ? process.env.BETTER_AUTH_BASE_URL : 'http://localhost:3000',
   rateLimit: {
     max: 100,
@@ -434,7 +435,7 @@ export const auth = betterAuth({
         }),
       ],
     }),
-    dodopayments({
+    ...(isDodoBillingEnabled() ? [dodopayments({
       client: dodoPayments,
       createCustomerOnSignUp: true,
       use: [
@@ -538,19 +539,17 @@ export const auth = betterAuth({
           },
         }),
       ],
-    }),
+    })] : []),
     nextCookies(),
   ],
   trustedOrigins: [
     'http://localhost:3000',
-    'https://scira.ai',
-    'https://www.scira.ai',
-    'https://scira-zaidmukaddam-sciraai.vercel.app',
+    'https://mydatavibes.com',
+    'https://www.mydatavibes.com',
   ],
   allowedOrigins: [
     'http://localhost:3000',
-    'https://scira.ai',
-    'https://www.scira.ai',
-    'https://scira-zaidmukaddam-sciraai.vercel.app',
+    'https://mydatavibes.com',
+    'https://www.mydatavibes.com',
   ],
 });

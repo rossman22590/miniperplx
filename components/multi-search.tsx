@@ -676,36 +676,38 @@ const MultiSearch = ({
       {/* Sources Section */}
       <div className="rounded-xl border border-border/60 overflow-hidden bg-card/30">
         {/* Header */}
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-muted/20 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Icons.Layers className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="font-pixel text-xs text-muted-foreground/80 uppercase tracking-wider">Sources</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground/60 tabular-nums">{totalResults}</span>
-            {totalResults > 0 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSourcesOpen(true);
-                }}
-                className="text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 hover:bg-muted/30 rounded flex items-center gap-1"
-              >
-                View all
-                <Icons.ArrowUpRight className="w-2.5 h-2.5" />
-              </button>
-            )}
-            <Icons.ChevronDown
-              className={cn(
-                'h-3 w-3 text-muted-foreground/60 transition-transform duration-200',
-                isExpanded && 'rotate-180',
-              )}
-            />
-          </div>
-        </button>
+        <div className="w-full px-4 py-2.5 flex items-center justify-between gap-2 hover:bg-muted/20 transition-colors">
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            aria-expanded={isExpanded}
+            className="min-w-0 flex-1 flex items-center justify-between gap-2 text-left"
+          >
+            <div className="flex items-center gap-2">
+              <Icons.Layers className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="font-pixel text-xs text-muted-foreground/80 uppercase tracking-wider">Sources</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground/60 tabular-nums">{totalResults}</span>
+              <Icons.ChevronDown
+                className={cn(
+                  'h-3 w-3 text-muted-foreground/60 transition-transform duration-200',
+                  isExpanded && 'rotate-180',
+                )}
+              />
+            </div>
+          </button>
+          {totalResults > 0 && (
+            <button
+              type="button"
+              onClick={() => setSourcesOpen(true)}
+              className="text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 hover:bg-muted/30 rounded flex items-center gap-1"
+            >
+              View all
+              <Icons.ArrowUpRight className="w-2.5 h-2.5" />
+            </button>
+          )}
+        </div>
 
         {/* Content */}
         {isExpanded && (

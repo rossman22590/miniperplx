@@ -419,7 +419,7 @@ export async function POST(req: NextRequest) {
       }
     };
 
-    // Professional header with Scira branding and chat title
+    // Professional header with Datavibes branding and chat title
     const drawProfessionalHeader = () => {
       // One-line: logo + app name/title
       const titleSize = 16;
@@ -927,7 +927,7 @@ export async function POST(req: NextRequest) {
       return out;
     };
 
-    // Draw the Scira logo (vector) using the same SVG paths as components/logos/scira-logo.tsx
+    // Draw the Datavibes logo (vector) using the same SVG paths as components/logos/scira-logo.tsx
     // Positions the logo with its top-left at (x, yTop). Width controls overall size.
     function drawSciraLogo(x: number, yTop: number, width: number, color = rgb(0, 0, 0)) {
       // Original viewBox: 910 x 934

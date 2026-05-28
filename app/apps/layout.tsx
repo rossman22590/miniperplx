@@ -12,18 +12,18 @@ export const metadata: Metadata = {
   openGraph: {
     title,
     description,
-    url: 'https://scira.ai/apps',
-    siteName: 'Scira AI',
+    url: 'https://mydatavibes.com/apps',
+    siteName: 'Datavibes AI',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title,
     description,
-    creator: '@sciraai',
+    creator: '@ddatavibes',
   },
   alternates: {
-    canonical: 'https://scira.ai/apps',
+    canonical: 'https://mydatavibes.com/apps',
   },
 };
 

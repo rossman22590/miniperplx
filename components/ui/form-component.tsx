@@ -1748,7 +1748,7 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-2">
-                    <p className="text-3xl font-semibold tracking-tight font-be-vietnam-pro">scira</p>
+                    <p className="text-3xl font-semibold tracking-tight font-be-vietnam-pro">Datavibes</p>
                     <ProBadge />
                   </div>
                 )}
@@ -2704,7 +2704,7 @@ const McpServerSelector: React.FC<McpServerSelectorProps> = React.memo(({ user, 
         <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
         <DrawerContent className="max-h-[80vh] h-full flex flex-col overflow-hidden">
           <DrawerHeader className="text-left pb-1 shrink-0">
-            <DrawerTitle className="text-lg font-light tracking-tight font-be-vietnam-pro">scira apps</DrawerTitle>
+            <DrawerTitle className="text-lg font-light tracking-tight font-be-vietnam-pro">Datavibes Apps</DrawerTitle>
           </DrawerHeader>
           <div className="flex-1 flex flex-col min-h-0 px-1 pb-4">
             {isLoading ? <div className="px-3 py-3 text-sm text-muted-foreground">Loading…</div> : drawerItems}
@@ -6591,7 +6591,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
               <div className="flex items-center gap-4">
                 <CheckIcon className="size-4 text-primary shrink-0" />
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-foreground">Scira Lookout</p>
+                  <p className="text-sm font-medium text-foreground">Datavibes Lookout</p>
                   <p className="text-xs text-muted-foreground">Automated search monitoring on your schedule</p>
                 </div>
               </div>

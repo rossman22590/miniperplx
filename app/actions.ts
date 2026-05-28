@@ -48,7 +48,6 @@ import { chat, message, buildSession, dodosubscription, type User } from '@/lib/
 import { eq, desc, ilike, and, asc, inArray, notExists } from 'drizzle-orm';
 import { getDiscountConfig } from '@/lib/discount';
 import { get } from '@vercel/edge-config';
-import { GroqProviderOptions, groq } from '@ai-sdk/groq';
 import { Client } from '@upstash/qstash';
 import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import type { CharacterAlignmentResponseModel } from '@elevenlabs/elevenlabs-js/api/types/CharacterAlignmentResponseModel';
@@ -234,13 +233,8 @@ export async function checkImageModeration(images: string[]) {
   }));
 
   const { text } = await generateText({
-    model: groq('meta-llama/llama-guard-4-12b'),
+    model: scira.languageModel('scira-llama-guard'),
     messages,
-    providerOptions: {
-      groq: {
-        service_tier: 'flex',
-      },
-    },
   });
   return text;
 }
@@ -2014,11 +2008,11 @@ export async function createScheduledLookout({
 
           if (delay > 0) {
             await qstash.publish({
-              // if dev env use localhost:3000/api/lookout, else use scira.ai/api/lookout
+              // if dev env use localhost:3000/api/lookout, else use mydatavibes.com/api/lookout
               url:
                 process.env.NODE_ENV === 'development'
                   ? process.env.NGROK_URL + '/api/lookout'
-                  : `https://scira.ai/api/lookout`,
+                  : `https://mydatavibes.com/api/lookout`,
               body: JSON.stringify({
                 lookoutId: lookout.id,
                 prompt,
@@ -2048,11 +2042,11 @@ export async function createScheduledLookout({
           console.log('📅 Cron schedule with timezone:', cronSchedule);
 
           const scheduleResponse = await qstash.schedules.create({
-            // if dev env use localhost:3000/api/lookout, else use scira.ai/api/lookout
+            // if dev env use localhost:3000/api/lookout, else use mydatavibes.com/api/lookout
             destination:
               process.env.NODE_ENV === 'development'
                 ? process.env.NGROK_URL + '/api/lookout'
-                : `https://scira.ai/api/lookout`,
+                : `https://mydatavibes.com/api/lookout`,
             method: 'POST',
             cron: cronSchedule,
             body: JSON.stringify({
@@ -2250,11 +2244,11 @@ export async function updateLookoutAction({
 
         // Create new schedule with updated cron
         const scheduleResponse = await qstash.schedules.create({
-          // if dev env use localhost:3000/api/lookout, else use scira.ai/api/lookout
+          // if dev env use localhost:3000/api/lookout, else use mydatavibes.com/api/lookout
           destination:
             process.env.NODE_ENV === 'development'
               ? process.env.NGROK_URL + '/api/lookout'
-              : `https://scira.ai/api/lookout`,
+              : `https://mydatavibes.com/api/lookout`,
           method: 'POST',
           cron: cronSchedule,
           body: JSON.stringify({
@@ -2362,7 +2356,7 @@ export async function testLookoutAction({ id }: { id: string }) {
         ? process.env.NGROK_URL
           ? process.env.NGROK_URL + '/api/lookout'
           : 'http://localhost:3000/api/lookout'
-        : `https://scira.ai/api/lookout`;
+        : `https://mydatavibes.com/api/lookout`;
 
     const response = await fetch(lookoutUrl, {
       method: 'POST',

@@ -172,7 +172,7 @@ const FILE_TYPE_MAP: Record<string, { typeLabel: string; icon: LucideIcon }> = {
 
 function parseUrlLike(href: string): URL | null {
   try {
-    if (href.startsWith('/')) return new URL(href, 'https://scira.ai');
+    if (href.startsWith('/')) return new URL(href, 'https://mydatavibes.com');
     return new URL(href);
   } catch {
     return null;
@@ -1739,7 +1739,7 @@ function fetchMetadata(url: string) {
   if (!metadataCache.has(url)) {
     metadataCache.set(
       url,
-      fetch(`https://metadata.scira.app/?url=${encodeURIComponent(url)}`)
+      fetch(`https://metadata.mydatavibes.com/?url=${encodeURIComponent(url)}`)
         .then((res) => res.json())
         .then((data) => (data.url ? data : null))
         .catch(() => null),
@@ -2625,7 +2625,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
         } catch {
           displayDomain = getDisplayDomain(href);
         }
-        return <>{renderHoverCard(href, displayDomain, true, citationText, key)}</>;
+        return renderHoverCard(href, displayDomain, true, citationText, key);
       },
       [renderHoverCard],
     );
@@ -2749,10 +2749,14 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
             components.push(<span key={key}>{textContent}</span>);
           }
 
-          return components.length === 1 ? components[0] : <Fragment>{components}</Fragment>;
+          return components.length === 1 ? (
+            components[0]
+          ) : (
+            <Fragment key={getElementKey('text', `fragment-${text}`)}>{components}</Fragment>
+          );
         },
         hr() {
-          return <></>;
+          return <Fragment key={getElementKey('hr')} />;
         },
         paragraph(children) {
           const key = getElementKey('paragraph', String(children));

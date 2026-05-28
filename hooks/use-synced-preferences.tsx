@@ -140,8 +140,13 @@ export function useSyncedPreferences<T extends PreferenceValue>(
   // Track pending saves to prevent overwriting local changes with stale DB data
   const pendingSaveRef = useRef<boolean>(false);
 
-  // Initialize with localStorage value immediately
-  const [localValue, setLocalValue] = useState<T>(() => getStoredValue(key, defaultValue));
+  // Match the server-rendered value on the first client render. Stored
+  // browser preferences are applied after mount to avoid hydration mismatches.
+  const [localValue, setLocalValue] = useState<T>(defaultValue);
+
+  useEffect(() => {
+    setLocalValue(getStoredValue(key, defaultValue));
+  }, [key]);
 
   // Fetch preferences from DB
   const { data: dbPreferences } = useQuery({

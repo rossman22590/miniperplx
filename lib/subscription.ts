@@ -17,6 +17,7 @@ import {
 } from './performance-cache';
 import { flow } from 'better-all';
 import { getBetterAllOptions } from './better-all';
+import { isBillingOff, isDodoBillingEnabled } from './billing-mode';
 
 export type SubscriptionDetails = {
   id: string;
@@ -71,6 +72,8 @@ function isDodoSubscriptionActiveForAccess(subscriptionRow: DodoSubscriptionReco
 // Helper function to check Dodo Subscriptions status
 async function checkDodoSubscriptionProStatus(userId: string): Promise<boolean> {
   try {
+    if (!isDodoBillingEnabled()) return false;
+
     // Check cache first
     const cachedStatus = getDodoProStatus(userId);
     if (cachedStatus !== null) {
@@ -125,6 +128,10 @@ async function getComprehensiveProStatus(
 ): Promise<{ isProUser: boolean; source: 'polar' | 'dodo' | 'none' }> {
   type ProResult = { isProUser: boolean; source: 'polar' | 'dodo' | 'none' };
   try {
+    if (isBillingOff()) return { isProUser: true, source: 'none' };
+
+    const dodoBillingEnabled = isDodoBillingEnabled();
+
     const result = await flow<ProResult>(
       {
         async polarSubscriptions() {
@@ -137,6 +144,8 @@ async function getComprehensiveProStatus(
           return subs;
         },
         async dodoSubscriptions() {
+          if (!dodoBillingEnabled) return [];
+
           const cached = getDodoSubscriptions(userId);
           const subs = cached ?? await (async () => {
             const data = await maindb.select().from(dodosubscription).where(eq(dodosubscription.userId, userId));
@@ -292,7 +301,7 @@ export async function getSubscriptionDetails(): Promise<SubscriptionDetailsResul
 export async function isUserSubscribed(): Promise<boolean> {
   try {
     // If billing is off, everyone is subscribed
-    if (process.env.BILLING_OFF === 'true') {
+    if (isBillingOff()) {
       const session = await auth.api.getSession({
         headers: await headers(),
       });
@@ -319,7 +328,7 @@ export async function isUserSubscribed(): Promise<boolean> {
 // Fast pro user status check using cache
 export async function isUserProCached(): Promise<boolean> {
   // If billing is off, everyone is premium
-  if (process.env.BILLING_OFF === 'true') {
+  if (isBillingOff()) {
     const session = await auth.api.getSession({
       headers: await headers(),
     });
@@ -408,6 +417,10 @@ export async function getDodoSubscriptionExpirationDate(): Promise<Date | null> 
     });
 
     if (!session?.user?.id) {
+      return null;
+    }
+
+    if (!isDodoBillingEnabled()) {
       return null;
     }
 

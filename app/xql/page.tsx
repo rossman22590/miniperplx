@@ -104,7 +104,7 @@ function XQLPageContent() {
           <div className="md:hidden absolute left-0">
             <SidebarTrigger />
           </div>
-          <span className="text-foreground">Scira</span>
+          <span className="text-foreground">Datavibes</span>
           <div className="flex items-center relative">
             <XLogoIcon className="size-6 sm:size-8 md:size-12 text-foreground -mr-1 sm:-mr-2 font-medium" />
             <h1 className="text-foreground">QL</h1>
@@ -187,7 +187,7 @@ function XQLPageContent() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {[
                 {
-                  query: '@SciraAI updates from last week',
+                  query: '@DDATAVIBES updates from last week',
                   description: 'Popular content with date range',
                 },
                 {

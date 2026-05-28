@@ -58,7 +58,7 @@ export function ProUpgradeScreen({ user }: ProUpgradeScreenProps) {
               </div>
               <p className="text-sm font-medium text-foreground">Unlock Voice</p>
               <p className="text-xs text-muted-foreground/70 leading-relaxed">
-                Have natural voice conversations with Scira. Ask questions, search the web, and get real-time responses.
+                Have natural voice conversations with Datavibes. Ask questions, search the web, and get real-time responses.
               </p>
             </div>
 

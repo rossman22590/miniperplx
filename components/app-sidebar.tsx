@@ -6,11 +6,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   PlusIcon,
   GearIcon,
-  CodeIcon,
   SignIn,
   XLogoIcon,
   GithubLogoIcon,
-  InstagramLogoIcon,
   InfoIcon,
   BookIcon,
   FileTextIcon,
@@ -23,7 +21,6 @@ import {
   BinocularsIcon,
   SearchList02Icon,
   FolderLibraryIcon,
-  Mail02Icon,
 } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@/components/ui/hugeicons';
 import {
@@ -83,6 +80,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTheme } from 'next-themes';
 import { Button } from './ui/button';
 import { useSyncedPreferences } from '@/hooks/use-synced-preferences';
+import { useLocalStorage } from '@/hooks/use-local-storage';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
@@ -155,9 +153,9 @@ function UserDropdownContent({
   };
 
   const themes = [
-    { value: 'system', label: 'Sys', colors: ['#F9F9F9', '#6B5B4F', '#E8DFD5'] },
-    { value: 'light', label: 'Light', colors: ['#FAFAFA', '#6B5B4F', '#EBE0C8'] },
-    { value: 'dark', label: 'Dark', colors: ['#1A1A1A', '#E8D5A3', '#3A3020'] },
+    { value: 'system', label: 'Sys', colors: ['#F9F9F9', 'oklch(0.68 0.24 356)', 'oklch(0.64 0.2 315)'] },
+    { value: 'light', label: 'Light', colors: ['#FAFAFA', 'oklch(0.68 0.24 356)', 'oklch(0.64 0.2 315)'] },
+    { value: 'dark', label: 'Dark', colors: ['#1A1A1A', 'oklch(0.74 0.21 356)', 'oklch(0.56 0.16 315)'] },
     { value: 'colourful', label: 'Color', colors: ['#3D3428', '#C4A96A', '#5A4D3A'] },
     { value: 't3chat', label: 'T3', colors: ['#2A1F35', '#9B2B5A', '#4A2D5A'] },
     { value: 'claudedark', label: 'CD', colors: ['#352F28', '#C07A3E', '#2A2520'] },
@@ -176,13 +174,13 @@ function UserDropdownContent({
           <p className="text-xs text-muted-foreground">
             {isProUser ? (
               <span>
-                Scira{' '}
+                Datavibes{' '}
                 <span className="font-pixel text-[10px] uppercase tracking-wider">
                   {user.isMaxUser ? 'Max' : 'Pro'}
                 </span>
               </span>
             ) : (
-              'Scira Free'
+              'Datavibes Free'
             )}
           </p>
         </div>
@@ -225,7 +223,7 @@ function UserDropdownContent({
                 cx="7"
                 cy="10"
                 r="4"
-                fill={themes.find((t) => t.value === currentTheme)?.colors[1] || '#E8D5A3'}
+                fill={themes.find((t) => t.value === currentTheme)?.colors[1] || 'oklch(0.74 0.21 356)'}
               />
               <rect
                 x="12"
@@ -233,7 +231,7 @@ function UserDropdownContent({
                 width="6"
                 height="8"
                 rx="1.5"
-                fill={themes.find((t) => t.value === currentTheme)?.colors[2] || '#3A3020'}
+                fill={themes.find((t) => t.value === currentTheme)?.colors[2] || 'oklch(0.56 0.16 315)'}
               />
             </svg>
             <span className="text-sm">Theme</span>
@@ -358,7 +356,7 @@ function UserDropdownContent({
               </Link>
               <div className="h-px bg-border/40 my-1" />
               <a
-                href="https://git.new/scira"
+                href="https://github.com/rossman22590/miniperplx"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={closeMobileSidebar}
@@ -368,27 +366,7 @@ function UserDropdownContent({
                 <span>GitHub</span>
               </a>
               <a
-                href="https://x.com/sciraai"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={closeMobileSidebar}
-                className="flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/30 hover:text-foreground transition-colors duration-150"
-              >
-                <XLogoIcon size={16} weight="regular" />
-                <span>X.com</span>
-              </a>
-              <a
-                href="https://www.instagram.com/scira.ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={closeMobileSidebar}
-                className="flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent/30 hover:text-foreground transition-colors duration-150"
-              >
-                <InstagramLogoIcon size={16} weight="regular" />
-                <span>Instagram</span>
-              </a>
-              <a
-                href="https://scira.userjot.com"
+                href="mailto:support@mydatavibes.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={closeMobileSidebar}
@@ -398,7 +376,7 @@ function UserDropdownContent({
                 <span>Feedback</span>
               </a>
               <a
-                href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fzaidmukaddam%2Fscira"
+                href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frossman22590%2Fminiperplx"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={closeMobileSidebar}
@@ -484,22 +462,7 @@ const groupChatsByDate = (chats: any[]) => {
 
 export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarProps) => {
   const [blurPersonalInfo] = useSyncedPreferences<boolean>('scira-blur-personal-info', false);
-  const [isRecentCollapsed, setIsRecentCollapsed] = React.useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      const stored = window.localStorage.getItem('scira-recent-collapsed');
-      return stored ? JSON.parse(stored) : false;
-    } catch {
-      return false;
-    }
-  });
-  React.useEffect(() => {
-    try {
-      window.localStorage.setItem('scira-recent-collapsed', JSON.stringify(isRecentCollapsed));
-    } catch {
-      // ignore
-    }
-  }, [isRecentCollapsed]);
+  const [isRecentCollapsed, setIsRecentCollapsed] = useLocalStorage<boolean>('scira-recent-collapsed', false);
 
   const { state, isMobile, setOpenMobile } = useSidebar();
   const [keyboardShortcutsOpen, setKeyboardShortcutsOpen] = React.useState(false);
@@ -571,20 +534,6 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
       label: 'Privacy',
       icon: ShieldIcon,
       href: '/privacy-policy',
-    },
-    {
-      id: 'github',
-      label: 'GitHub',
-      icon: GithubLogoIcon,
-      href: 'https://git.new/scira',
-      external: true,
-    },
-    {
-      id: 'feedback',
-      label: 'Feedback',
-      icon: BugIcon,
-      href: 'https://scira.userjot.com',
-      external: true,
     },
   ];
 
@@ -693,7 +642,7 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
     try {
       await updateChatVisibility(shareTarget.id, visibility);
       setShareVisibility(visibility);
-      const shareUrl = visibility === 'public' ? `https://scira.ai/share/${shareTarget.id}` : '';
+      const shareUrl = visibility === 'public' ? `https://mydatavibes.com/share/${shareTarget.id}` : '';
       sileo.success({
         title: visibility === 'public' ? 'Chat shared' : 'Chat is now private',
         description: visibility === 'public' ? 'Your chat is now publicly accessible' : 'Your chat is now private',
@@ -764,7 +713,7 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
                     <SciraLogo className="size-6" />
                   </div>
                   <div className="flex flex-row items-center gap-2 leading-none group-data-[collapsible=icon]:hidden">
-                    <span className="font-be-vietnam-pro font-light tracking-tighter text-xl">scira</span>
+                    <span className="font-be-vietnam-pro font-light tracking-tighter text-xl">Datavibes</span>
                     {user && isProUser && (
                       <div className="w-fit">
                         <span className="animate-shimmer text-xs font-baumans inline-flex items-center justify-center min-w-6 h-4 px-1.5 pt-0 pb-0.5 rounded-md shadow-sm bg-linear-to-br from-secondary/30 via-primary/25 to-accent/30 text-foreground ring-1 ring-primary/25 ring-offset-1 ring-offset-background dark:bg-linear-to-br dark:from-primary dark:via-secondary dark:to-primary dark:text-foreground dark:ring-primary/40">
@@ -979,44 +928,6 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
               </SidebarMenuButton>
             </SidebarMenuItem>
           )} */}
-
-          {/* InMail */}
-          {user && (
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                tooltip="InMail - AI Email Research Agent"
-                className="hover:bg-primary/10 transition-all duration-200"
-              >
-                <a
-                  href="https://inmail.scira.ai/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={closeMobileSidebar}
-                  className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full"
-                >
-                  <HugeiconsIcon icon={Mail02Icon} size={18} />
-                  <span className="group-data-[collapsible=icon]:hidden">InMail</span>
-                </a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          )}
-
-          {/* API */}
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="API" className="hover:bg-primary/10 transition-all duration-200">
-              <a
-                href="https://api.scira.ai/"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={closeMobileSidebar}
-                className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full"
-              >
-                <CodeIcon size={18} weight="regular" />
-                <span className="group-data-[collapsible=icon]:hidden">API</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
 
           {/* Guest Info Links when signed out */}
           {!user &&
@@ -1403,13 +1314,13 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
                           <span className="text-xs text-sidebar-foreground/70 truncate text-left w-full">
                             {isProUser ? (
                               <span>
-                                Scira{' '}
+                                Datavibes{' '}
                                 <span className="font-pixel text-[10px] uppercase tracking-wider">
                                   {user?.isMaxUser ? 'Max' : 'Pro'}
                                 </span>
                               </span>
                             ) : (
-                              'Scira Free'
+                              'Datavibes Free'
                             )}
                           </span>
                         </div>

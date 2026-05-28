@@ -14,20 +14,20 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const chat = await getChatById({ id });
 
   if (!chat || chat.visibility !== 'public') {
-    return { title: 'Scira Chat' };
+    return { title: 'Datavibes Chat' };
   }
 
   return {
     title: chat.title,
-    description: 'A shared chat on scira.ai',
+    description: 'A shared chat on mydatavibes.com',
     openGraph: {
       title: chat.title,
-      url: `https://scira.ai/share/${id}`,
-      description: 'A shared chat on scira.ai',
-      siteName: 'scira.ai',
+      url: `https://mydatavibes.com/share/${id}`,
+      description: 'A shared chat on mydatavibes.com',
+      siteName: 'mydatavibes.com',
       images: [
         {
-          url: `https://scira.ai/api/og/chat/${id}`,
+          url: `https://mydatavibes.com/api/og/chat/${id}`,
           width: 1200,
           height: 630,
         },
@@ -36,20 +36,20 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     twitter: {
       card: 'summary_large_image',
       title: chat.title,
-      url: `https://scira.ai/share/${id}`,
-      description: 'A shared chat on scira.ai',
-      siteName: 'scira.ai',
-      creator: '@sciraai',
+      url: `https://mydatavibes.com/share/${id}`,
+      description: 'A shared chat on mydatavibes.com',
+      siteName: 'mydatavibes.com',
+      creator: '@ddatavibes',
       images: [
         {
-          url: `https://scira.ai/api/og/chat/${id}`,
+          url: `https://mydatavibes.com/api/og/chat/${id}`,
           width: 1200,
           height: 630,
         },
       ],
     },
     alternates: {
-      canonical: `https://scira.ai/share/${id}`,
+      canonical: `https://mydatavibes.com/share/${id}`,
     },
   } as Metadata;
 }
@@ -71,10 +71,10 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   });
 
   const user = await userPromise;
-  const shareUrl = `https://scira.ai/share/${id}`;
+  const shareUrl = `https://mydatavibes.com/share/${id}`;
   const uiMessages = convertToUIMessages(messages);
 
-  const sharedBy = chat.userName || chat.userEmail || 'Scira user';
+  const sharedBy = chat.userName || chat.userEmail || 'Datavibes user';
 
   return (
     <SidebarLayout>

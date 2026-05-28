@@ -5,9 +5,9 @@ import { SciraLogo } from '@/components/logos/scira-logo';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
-  description: 'Scira AI Privacy Policy — how we collect, use, and protect your personal data.',
+  description: 'Datavibes AI Privacy Policy - how we collect, use, and protect your personal data.',
   alternates: {
-    canonical: 'https://scira.ai/privacy-policy',
+    canonical: 'https://mydatavibes.com/privacy-policy',
   },
   robots: {
     index: true,
@@ -36,7 +36,7 @@ export default function PrivacyPage() {
           <div className="flex items-center justify-between h-14 px-6">
             <Link href="/" className="flex items-center gap-2.5 group">
               <SciraLogo className="size-5 transition-transform duration-300 group-hover:scale-110" />
-              <span className="text-lg font-light tracking-tighter font-be-vietnam-pro">scira</span>
+              <span className="text-lg font-light tracking-tighter font-be-vietnam-pro">Datavibes</span>
             </Link>
             <div className="flex items-center gap-4">
               <Link href="/terms" className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -84,7 +84,7 @@ export default function PrivacyPage() {
             {/* Content */}
             <div className="prose prose-neutral dark:prose-invert max-w-none prose-headings:font-be-vietnam-pro prose-headings:font-light prose-headings:tracking-tight prose-h2:text-lg prose-h2:mt-14 prose-h2:mb-4 prose-h2:scroll-mt-20 prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:text-[15px] prose-li:text-muted-foreground prose-li:text-[15px] prose-a:text-foreground prose-a:font-medium prose-a:no-underline hover:prose-a:underline prose-strong:text-foreground prose-strong:font-medium">
               <p className="text-base text-foreground/80 leading-relaxed">
-                At Scira AI, we respect your privacy and are committed to protecting your personal data. This Privacy Policy
+                At Datavibes AI, we respect your privacy and are committed to protecting your personal data. This Privacy Policy
                 explains how we collect, use, and safeguard your information when you use our AI-powered research and app integration platform.
               </p>
 
@@ -99,7 +99,7 @@ export default function PrivacyPage() {
                 <li><strong>Cookies and Similar Technologies:</strong> We use cookies and similar tracking technologies to enhance your experience.</li>
               </ul>
               <p>
-                <strong>Important Note on Payment Data:</strong> Scira AI does not collect, store, or process any payment
+                <strong>Important Note on Payment Data:</strong> Datavibes AI does not collect, store, or process any payment
                 card details, bank information, UPI details, or other sensitive payment data. All payment information is
                 handled directly by our payment processors (Polar and DodoPayments).
               </p>
@@ -120,7 +120,7 @@ export default function PrivacyPage() {
                 <li><strong>Service Providers:</strong> With third-party service providers who help us operate and improve our service, including:
                   <ul>
                     <li><strong>Vercel:</strong> Our hosting and infrastructure provider</li>
-                    <li><strong>AI Processing Partners:</strong> OpenAI, Anthropic, xAI, and others for processing search queries</li>
+                    <li><strong>AI Processing Partners:</strong> OpenRouter and other infrastructure providers for processing search queries</li>
                     <li><strong>Payment Processors:</strong> Polar and DodoPayments for billing and subscription management</li>
                   </ul>
                 </li>
@@ -160,7 +160,7 @@ export default function PrivacyPage() {
               </p>
               <p>
                 You may request deletion of your personal data at any time by emailing{' '}
-                <a href="mailto:zaid@scira.ai">zaid@scira.ai</a>. We will action deletion requests within 30 days,
+                <a href="mailto:support@mydatavibes.com">support@mydatavibes.com</a>. We will action deletion requests within 30 days,
                 except where we are required to retain data for legal or compliance reasons.
               </p>
 
@@ -172,13 +172,13 @@ export default function PrivacyPage() {
 
               <h2 id="contact"><span className="font-pixel text-xs text-muted-foreground/50 mr-2">09</span>Contact Us</h2>
               <p>If you have any questions about this Privacy Policy, please contact us at:</p>
-              <p><a href="mailto:zaid@scira.ai">zaid@scira.ai</a></p>
+              <p><a href="mailto:support@mydatavibes.com">support@mydatavibes.com</a></p>
             </div>
 
             {/* Agreement Note */}
             <div className="mt-16 pt-8 border-t border-border/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <p className="text-sm text-muted-foreground">
-                By using Scira AI, you agree to our Privacy Policy and our{' '}
+                By using Datavibes AI, you agree to our Privacy Policy and our{' '}
                 <Link href="/terms" className="text-foreground hover:underline underline-offset-2">Terms of Service</Link>.
               </p>
               <Link href="/terms" className="flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-foreground/70 transition-colors group shrink-0">
@@ -221,7 +221,7 @@ export default function PrivacyPage() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-8">
             <div className="flex items-center gap-3">
               <SciraLogo className="size-4" />
-              <span className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} Scira</span>
+              <span className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} Datavibes</span>
             </div>
             <div className="flex items-center gap-6">
               <Link href="/" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Home</Link>

@@ -223,7 +223,7 @@ interface ContentExtractionStrategy {
   getContents(links: string[]): Promise<SearchResult[]>;
 }
 
-interface MetadataSciraResponse {
+interface MetadataProxyResponse {
   url?: string;
   canonical?: string;
   ogUrl?: string;
@@ -282,7 +282,7 @@ async function getMetadataFallbackResults(urls: string[], logPrefix: string): Pr
   const uniqueUrls = Array.from(new Set(urls)).filter(isHttpUrl);
   if (uniqueUrls.length === 0) return [];
 
-  console.log(`[${logPrefix}] Using metadata.scira.app fallback for ${uniqueUrls.length} URLs:`, uniqueUrls);
+  console.log(`[${logPrefix}] Using metadata.mydatavibes.com fallback for ${uniqueUrls.length} URLs:`, uniqueUrls);
 
   const metadataResults = await all(
     Object.fromEntries(
@@ -290,20 +290,20 @@ async function getMetadataFallbackResults(urls: string[], logPrefix: string): Pr
         `md:${index}`,
         async () => {
           try {
-            const endpoint = new URL('https://metadata.scira.app/');
+            const endpoint = new URL('https://metadata.mydatavibes.com/');
             endpoint.searchParams.set('url', url);
 
             const response = await fetch(endpoint.toString(), { method: 'GET' });
             if (!response.ok) {
               console.error(
-                `[${logPrefix}] metadata.scira.app failed for ${url}:`,
+                `[${logPrefix}] metadata.mydatavibes.com failed for ${url}:`,
                 response.status,
                 response.statusText,
               );
               return null;
             }
 
-            const data = (await response.json()) as MetadataSciraResponse;
+            const data = (await response.json()) as MetadataProxyResponse;
             const parsedUrl = new URL(url);
 
             const title =
@@ -331,7 +331,7 @@ async function getMetadataFallbackResults(urls: string[], logPrefix: string): Pr
               image: data.image,
             } satisfies SearchResult;
           } catch (error) {
-            console.error(`[${logPrefix}] metadata.scira.app error for ${url}:`, error);
+            console.error(`[${logPrefix}] metadata.mydatavibes.com error for ${url}:`, error);
             return null;
           }
         },
@@ -479,6 +479,83 @@ export type Research = {
   charts: any[];
 };
 
+type ResearchPlanItem = {
+  title: string;
+  todos: string[];
+};
+
+const researchPlanSchema = z.object({
+  plan: z
+    .array(
+      z.object({
+        title: z.string().min(1).max(120).describe('A title for the research topic'),
+        todos: z.array(z.string().min(1)).min(1).max(6).describe('A list of what to research for the given title'),
+      }),
+    )
+    .min(1)
+    .max(5),
+});
+
+function truncateText(text: string, maxLength: number) {
+  const trimmed = text.replace(/\s+/g, ' ').trim();
+  if (trimmed.length <= maxLength) return trimmed;
+  return `${trimmed.slice(0, maxLength - 1).trim()}...`;
+}
+
+function normalizeResearchPlan(plan: ResearchPlanItem[]): ResearchPlanItem[] {
+  const normalized = plan
+    .filter((item) => item.title.trim() && item.todos.some((todo) => todo.trim()))
+    .slice(0, 5)
+    .map((item, index) => ({
+      title: truncateText(item.title.trim() || `Research area ${index + 1}`, 70),
+      todos: item.todos
+        .map((todo) => truncateText(todo, 160))
+        .filter(Boolean)
+        .slice(0, 6),
+    }))
+    .filter((item) => item.todos.length > 0);
+
+  return normalized.length > 0 ? normalized : createFallbackResearchPlan('', false);
+}
+
+function createFallbackResearchPlan(
+  prompt: string,
+  hasFilesForPlanning: boolean,
+  fileNames?: string,
+): ResearchPlanItem[] {
+  const topic = truncateText(prompt || 'the requested topic', 54);
+  const sourceTodo = hasFilesForPlanning
+    ? `Search uploaded files${fileNames ? ` (${truncateText(fileNames, 80)})` : ''} for relevant details`
+    : 'Search authoritative web sources for reliable background';
+
+  return [
+    {
+      title: truncateText(`Research ${topic}`, 70),
+      todos: [
+        sourceTodo,
+        'Find current, authoritative sources',
+        'Collect core facts, dates, and context',
+      ],
+    },
+    {
+      title: 'Cross-check important claims',
+      todos: [
+        'Compare findings across independent sources',
+        'Look for recent updates and conflicting reports',
+        'Identify any uncertainty or missing evidence',
+      ],
+    },
+    {
+      title: 'Prepare final synthesis',
+      todos: [
+        'Organize the strongest findings by theme',
+        'Preserve source links for citations',
+        'Summarize the answer clearly for the user',
+      ],
+    },
+  ];
+}
+
 enum SearchCategory {
   NEWS = 'news',
   COMPANY = 'company',
@@ -609,24 +686,18 @@ async function extremeSearch(
     });
   }
 
-  // plan out the research
+  // Plan out the research. Structured output can fail with some model/provider responses, so keep
+  // a deterministic fallback rather than aborting the whole streamed tool invocation.
+  let plan: ResearchPlanItem[];
 
-  const { output: result } = await generateText({
-    model: scira.languageModel('scira-ext-1'),
-    output: Output.object({
-      schema: z.object({
-        plan: z
-          .array(
-            z.object({
-              title: z.string().min(10).max(70).describe('A title for the research topic'),
-              todos: z.array(z.string()).min(3).max(5).describe('A list of what to research for the given title'),
-            }),
-          )
-          .min(1)
-          .max(5),
+  try {
+    const { output: result } = await generateText({
+      model: scira.languageModel('scira-ext-1'),
+      output: Output.object({
+        schema: researchPlanSchema,
       }),
-    }),
-    prompt: `
+      temperature: 0,
+      prompt: `
 Plan out the research for the following topic: ${prompt}.
 
 Today's Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit', weekday: 'short' })}
@@ -668,11 +739,15 @@ When to include browsePage in the plan (be proactive):
 
 ${hasFilesForPlanning ? '- Include file search steps when the uploaded files are relevant to the research topic\n' : ''}- Note: The research agent will call the done tool automatically after using most of the 75 available steps - do not include it in the plan
 - Make the plan technical and specific to the topic`,
-  });
+    });
 
-  console.log(result.plan);
+    plan = normalizeResearchPlan(result.plan);
+  } catch (error) {
+    console.error('[ExtremeSearch] Failed to generate structured research plan; using fallback plan:', error);
+    plan = createFallbackResearchPlan(prompt, hasFilesForPlanning, fileNames);
+  }
 
-  const plan = result.plan;
+  console.log(plan);
 
   // calculate the total number of todos
   const totalTodos = plan.reduce((acc, curr) => acc + curr.todos.length, 0);

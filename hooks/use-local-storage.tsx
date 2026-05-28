@@ -19,8 +19,13 @@ function getStoredValue<T>(key: string, defaultValue: T): T {
 }
 
 export function useLocalStorage<T>(key: string, defaultValue: T): [T, (value: T | ((val: T) => T)) => void] {
-  // Initialize with the stored value immediately
-  const [storedValue, setStoredValue] = useState<T>(() => getStoredValue(key, defaultValue));
+  // Match the server-rendered value on the first client render. Stored
+  // browser state is applied after mount to avoid hydration mismatches.
+  const [storedValue, setStoredValue] = useState<T>(defaultValue);
+
+  useEffect(() => {
+    setStoredValue(getStoredValue(key, defaultValue));
+  }, [key]);
 
   // Listen for storage changes from other components/tabs
   useEffect(() => {
