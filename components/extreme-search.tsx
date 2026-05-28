@@ -40,7 +40,7 @@ import { cn } from '@/lib/utils';
 import { DataExtremeSearchPart } from '@/lib/types';
 import { Tabs as KumoTabs } from '@cloudflare/kumo';
 import { XLogoIcon } from '@phosphor-icons/react/dist/ssr';
-import { XPostCard } from '@/components/x-post-card';
+import { SafeEmbeddedTweet } from '@/components/safe-embedded-tweet';
 
 // Custom minimal icons
 const Icons = {
@@ -325,6 +325,81 @@ const ExtremeSourcesSheet: React.FC<{
   );
 };
 
+const getXPostId = (post: any) => {
+  if (post?.tweet_id) return post.tweet_id;
+  if (post?.id) return post.id;
+  if (typeof post?.url === 'string') return post.url.match(/\/status\/(\d+)/)?.[1] ?? null;
+  return null;
+};
+
+const ExtremeXPostsSheet: React.FC<{
+  posts: any[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}> = ({ posts, open, onOpenChange }) => {
+  const isMobile = useIsMobile();
+  const SheetWrapper = isMobile ? Drawer : Sheet;
+  const SheetContentWrapper = isMobile ? DrawerContent : SheetContent;
+  const postsWithIds = useMemo(() => {
+    const seen = new Set<string>();
+    return posts.filter((post) => {
+      const id = getXPostId(post);
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }, [posts]);
+
+  return (
+    <SheetWrapper open={open} onOpenChange={onOpenChange}>
+      <SheetContentWrapper
+        className={cn(isMobile ? 'h-[85vh]' : 'w-[560px] sm:max-w-[560px]', 'p-0 bg-background border-border')}
+      >
+        <div className="flex h-full flex-col">
+          <div className="px-5 py-4 border-b border-border bg-card">
+            <div className="flex items-center gap-2">
+              <div className="p-1 rounded bg-background/80">
+                <XLogoIcon className="h-3.5 w-3.5 text-foreground" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">All X Posts</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">{postsWithIds.length} posts found</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3">
+            <div className="space-y-4 max-w-full sm:max-w-[520px] mx-auto">
+              {postsWithIds.map((post, index) => {
+                const id = getXPostId(post);
+                if (!id) return null;
+                return (
+                  <motion.div
+                    key={id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.015 }}
+                  >
+                    <SafeEmbeddedTweet
+                      tweet={post.tweet}
+                      fallback={{
+                        id,
+                        url: post.url,
+                        text: post.description || post.title,
+                        authorHandle: post.author,
+                        createdAt: post.created_at,
+                      }}
+                    />
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </SheetContentWrapper>
+    </SheetWrapper>
+  );
+};
+
 interface SearchQuery {
   id: string;
   query: string;
@@ -414,6 +489,7 @@ const ExtremeSearchComponent = ({
   const [activeTab, setActiveTab] = useState<string>('process');
   const [resultsOpen, setResultsOpen] = useState(true);
   const [sourcesSheetOpen, setSourcesSheetOpen] = useState(false);
+  const [xPostsSheetOpen, setXPostsSheetOpen] = useState(false);
 
   // Timeline container ref for auto-scroll
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -3254,8 +3330,9 @@ const ExtremeSearchComponent = ({
                         <div className="flex gap-2.5 overflow-x-auto no-scrollbar">
                           {tweetsWithIds.map((citation, index) => (
                             <div key={citation.tweet_id || index} className="shrink-0 w-[320px] sm:w-[360px]">
-                              <XPostCard
-                                post={{
+                              <SafeEmbeddedTweet
+                                tweet={citation.tweet}
+                                fallback={{
                                   id: citation.tweet_id,
                                   url: citation.url,
                                   text: citation.description || citation.title,
@@ -3725,8 +3802,9 @@ const ExtremeSearchComponent = ({
                   <div className="flex gap-2.5 overflow-x-auto no-scrollbar">
                     {tweetsWithIds.map((citation, index) => (
                       <div key={citation.tweet_id || index} className="shrink-0 w-[320px] sm:w-[360px]">
-                        <XPostCard
-                          post={{
+                        <SafeEmbeddedTweet
+                          tweet={citation.tweet}
+                          fallback={{
                             id: citation.tweet_id,
                             url: citation.url,
                             text: citation.description || citation.title,

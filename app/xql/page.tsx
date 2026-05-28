@@ -19,7 +19,7 @@ import { SciraLogo } from '@/components/logos/scira-logo';
 import { MarkdownRenderer } from '@/components/markdown';
 import { SidebarLayout } from '@/components/sidebar-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { XPostCard } from '@/components/x-post-card';
+import { SafeEmbeddedTweet } from '@/components/safe-embedded-tweet';
 
 function buildSQLQuery(input: XQLSearchInput) {
   let sql = 'SELECT * FROM x_posts\n';
@@ -422,9 +422,10 @@ function XQLPageContent() {
                         {tweets.length > 0 ? (
                           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             {tweets.map(({ id, url, data }) => (
-                              <XPostCard
+                              <SafeEmbeddedTweet
                                 key={id}
-                                post={{
+                                tweet={data}
+                                fallback={{
                                   id,
                                   url,
                                   text: data?.text,

@@ -531,11 +531,7 @@ function createFallbackResearchPlan(
   return [
     {
       title: truncateText(`Research ${topic}`, 70),
-      todos: [
-        sourceTodo,
-        'Find current, authoritative sources',
-        'Collect core facts, dates, and context',
-      ],
+      todos: [sourceTodo, 'Find current, authoritative sources', 'Collect core facts, dates, and context'],
     },
     {
       title: 'Cross-check important claims',
@@ -1766,6 +1762,7 @@ ${JSON.stringify(plan)}
                       text: tweetText,
                       link: canonicalTweetLink(tweetId, tweetUrl),
                       id: tweetId,
+                      tweet: tweetData,
                       author: `@${userHandle}`,
                       publishedDate: createdAt,
                       title: `Post from @${userHandle}`,
@@ -1815,6 +1812,7 @@ ${JSON.stringify(plan)}
                 title: source.title || source.author || 'X post',
                 description: source.text,
                 tweet_id: source.id,
+                tweet: source.tweet,
                 author: source.author,
                 created_at: source.publishedDate,
               }));
@@ -1949,7 +1947,8 @@ ${JSON.stringify(plan)}
       // Count how many searches/actions have been performed (non-thinking, non-done steps)
       const actionToolNames = new Set(['webSearch', 'browsePage', 'xSearch', 'codeRunner', 'fileQuery']);
       const actionCount = steps.reduce(
-        (count, step) => count + step.toolCalls.filter((tc) => tc?.toolName != null && actionToolNames.has(tc.toolName)).length,
+        (count, step) =>
+          count + step.toolCalls.filter((tc) => tc?.toolName != null && actionToolNames.has(tc.toolName)).length,
         0,
       );
 

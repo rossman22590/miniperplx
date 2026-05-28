@@ -9,7 +9,8 @@ import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { CustomUIDataTypes, DataQueryCompletionPart } from '@/lib/types';
 import type { DataUIPart } from 'ai';
-import { XPostCard } from '@/components/x-post-card';
+import { SafeEmbeddedTweet } from '@/components/safe-embedded-tweet';
+import type { Tweet } from 'react-tweet/api';
 
 // Custom Premium Icons
 const Icons = {
@@ -54,6 +55,7 @@ interface Source {
   link: string;
   id?: string;
   title?: string;
+  tweet?: Tweet;
 }
 
 interface XSearchQueryResult {
@@ -281,6 +283,7 @@ const XSearch: React.FC<XSearchProps> = ({ result, args, annotations = [] }) => 
           title,
           description: typeof citation === 'object' ? citation.description : '',
           text: matchingSource?.text,
+          tweet: matchingSource?.tweet,
           tweet_id: tweetId,
         };
       })
@@ -336,10 +339,11 @@ const XSearch: React.FC<XSearchProps> = ({ result, args, annotations = [] }) => 
     <div className="w-full my-2">
       <div className="rounded-lg border border-border/60 overflow-hidden bg-card/30">
         {/* Header */}
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full px-2 py-2 flex items-center justify-between hover:bg-muted/20 transition-colors group"
-        >
+        <div className="w-full px-2 py-2 flex items-center gap-2 hover:bg-muted/20 transition-colors">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="min-w-0 flex-1 flex items-center justify-between text-left group"
+          >
           <div className="flex items-center gap-2 min-w-0">
             <div className="p-1 rounded bg-background/80 shrink-0">
               <XLogoIcon className="size-5 text-foreground" />
@@ -364,7 +368,60 @@ const XSearch: React.FC<XSearchProps> = ({ result, args, annotations = [] }) => 
               )}
             />
           </div>
-        </button>
+          </button>
+          {tweetCitations.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setIsSheetOpen(true)}
+              className="shrink-0 h-7 inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background/80 px-2 text-[11px] font-medium text-foreground hover:bg-accent/40 transition-colors"
+              aria-label={`View all ${tweetCitations.length} X posts`}
+            >
+              <Icons.Messages className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="hidden sm:inline">View all</span>
+              <span className="tabular-nums">{tweetCitations.length}</span>
+            </button>
+          )}
+        </div>
+
+        {tweetCitations.length > 0 && (
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <SheetContent side="right" className="w-full sm:w-[480px] md:w-[550px] sm:max-w-[90vw] p-0">
+              <div className="flex flex-col h-full bg-background">
+                <SheetHeader className="px-4 py-3 border-b border-border/40">
+                  <SheetTitle className="flex items-center gap-2 text-sm">
+                    <div className="p-1 rounded bg-background/80">
+                      <XLogoIcon className="h-3 w-3 text-foreground" />
+                    </div>
+                    <span>All Posts ({tweetCitations.length})</span>
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="flex-1 overflow-y-auto p-3">
+                  <div className="space-y-4 max-w-full sm:max-w-[520px] mx-auto">
+                    {tweetCitations.map((citation, index) => (
+                      <motion.div
+                        key={citation.tweet_id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.015 }}
+                      >
+                        {citation.tweet_id && (
+                          <SafeEmbeddedTweet
+                            tweet={citation.tweet}
+                            fallback={{
+                              id: citation.tweet_id,
+                              url: citation.url,
+                              text: citation.text || citation.title || citation.description,
+                            }}
+                          />
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        )}
 
         {/* Content */}
         {isExpanded && (
@@ -394,8 +451,9 @@ const XSearch: React.FC<XSearchProps> = ({ result, args, annotations = [] }) => 
                       className="shrink-0 w-[320px] sm:w-[360px]"
                     >
                       {citation.tweet_id && (
-                        <XPostCard
-                          post={{
+                        <SafeEmbeddedTweet
+                          tweet={citation.tweet}
+                          fallback={{
                             id: citation.tweet_id,
                             url: citation.url,
                             text: citation.text || citation.title || citation.description,
@@ -407,52 +465,17 @@ const XSearch: React.FC<XSearchProps> = ({ result, args, annotations = [] }) => 
 
                   {/* More button - cleaner design */}
                   {remainingTweets.length > 0 && (
-                    <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                      <button
-                        onClick={() => setIsSheetOpen(true)}
-                        className="shrink-0 w-[320px] sm:w-[360px] min-h-[190px] border border-dashed border-border/60 dark:border-2 dark:border-solid dark:border-border rounded-xl flex flex-col items-center justify-center hover:border-border dark:hover:border-border hover:bg-accent/20 transition-colors group"
-                      >
-                        <div className="p-2 rounded-full bg-muted/50 mb-2 group-hover:bg-muted transition-colors">
-                          <Icons.Messages className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <p className="font-medium text-xs text-foreground">+{remainingTweets.length} more</p>
-                        <p className="text-[10px] text-muted-foreground/70 mt-0.5">View all posts</p>
-                      </button>
-                      <SheetContent side="right" className="w-full sm:w-[480px] md:w-[550px] sm:max-w-[90vw] p-0">
-                        <div className="flex flex-col h-full bg-background">
-                          <SheetHeader className="px-4 py-3 border-b border-border/40">
-                            <SheetTitle className="flex items-center gap-2 text-sm">
-                              <div className="p-1 rounded bg-background/80">
-                                <XLogoIcon className="h-3 w-3 text-foreground" />
-                              </div>
-                              <span>All Posts ({tweetCitations.length})</span>
-                            </SheetTitle>
-                          </SheetHeader>
-                          <div className="flex-1 overflow-y-auto p-3">
-                            <div className="space-y-4 max-w-full sm:max-w-[520px] mx-auto">
-                              {tweetCitations.map((citation, index) => (
-                                <motion.div
-                                  key={citation.tweet_id}
-                                  initial={{ opacity: 0, y: 10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ delay: index * 0.015 }}
-                                >
-                                  {citation.tweet_id && (
-                                    <XPostCard
-                                      post={{
-                                        id: citation.tweet_id,
-                                        url: citation.url,
-                                        text: citation.text || citation.title || citation.description,
-                                      }}
-                                    />
-                                  )}
-                                </motion.div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </SheetContent>
-                    </Sheet>
+                    <button
+                      type="button"
+                      onClick={() => setIsSheetOpen(true)}
+                      className="shrink-0 w-[320px] sm:w-[360px] min-h-[190px] border border-dashed border-border/60 dark:border-2 dark:border-solid dark:border-border rounded-xl flex flex-col items-center justify-center hover:border-border dark:hover:border-border hover:bg-accent/20 transition-colors group"
+                    >
+                      <div className="p-2 rounded-full bg-muted/50 mb-2 group-hover:bg-muted transition-colors">
+                        <Icons.Messages className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <p className="font-medium text-xs text-foreground">+{remainingTweets.length} more</p>
+                      <p className="text-[10px] text-muted-foreground/70 mt-0.5">View all posts</p>
+                    </button>
                   )}
                 </div>
               </div>

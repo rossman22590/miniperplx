@@ -167,6 +167,7 @@ export function xSearchTool(dataStream?: UIMessageStreamWriter<ChatMessage>) {
                     text: text,
                     link: canonicalTweetLink(tweetId, tweetUrl),
                     id: tweetId,
+                    tweet: tweetData,
                   };
                 } catch (error) {
                   console.error(`Error fetching tweet data for ${link.sourceType === 'url' ? link.url : ''}:`, error);
