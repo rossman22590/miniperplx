@@ -130,10 +130,14 @@ export async function getAdminUsers(): Promise<AdminUserRecord[]> {
 
   return users.map((record) => {
     const userSubscriptions = subscriptionsByUserId.get(record.id) ?? [];
-    const activeSubscription = userSubscriptions.find(
+    const activeSubscriptions = userSubscriptions.filter(
       (subscriptionRecord) =>
         isActiveSubscriptionStatus(subscriptionRecord.status) && new Date(subscriptionRecord.currentPeriodEnd) > new Date(),
     );
+    const activeMaxSubscription = activeSubscriptions.find(
+      (subscriptionRecord) => subscriptionRecord.productId === MANUAL_MAX_PRODUCT_ID,
+    );
+    const activeSubscription = activeMaxSubscription ?? activeSubscriptions[0];
     const latestSubscription = userSubscriptions[0];
     const adminFlags = getBanFlags(preferencesByUserId.get(record.id));
 
@@ -147,8 +151,8 @@ export async function getAdminUsers(): Promise<AdminUserRecord[]> {
       chatCount: chatCounts.get(record.id) ?? 0,
       lookoutCount: lookoutCounts.get(record.id) ?? 0,
       sessionCount: sessionCounts.get(record.id) ?? 0,
-      isPro: Boolean(activeSubscription),
-      isMax: Boolean(activeSubscription && activeSubscription.productId === MANUAL_MAX_PRODUCT_ID),
+      isPro: activeSubscriptions.length > 0,
+      isMax: Boolean(activeMaxSubscription),
       subscriptionStatus: activeSubscription?.status ?? latestSubscription?.status ?? 'none',
       subscriptionEndsAt: activeSubscription?.currentPeriodEnd ?? latestSubscription?.currentPeriodEnd ?? null,
       isBanned: adminFlags.isBanned,

@@ -64,6 +64,9 @@ export type ProSource = 'polar' | 'dodo' | 'none';
 export type PlanTier = 'free' | 'pro' | 'max';
 export type SubscriptionStatus = 'active' | 'canceled' | 'expired' | 'none';
 
+const ADMIN_PRO_PRODUCT_ID = 'admin-pro';
+const ADMIN_MAX_PRODUCT_ID = 'admin-max';
+
 // Type for dodo subscription data selected from the database
 export interface DodoSubscriptionData {
   id: string;
@@ -373,7 +376,12 @@ export const getLightweightUserAuth = cache(async (): Promise<LightweightUserAut
 
     // Capture the polar rows via closure so we can use the email after flow() completes,
     // even when no task calls $end() (i.e. neither source is Pro).
-    let capturedPolarRows: { userId: string; email: string; subscriptionStatus: string | null }[] = [];
+    let capturedPolarRows: {
+      userId: string;
+      email: string;
+      subscriptionStatus: string | null;
+      subscriptionProductId: string | null;
+    }[] = [];
 
     // Run polar subscription check + dodo DB check (on cache miss) in parallel.
     // flow() exits as soon as either source confirms the user is Pro, avoiding
@@ -388,6 +396,7 @@ export const getLightweightUserAuth = cache(async (): Promise<LightweightUserAut
               userId: user.id,
               email: user.email,
               subscriptionStatus: subscription.status,
+              subscriptionProductId: subscription.productId,
             })
             .from(user)
             .leftJoin(subscription, eq(subscription.userId, user.id))
@@ -397,12 +406,16 @@ export const getLightweightUserAuth = cache(async (): Promise<LightweightUserAut
             userId: r.userId,
             email: r.email,
             subscriptionStatus: r.subscriptionStatus ?? null,
+            subscriptionProductId: r.subscriptionProductId ?? null,
           }));
 
           if (!rows.length) return null;
 
           const hasActive = rows.some((row) => row.subscriptionStatus === 'active');
-          if (hasActive) this.$end({ email: rows[0].email, isProUser: true, isMaxUser: false });
+          const hasActiveAdminMax = rows.some(
+            (row) => row.subscriptionStatus === 'active' && row.subscriptionProductId === ADMIN_MAX_PRODUCT_ID,
+          );
+          if (hasActive) this.$end({ email: rows[0].email, isProUser: true, isMaxUser: hasActiveAdminMax });
           return rows;
         },
         async dodoCheck() {
@@ -590,9 +603,17 @@ export const getComprehensiveUserData = cache(async (): Promise<ComprehensiveUse
       }));
 
     // Process Polar subscription
-    const activePolarSubscription = polarSubscriptions
+    const activePolarSubscriptions = polarSubscriptions
       .filter((sub) => sub.status === 'active')
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const activeAdminMaxSubscription = activePolarSubscriptions.find(
+      (sub) => sub.productId === ADMIN_MAX_PRODUCT_ID,
+    );
+    const activeAdminProSubscription = activePolarSubscriptions.find(
+      (sub) => sub.productId === ADMIN_PRO_PRODUCT_ID,
+    );
+    const activePolarSubscription =
+      activeAdminMaxSubscription ?? activeAdminProSubscription ?? activePolarSubscriptions[0];
 
     // Process Dodo Subscriptions
     // Include both active subscriptions and cancelled subscriptions that are still within their paid period
@@ -624,7 +645,7 @@ export const getComprehensiveUserData = cache(async (): Promise<ComprehensiveUse
     let proSource: 'polar' | 'dodo' | 'none' = 'none';
     let subscriptionStatus: 'active' | 'canceled' | 'expired' | 'none' = 'none';
 
-    const isAdminMaxPolar = activePolarSubscription?.productId === 'admin-max';
+    const isAdminMaxPolar = activePolarSubscription?.productId === ADMIN_MAX_PRODUCT_ID;
 
     if (isDodoActive && isDodoMax) {
       isProUser = true;

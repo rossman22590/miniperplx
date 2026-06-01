@@ -1,5 +1,3 @@
-# syntax=docker.io/docker/dockerfile:1
-
 # Base image: Using Node.js 22 with Alpine Linux for a minimal footprint
 FROM node:22-alpine AS base
 
@@ -15,7 +13,7 @@ WORKDIR /app
 # Copy package files and install dependencies using pnpm
 # pnpm is used for faster and more efficient package management
 COPY package.json pnpm-lock.yaml* ./
-RUN corepack enable pnpm && pnpm i;
+RUN corepack enable pnpm && pnpm install --frozen-lockfile
 
 # Stage 2: Building the application
 # This stage builds the Next.js application
@@ -27,6 +25,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Copy environment variables for build configuration
 COPY .env .env
+# Produce the standalone server output consumed by the runtime stage.
+ENV NEXT_OUTPUT=standalone
 # Build the Next.js application
 RUN npm run build
 

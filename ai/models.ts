@@ -42,7 +42,7 @@ export interface ProviderInfo {
 }
 
 export const PROVIDERS: Record<ModelProvider, ProviderInfo> = {
-  scira: { id: 'scira', name: 'Scira', icon: 'scira' },
+  scira: { id: 'scira', name: 'Datavibes', icon: 'scira' },
   xai: { id: 'xai', name: 'xAI', icon: 'xai', hasNew: true },
   openai: { id: 'openai', name: 'OpenAI', icon: 'openai', hasNew: true },
   anthropic: { id: 'anthropic', name: 'Anthropic', icon: 'anthropic', hasNew: true },

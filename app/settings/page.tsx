@@ -23,7 +23,7 @@ import {
 import { useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSyncedPreferences } from '@/hooks/use-synced-preferences';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -39,7 +39,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useRouter } from 'next/navigation';
 
 function SettingsContent() {
-  const { user, isProUser, isLoading, subscriptionData } = useUser();
+  const { user, isProUser, isLoading, subscriptionData, refetch } = useUser();
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -52,6 +52,10 @@ function SettingsContent() {
     true,
   );
   const [blurPersonalInfo, setBlurPersonalInfo] = useSyncedPreferences<boolean>('scira-blur-personal-info', false);
+
+  useEffect(() => {
+    void refetch();
+  }, [refetch]);
 
   const tabs = [
     { value: 'usage', label: 'Usage', icon: Analytics01Icon },

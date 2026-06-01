@@ -73,6 +73,34 @@ const getPlatformFromUrl = (url: string): 'youtube' | 'spotify' | null => {
   return null;
 };
 
+const sanitizeMarkdownHref = (href: string): string => {
+  const trimmed = href.trim();
+  if (!trimmed) return trimmed;
+
+  const citationStart = trimmed.search(/\[\[\d+\]\]\(https?:\/\//i);
+  const candidate =
+    citationStart > 0
+      ? trimmed
+          .slice(0, citationStart)
+          .trim()
+          .replace(/[.,;:]+$/, '')
+      : trimmed;
+
+  const firstUrl = candidate.match(/https?:\/\/[^\s<>()\[\]]+/i)?.[0]?.replace(/[.,;:]+$/, '');
+  return firstUrl || candidate;
+};
+
+const isSafeLinkHref = (href: string): boolean => {
+  if (href.startsWith('/') || href.startsWith('#') || href.startsWith('mailto:')) return true;
+
+  try {
+    const url = new URL(href);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
 // Helper to get a compact, TLD-stripped domain label for display
 const getDisplayDomain = (input: string): string => {
   const trimmed = input.trim();
@@ -1963,6 +1991,7 @@ const MobileHoverCard: React.FC<{
 }> = React.memo(({ href, text, isCitation = false, citationText }) => {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
+  const safeHref = useMemo(() => sanitizeMarkdownHref(href), [href]);
   const title = citationText || (typeof text === 'string' ? text : '');
 
   const handleClick = useCallback(
@@ -1991,12 +2020,16 @@ const MobileHoverCard: React.FC<{
     ? 'cursor-pointer inline-flex items-center align-middle text-[10px] leading-tight font-medium no-underline px-1.5 py-[2px] mb-0.5! m-0! rounded-md bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted transition-colors focus-visible:ring-2 focus-visible:ring-ring/40 outline-none touch-manipulation'
     : 'text-primary/90 no-underline hover:text-primary font-medium transition-colors touch-manipulation rounded-sm px-0.5';
 
+  if (!isSafeLinkHref(safeHref)) {
+    return <span className={linkClassName}>{text}</span>;
+  }
+
   // On mobile, use controlled mode for tap-to-open
   if (isMobile) {
     return (
       <HoverCard open={isOpen} onOpenChange={handleOpenChange}>
         <HoverCardTrigger asChild>
-          <Link href={href} target="_blank" onClick={handleClick} className={linkClassName}>
+          <Link href={safeHref} target="_blank" onClick={handleClick} className={linkClassName}>
             {text}
           </Link>
         </HoverCardTrigger>
@@ -2007,7 +2040,7 @@ const MobileHoverCard: React.FC<{
           className="w-60 p-0 shadow-md border border-border/60 rounded-lg overflow-hidden bg-popover"
           onClick={(e) => e.stopPropagation()}
         >
-          <LinkPreview href={href} title={title} />
+          <LinkPreview href={safeHref} title={title} />
         </HoverCardContent>
       </HoverCard>
     );
@@ -2017,7 +2050,7 @@ const MobileHoverCard: React.FC<{
   return (
     <HoverCard openDelay={10}>
       <HoverCardTrigger asChild>
-        <Link href={href} target="_blank" className={linkClassName}>
+        <Link href={safeHref} target="_blank" className={linkClassName}>
           {text}
         </Link>
       </HoverCardTrigger>
@@ -2028,7 +2061,7 @@ const MobileHoverCard: React.FC<{
         className="w-60 p-0 shadow-md border border-border/60 rounded-lg overflow-hidden bg-popover"
         onClick={(e) => e.stopPropagation()}
       >
-        <LinkPreview href={href} title={title} />
+        <LinkPreview href={safeHref} title={title} />
       </HoverCardContent>
     </HoverCard>
   );
@@ -2806,10 +2839,11 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
           return <InlineCode key={key} elementKey={key} code={codeString} />;
         },
         link(href, text) {
-          const key = getElementKey('link', href);
+          const safeHref = sanitizeMarkdownHref(href);
+          const key = getElementKey('link', safeHref);
 
-          if (href.startsWith('mailto:')) {
-            const email = href.replace('mailto:', '');
+          if (safeHref.startsWith('mailto:')) {
+            const email = safeHref.replace('mailto:', '');
             return (
               <span key={key} className="break-all">
                 {email}
@@ -2817,43 +2851,43 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
             );
           }
 
-          const linkText = typeof text === 'string' ? text : href;
-          const filePreview = getFilePreviewDefinition(href, typeof text === 'string' ? text : undefined);
+          const linkText = typeof text === 'string' ? (text === href ? safeHref : text) : safeHref;
+          const filePreview = getFilePreviewDefinition(safeHref, typeof text === 'string' ? text : undefined);
 
           // For user messages, keep raw text to avoid accidental linkification changes
           if (isUserMessage) {
-            if (linkText !== href && linkText !== '') {
+            if (linkText !== safeHref && linkText !== '') {
               return (
                 <span key={key} className="inline-block">
-                  {linkText} ({href})
+                  {linkText} ({safeHref})
                 </span>
               );
             }
             return (
               <span key={key} className="inline-block">
-                {href}
+                {safeHref}
               </span>
             );
           }
 
           if (filePreview) {
-            return <FileLinkPreview key={key} href={href} title={linkText} />;
+            return <FileLinkPreview key={key} href={safeHref} title={linkText} />;
           }
 
           // If there's descriptive link text, render a normal anchor with hover preview.
           // This preserves full text inside tables and prevents truncation to citation chips.
-          if (linkText && linkText !== href) {
-            return renderHoverCard(href, linkText, false, undefined, key);
+          if (linkText && linkText !== safeHref) {
+            return renderHoverCard(safeHref, linkText, false, undefined, key);
           }
 
           // For bare URLs, render as citation chips
-          let citationIndex = citationLinks.findIndex((link) => link.link === href);
+          let citationIndex = citationLinks.findIndex((link) => link.link === safeHref);
           if (citationIndex === -1) {
-            citationLinks.push({ text: href, link: href });
+            citationLinks.push({ text: safeHref, link: safeHref });
             citationIndex = citationLinks.length - 1;
           }
           const citationText = citationLinks[citationIndex].text;
-          return renderCitation(citationIndex, citationText, href, key);
+          return renderCitation(citationIndex, citationText, safeHref, key);
         },
         image(src, alt, title) {
           const key = getElementKey('image', String(src));

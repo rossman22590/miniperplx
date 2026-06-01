@@ -1646,6 +1646,10 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
       subscription.current_period_start ||
       subscription.created_at ||
       null;
+    const planName =
+      currentUser?.planTier === 'max' || currentUser?.isMaxUser || subscription.productId === 'admin-max'
+        ? 'Datavibes Max'
+        : 'Datavibes Pro';
     return [
       {
         id: subscription.id || `polar-sub-${currentUser?.id || 'current'}`,
@@ -1654,7 +1658,7 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
         currency: subscription.currency,
         status: subscription.status,
         product: {
-          name: 'Datavibes Pro',
+          name: planName,
         },
       },
     ];
@@ -1743,7 +1747,17 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
   const hasActiveSubscription =
     subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active';
   const hasDodoProStatus = dodoProStatus?.isProUser || (user?.proSource === 'dodo' && user?.isProUser);
-  const isProUserActive = hasActiveSubscription || hasDodoProStatus;
+  const isProUserActive = Boolean(
+    user?.isProUser ||
+      isProUser ||
+      hasActiveSubscription ||
+      hasDodoProStatus ||
+      user?.planTier === 'pro' ||
+      user?.planTier === 'max',
+  );
+  const effectivePlanTier =
+    user?.isMaxUser || user?.planTier === 'max' ? 'max' : isProUserActive ? 'pro' : 'free';
+  const effectivePlanName = effectivePlanTier === 'max' ? 'Max' : 'Pro';
   const subscription = subscriptionData?.subscription;
 
   // Check if DodoPayments Pro is expiring soon (within 7 days)
@@ -1773,7 +1787,7 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
                   <h3 className={cn('font-semibold', isMobile ? 'text-sm' : 'text-base')}>
                     Datavibes{' '}
                     <span className="font-pixel text-xs uppercase tracking-wider">
-                      {user?.isMaxUser ? 'Max' : 'Pro'}
+                      {effectivePlanName}
                     </span>
                   </h3>
                   <p className={cn('opacity-80', isMobile ? 'text-[10px]' : 'text-xs')}>
