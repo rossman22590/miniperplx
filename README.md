@@ -6,7 +6,7 @@ Research at the speed of thought. The agentic research platform that plans, retr
   <img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge.svg" />
 </a>
 
-<br />
+<br /> 
 
 ![Scira](/app/opengraph-image.png)
 
