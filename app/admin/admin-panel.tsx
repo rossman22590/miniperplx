@@ -1,15 +1,25 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Crown02Icon, Analytics01Icon, UserBlock01Icon, Logout01Icon } from '@hugeicons/core-free-icons';
+import {
+  Crown02Icon,
+  Analytics01Icon,
+  UserBlock01Icon,
+  Logout01Icon,
+  Settings02Icon,
+} from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@/components/ui/hugeicons';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -30,6 +40,15 @@ import {
 import { cn } from '@/lib/utils';
 
 const LIMIT_KEYS = Object.keys(DEFAULT_LIMITS) as (keyof UserLimits)[];
+const FREE_LIMIT_KEYS: (keyof UserLimits)[] = ['dailySearch', 'extremeSearch'];
+const MAX_LIMIT_KEYS: (keyof UserLimits)[] = ['anthropicWeekly', 'googleMonthly'];
+
+const USAGE_LABELS: Record<keyof UserLimits, string> = {
+  dailySearch: 'Searches today',
+  extremeSearch: 'Extreme this month',
+  anthropicWeekly: 'Anthropic this week',
+  googleMonthly: 'Gemini this month',
+};
 
 type LimitDraft = Record<keyof UserLimits, string>;
 
@@ -40,34 +59,127 @@ function draftFromOverrides(overrides: UserLimitOverrides): LimitDraft {
   }, {} as LimitDraft);
 }
 
-function UsageLine({
-  label,
-  used,
-  limit,
-  isOverride,
-}: {
-  label: string;
-  used: number;
-  limit: number;
-  isOverride: boolean;
-}) {
-  const exhausted = used >= limit;
+function formatDate(date: Date | string | null) {
+  if (!date) return 'Never';
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(date));
+}
+
+function getInitials(name: string) {
   return (
-    <p className={cn(exhausted && 'text-destructive')}>
-      <span className="tabular-nums">
-        {used} / {limit}
-      </span>{' '}
-      {label}
-      {isOverride && (
-        <Badge variant="outline" className="ml-1.5 px-1 py-0 text-[10px] leading-4">
-          custom
-        </Badge>
-      )}
-    </p>
+    name
+      ?.split(' ')
+      .map((chunk) => chunk[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || 'U'
   );
 }
 
-function LimitOverridesEditor({
+/** Which limit keys actually apply to this user's tier. */
+function applicableLimitKeys(record: AdminUserRecord): (keyof UserLimits)[] {
+  if (record.isMax) return MAX_LIMIT_KEYS;
+  if (record.isPro) return [];
+  return FREE_LIMIT_KEYS;
+}
+
+function PlanBadge({ record }: { record: AdminUserRecord }) {
+  if (record.isMax) return <Badge className="bg-purple-600 text-white">Max</Badge>;
+  if (record.isPro) return <Badge className="bg-primary text-primary-foreground">Pro</Badge>;
+  return <Badge variant="outline">Free</Badge>;
+}
+
+function UserIdentity({
+  record,
+  adminEmail,
+  size = 'sm',
+}: {
+  record: AdminUserRecord;
+  adminEmail: string;
+  size?: 'sm' | 'lg';
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <Avatar className={size === 'lg' ? 'h-12 w-12' : 'h-9 w-9'}>
+        <AvatarImage src={record.image ?? ''} />
+        <AvatarFallback>{getInitials(record.name)}</AvatarFallback>
+      </Avatar>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <p className={cn('truncate font-medium', size === 'lg' && 'text-base')}>{record.name}</p>
+          {record.email.toLowerCase() === adminEmail.toLowerCase() && <Badge variant="secondary">Admin</Badge>}
+          <PlanBadge record={record} />
+          {record.isBanned && <Badge variant="destructive">Banned</Badge>}
+        </div>
+        <p className="truncate text-xs text-muted-foreground">{record.email}</p>
+      </div>
+    </div>
+  );
+}
+
+function UsageSummary({ record }: { record: AdminUserRecord }) {
+  const keys = applicableLimitKeys(record);
+  if (keys.length === 0) {
+    return <p className="text-xs text-muted-foreground">Unlimited</p>;
+  }
+  return (
+    <div className="space-y-0.5 text-xs">
+      {keys.map((key) => {
+        const used = record.usage[key];
+        const limit = record.limits[key];
+        const isOverride = record.limitOverrides[key] !== undefined;
+        return (
+          <p key={key} className={cn('text-muted-foreground', used >= limit && 'text-destructive')}>
+            <span className="tabular-nums text-foreground">
+              {used}/{limit}
+            </span>{' '}
+            {USAGE_LABELS[key].toLowerCase()}
+            {isOverride && <span className="ml-1 text-[10px] text-primary">(custom)</span>}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function UsageMeter({ record, limitKey }: { record: AdminUserRecord; limitKey: keyof UserLimits }) {
+  const used = record.usage[limitKey];
+  const limit = record.limits[limitKey];
+  const percent = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
+  const isOverride = record.limitOverrides[limitKey] !== undefined;
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-muted-foreground">
+          {USAGE_LABELS[limitKey]}
+          {isOverride && (
+            <Badge variant="outline" className="ml-1.5 px-1 py-0 text-[10px] leading-4">
+              custom
+            </Badge>
+          )}
+        </span>
+        <span className={cn('tabular-nums', used >= limit ? 'text-destructive' : 'text-foreground')}>
+          {used} / {limit}
+        </span>
+      </div>
+      <Progress value={percent} className="h-1.5" />
+    </div>
+  );
+}
+
+function SectionTitle({ title, description }: { title: string; description?: string }) {
+  return (
+    <div>
+      <h3 className="text-sm font-semibold">{title}</h3>
+      {description && <p className="text-xs text-muted-foreground">{description}</p>}
+    </div>
+  );
+}
+
+function LimitOverridesForm({
   record,
   disabled,
   onSave,
@@ -77,8 +189,13 @@ function LimitOverridesEditor({
   onSave: (overrides: UserLimitOverrideInput, successMessage: string) => void;
 }) {
   const [draft, setDraft] = useState<LimitDraft>(() => draftFromOverrides(record.limitOverrides));
-  const hasOverrides = LIMIT_KEYS.some((key) => record.limitOverrides[key] !== undefined);
 
+  // Re-sync the draft when the server record changes (after save / refresh).
+  useEffect(() => {
+    setDraft(draftFromOverrides(record.limitOverrides));
+  }, [record.limitOverrides]);
+
+  const hasOverrides = LIMIT_KEYS.some((key) => record.limitOverrides[key] !== undefined);
   const isDirty = LIMIT_KEYS.some((key) => draft[key] !== (record.limitOverrides[key]?.toString() ?? ''));
 
   const handleSave = () => {
@@ -100,7 +217,6 @@ function LimitOverridesEditor({
   };
 
   const handleReset = () => {
-    setDraft(draftFromOverrides({}));
     onSave(
       LIMIT_KEYS.reduce((cleared, key) => {
         cleared[key] = null;
@@ -110,19 +226,20 @@ function LimitOverridesEditor({
     );
   };
 
-  return (
-    <div className="space-y-2 rounded-lg border p-2.5">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium">Limit overrides</p>
-        {record.limitsUpdatedAt && (
-          <p className="text-[10px] text-muted-foreground">Updated {formatDate(new Date(record.limitsUpdatedAt))}</p>
-        )}
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        {LIMIT_KEYS.map((key) => (
-          <label key={key} className="space-y-1">
-            <span className="block text-[10px] text-muted-foreground">{LIMIT_LABELS[key]}</span>
+  const renderGroup = (title: string, keys: (keyof UserLimits)[], active: boolean) => (
+    <div className="space-y-2">
+      <p className="text-xs font-medium text-muted-foreground">
+        {title}
+        {!active && <span className="ml-1 font-normal">(not active for this plan)</span>}
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        {keys.map((key) => (
+          <div key={key} className="space-y-1">
+            <Label htmlFor={`limit-${record.id}-${key}`} className="text-xs">
+              {LIMIT_LABELS[key]}
+            </Label>
             <Input
+              id={`limit-${record.id}-${key}`}
               type="number"
               inputMode="numeric"
               min={DEFAULT_LIMITS[key]}
@@ -131,51 +248,59 @@ function LimitOverridesEditor({
               placeholder={`${DEFAULT_LIMITS[key]} (default)`}
               onChange={(event) => setDraft((prev) => ({ ...prev, [key]: event.target.value }))}
               disabled={disabled}
-              className="h-8 text-xs"
+              className="h-9"
             />
-          </label>
+          </div>
         ))}
       </div>
-      <div className="flex flex-wrap gap-2">
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {renderGroup('Free tier', FREE_LIMIT_KEYS, !record.isPro)}
+      {renderGroup('Max tier', MAX_LIMIT_KEYS, record.isMax)}
+      <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" disabled={disabled || !isDirty} onClick={handleSave}>
           Save limits
         </Button>
         <Button size="sm" variant="outline" disabled={disabled || !hasOverrides} onClick={handleReset}>
           Reset to defaults
         </Button>
+        {record.limitsUpdatedAt && (
+          <span className="text-xs text-muted-foreground">Last changed {formatDate(record.limitsUpdatedAt)}</span>
+        )}
       </div>
-      <p className="text-[10px] text-muted-foreground">
-        Permanent per-user caps. Blank fields use the default. Free-tier caps only apply to non-Pro users; Anthropic and
-        Gemini caps only apply to Max users.
+      <p className="text-xs text-muted-foreground">
+        Overrides are permanent for this user. Leave a field blank to use the default. Values can&apos;t go below the
+        default.
       </p>
     </div>
   );
 }
 
-function formatDate(date: Date | null) {
-  if (!date) return 'Never';
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(new Date(date));
-}
-
-function UserRow({ record, adminEmail }: { record: AdminUserRecord; adminEmail: string }) {
+function ManageUserSheet({
+  record,
+  adminEmail,
+  open,
+  onOpenChange,
+}: {
+  record: AdminUserRecord | null;
+  adminEmail: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [banReason, setBanReason] = useState(record.banReason ?? '');
-  const isSelf = record.email.toLowerCase() === adminEmail.toLowerCase();
+  const [banReason, setBanReason] = useState('');
 
-  const initials =
-    record.name
-      ?.split(' ')
-      .map((chunk) => chunk[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase() || 'U';
+  useEffect(() => {
+    setBanReason(record?.banReason ?? '');
+  }, [record?.id, record?.banReason]);
 
-  const runAction = (fn: () => Promise<void>, successMessage: string) => {
+  const isSelf = Boolean(record && record.email.toLowerCase() === adminEmail.toLowerCase());
+
+  const runAction = (fn: () => Promise<unknown>, successMessage: string) => {
     startTransition(async () => {
       try {
         await fn();
@@ -187,171 +312,163 @@ function UserRow({ record, adminEmail }: { record: AdminUserRecord; adminEmail: 
     });
   };
 
+  const planDescription = record
+    ? `${record.subscriptionStatus === 'none' ? 'No subscription' : `Status: ${record.subscriptionStatus}`}${
+        record.subscriptionEndsAt ? ` · ends ${formatDate(record.subscriptionEndsAt)}` : ''
+      }`
+    : '';
+
+  const banDescription = record
+    ? record.isBanned
+      ? `Banned${record.banUpdatedAt ? ` ${formatDate(record.banUpdatedAt)}` : ''}${
+          record.banReason ? ` · ${record.banReason}` : ''
+        }`
+      : 'Blocks chat access and clears all sessions.'
+    : '';
+
   return (
-    <TableRow className={cn(record.isBanned && 'bg-destructive/5')}>
-      <TableCell className="min-w-[260px]">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={record.image ?? ''} />
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="truncate font-medium">{record.name}</p>
-              {record.email === adminEmail && <Badge variant="secondary">Admin</Badge>}
-              {record.isMax ? (
-                <Badge className="bg-purple-600 text-white">Max</Badge>
-              ) : record.isPro ? (
-                <Badge className="bg-primary text-primary-foreground">Pro</Badge>
-              ) : (
-                <Badge variant="outline">Free</Badge>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
+        {record && (
+          <>
+            <SheetHeader className="pr-10">
+              <SheetTitle asChild>
+                <div>
+                  <UserIdentity record={record} adminEmail={adminEmail} size="lg" />
+                </div>
+              </SheetTitle>
+              <SheetDescription>
+                Joined {formatDate(record.createdAt)} · {record.chatCount} chats · {record.lookoutCount} lookouts ·{' '}
+                {record.sessionCount} active sessions
+              </SheetDescription>
+            </SheetHeader>
+
+            <div className="space-y-6 px-4 pb-8">
+              {isSelf && (
+                <p className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+                  Self-protection is enabled: plan, ban, and session controls are disabled for the admin account.
+                </p>
               )}
-              {record.isBanned && <Badge variant="destructive">Banned</Badge>}
+
+              <section className="space-y-3">
+                <SectionTitle title="Plan" description={planDescription} />
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant={record.isPro ? 'outline' : 'default'}
+                    disabled={pending || isSelf}
+                    onClick={() =>
+                      runAction(
+                        () => setUserProStatusAction(record.id, !record.isPro),
+                        record.isPro ? 'Pro access removed' : 'Pro access granted',
+                      )
+                    }
+                  >
+                    <HugeiconsIcon icon={Crown02Icon} size={16} strokeWidth={1.5} />
+                    {record.isPro ? 'Revoke Pro' : 'Make Pro'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={record.isMax ? 'outline' : 'default'}
+                    className={!record.isMax ? 'bg-purple-600 text-white hover:bg-purple-700' : ''}
+                    disabled={pending || isSelf}
+                    onClick={() =>
+                      runAction(
+                        () => setUserMaxStatusAction(record.id, !record.isMax),
+                        record.isMax ? 'Max access removed' : 'Max access granted',
+                      )
+                    }
+                  >
+                    <HugeiconsIcon icon={Crown02Icon} size={16} strokeWidth={1.5} />
+                    {record.isMax ? 'Revoke Max' : 'Make Max'}
+                  </Button>
+                </div>
+              </section>
+
+              <Separator />
+
+              <section className="space-y-4">
+                <SectionTitle
+                  title="Usage"
+                  description="Current period consumption against this user's effective limits."
+                />
+                {applicableLimitKeys(record).length > 0 ? (
+                  <div className="space-y-3">
+                    {applicableLimitKeys(record).map((key) => (
+                      <UsageMeter key={key} record={record} limitKey={key} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Pro users have unlimited searches.</p>
+                )}
+              </section>
+
+              <section className="space-y-3">
+                <SectionTitle title="Limit overrides" description="Raise this user's caps above the defaults." />
+                <LimitOverridesForm
+                  key={record.id}
+                  record={record}
+                  disabled={pending}
+                  onSave={(overrides, successMessage) =>
+                    runAction(() => setUserLimitOverridesAction(record.id, overrides), successMessage)
+                  }
+                />
+              </section>
+
+              <Separator />
+
+              <section className="space-y-3">
+                <SectionTitle title="Sessions" description={`${record.sessionCount} active session(s).`} />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={pending || isSelf || record.sessionCount === 0}
+                  onClick={() => runAction(() => clearUserSessionsAction(record.id), 'Sessions cleared')}
+                >
+                  <HugeiconsIcon icon={Logout01Icon} size={16} strokeWidth={1.5} />
+                  Force sign out
+                </Button>
+              </section>
+
+              <Separator />
+
+              <section className="space-y-3 rounded-lg border border-destructive/30 p-3">
+                <SectionTitle title={record.isBanned ? 'Banned' : 'Ban user'} description={banDescription} />
+                {!record.isBanned && (
+                  <Textarea
+                    value={banReason}
+                    onChange={(event) => setBanReason(event.target.value)}
+                    placeholder="Reason (kept for the audit trail)"
+                    className="min-h-[72px] text-sm"
+                    disabled={pending || isSelf}
+                  />
+                )}
+                <Button
+                  size="sm"
+                  variant={record.isBanned ? 'outline' : 'destructive'}
+                  disabled={pending || isSelf}
+                  onClick={() =>
+                    runAction(
+                      () => setUserBanStatusAction(record.id, !record.isBanned, banReason),
+                      record.isBanned ? 'User unbanned' : 'User banned and sessions cleared',
+                    )
+                  }
+                >
+                  <HugeiconsIcon icon={UserBlock01Icon} size={16} strokeWidth={1.5} />
+                  {record.isBanned ? 'Unban' : 'Ban user'}
+                </Button>
+              </section>
             </div>
-            <p className="truncate text-xs text-muted-foreground">{record.email}</p>
-          </div>
-        </div>
-      </TableCell>
-      <TableCell className="min-w-[200px]">
-        <div className="space-y-1 text-xs text-muted-foreground">
-          {!record.isPro && (
-            <>
-              <UsageLine
-                label="searches today"
-                used={record.usage.dailySearch}
-                limit={record.limits.dailySearch}
-                isOverride={record.limitOverrides.dailySearch !== undefined}
-              />
-              <UsageLine
-                label="extreme this month"
-                used={record.usage.extremeSearch}
-                limit={record.limits.extremeSearch}
-                isOverride={record.limitOverrides.extremeSearch !== undefined}
-              />
-            </>
-          )}
-          {record.isMax && (
-            <>
-              <UsageLine
-                label="Anthropic this week"
-                used={record.usage.anthropicWeekly}
-                limit={record.limits.anthropicWeekly}
-                isOverride={record.limitOverrides.anthropicWeekly !== undefined}
-              />
-              <UsageLine
-                label="Gemini this month"
-                used={record.usage.googleMonthly}
-                limit={record.limits.googleMonthly}
-                isOverride={record.limitOverrides.googleMonthly !== undefined}
-              />
-            </>
-          )}
-          {record.isPro && !record.isMax && <p>Unlimited searches (Pro)</p>}
-          <p className="pt-1">
-            {record.chatCount} chats · {record.lookoutCount} lookouts · {record.sessionCount} sessions
-          </p>
-        </div>
-      </TableCell>
-      <TableCell>
-        <div className="space-y-1 text-xs">
-          <p className="font-medium capitalize">{record.subscriptionStatus}</p>
-          <p className="text-muted-foreground">Ends {formatDate(record.subscriptionEndsAt)}</p>
-        </div>
-      </TableCell>
-      <TableCell>
-        <div className="space-y-1 text-xs text-muted-foreground">
-          <p>Joined {formatDate(record.createdAt)}</p>
-          <p>Updated {formatDate(record.updatedAt)}</p>
-        </div>
-      </TableCell>
-      <TableCell className="min-w-[280px]">
-        <div className="space-y-3">
-          <Textarea
-            value={banReason}
-            onChange={(event) => setBanReason(event.target.value)}
-            placeholder="Ban reason for audit trail"
-            className="min-h-[84px] text-xs"
-            disabled={pending || isSelf}
-          />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              disabled={pending || isSelf}
-              onClick={() =>
-                runAction(
-                  () => setUserProStatusAction(record.id, !record.isPro).then(() => Promise.resolve()),
-                  record.isPro ? 'Pro access removed' : 'Pro access granted',
-                )
-              }
-            >
-              <HugeiconsIcon icon={Crown02Icon} size={16} strokeWidth={1.5} />
-              {record.isPro ? 'Revoke Pro' : 'Make Pro'}
-            </Button>
-            <Button
-              size="sm"
-              variant={record.isMax ? 'outline' : 'default'}
-              className={!record.isMax ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}
-              disabled={pending || isSelf}
-              onClick={() =>
-                runAction(
-                  () => setUserMaxStatusAction(record.id, !record.isMax).then(() => Promise.resolve()),
-                  record.isMax ? 'Max access removed' : 'Max access granted',
-                )
-              }
-            >
-              <HugeiconsIcon icon={Crown02Icon} size={16} strokeWidth={1.5} />
-              {record.isMax ? 'Revoke Max' : 'Make Max'}
-            </Button>
-            <Button
-              size="sm"
-              variant={record.isBanned ? 'outline' : 'destructive'}
-              disabled={pending || isSelf}
-              onClick={() =>
-                runAction(
-                  () => setUserBanStatusAction(record.id, !record.isBanned, banReason).then(() => Promise.resolve()),
-                  record.isBanned ? 'User unbanned' : 'User banned and sessions cleared',
-                )
-              }
-            >
-              <HugeiconsIcon icon={UserBlock01Icon} size={16} strokeWidth={1.5} />
-              {record.isBanned ? 'Unban' : 'Ban User'}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={pending || isSelf}
-              onClick={() =>
-                runAction(() => clearUserSessionsAction(record.id).then(() => Promise.resolve()), 'Sessions cleared')
-              }
-            >
-              <HugeiconsIcon icon={Logout01Icon} size={16} strokeWidth={1.5} />
-              Clear Sessions
-            </Button>
-          </div>
-          <LimitOverridesEditor
-            record={record}
-            disabled={pending}
-            onSave={(overrides, successMessage) =>
-              runAction(
-                () => setUserLimitOverridesAction(record.id, overrides).then(() => Promise.resolve()),
-                successMessage,
-              )
-            }
-          />
-          {record.isBanned && record.banReason && (
-            <p className="text-xs text-muted-foreground">
-              Current ban note: <span className="text-foreground">{record.banReason}</span>
-            </p>
-          )}
-          {isSelf && <p className="text-xs text-muted-foreground">Self-protection is enabled for the admin account.</p>}
-        </div>
-      </TableCell>
-    </TableRow>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }
 
 export function AdminPanel({ users, adminEmail }: { users: AdminUserRecord[]; adminEmail: string }) {
   const [query, setQuery] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const filteredUsers = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -365,6 +482,12 @@ export function AdminPanel({ users, adminEmail }: { users: AdminUserRecord[]; ad
       );
     });
   }, [query, users]);
+
+  // Derive from the latest server data so the sheet updates after router.refresh().
+  const selectedUser = useMemo(
+    () => (selectedUserId ? (users.find((record) => record.id === selectedUserId) ?? null) : null),
+    [selectedUserId, users],
+  );
 
   const totalUsers = users.length;
   const proUsers = users.filter((record) => record.isPro).length;
@@ -412,7 +535,7 @@ export function AdminPanel({ users, adminEmail }: { users: AdminUserRecord[]; ad
             <div>
               <CardTitle className="text-2xl">Admin Panel</CardTitle>
               <CardDescription>
-                Hard-gated to {adminEmail}. Manual Pro grants create real subscription records.
+                Hard-gated to {adminEmail}. Select a user to manage plan, limits, sessions, and bans.
               </CardDescription>
             </div>
             <div className="flex w-full max-w-md items-center gap-2">
@@ -426,20 +549,56 @@ export function AdminPanel({ users, adminEmail }: { users: AdminUserRecord[]; ad
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="overflow-hidden rounded-xl border">
+          <div className="overflow-x-auto rounded-xl border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
+                  <TableHead>Plan</TableHead>
                   <TableHead>Usage</TableHead>
-                  <TableHead>Billing</TableHead>
-                  <TableHead>Timestamps</TableHead>
-                  <TableHead>Controls</TableHead>
+                  <TableHead className="hidden lg:table-cell">Activity</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers.map((record) => (
-                  <UserRow key={record.id} record={record} adminEmail={adminEmail} />
+                  <TableRow
+                    key={record.id}
+                    className={cn('cursor-pointer', record.isBanned && 'bg-destructive/5')}
+                    onClick={() => setSelectedUserId(record.id)}
+                  >
+                    <TableCell className="min-w-[240px]">
+                      <UserIdentity record={record} adminEmail={adminEmail} />
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-xs">
+                      <p className="font-medium capitalize">{record.subscriptionStatus}</p>
+                      {record.subscriptionEndsAt && (
+                        <p className="text-muted-foreground">Ends {formatDate(record.subscriptionEndsAt)}</p>
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <UsageSummary record={record} />
+                    </TableCell>
+                    <TableCell className="hidden whitespace-nowrap text-xs text-muted-foreground lg:table-cell">
+                      <p>
+                        {record.chatCount} chats · {record.sessionCount} sessions
+                      </p>
+                      <p>Joined {formatDate(record.createdAt)}</p>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedUserId(record.id);
+                        }}
+                      >
+                        <HugeiconsIcon icon={Settings02Icon} size={16} strokeWidth={1.5} />
+                        Manage
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 ))}
               </TableBody>
             </Table>
@@ -452,6 +611,15 @@ export function AdminPanel({ users, adminEmail }: { users: AdminUserRecord[]; ad
           )}
         </CardContent>
       </Card>
+
+      <ManageUserSheet
+        record={selectedUser}
+        adminEmail={adminEmail}
+        open={selectedUser !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedUserId(null);
+        }}
+      />
     </div>
   );
 }
