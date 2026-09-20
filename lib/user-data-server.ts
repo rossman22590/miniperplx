@@ -13,9 +13,7 @@ import { getDodoProStatus, setDodoProStatus, sessionCache, createSessionKey } fr
 // Reverse mapping: userId → Set of session tokens, so we can invalidate all sessions when user data changes
 const userSessionTokens = new Map<string, Set<string>>();
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? 'rcohen@mytsi.org')
-  .split(',')
-  .map((e) => e.trim().toLowerCase());
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? 'rcohen@mytsi.org').split(',').map((e) => e.trim().toLowerCase());
 
 function isAdminEmail(email: string): boolean {
   return ADMIN_EMAILS.includes(email.toLowerCase());
@@ -49,6 +47,7 @@ export function invalidateSessionCacheForToken(token: string): void {
 import { all, flow } from 'better-all';
 import { getBetterAllOptions } from '@/lib/better-all';
 import { isBillingOff, isDodoBillingEnabled } from './billing-mode';
+import { resolveUserLimits, type UserLimits } from './limits';
 
 // Status type literals
 export type DodoSubscriptionStatus = 'active' | 'on_hold' | 'cancelled' | 'expired' | 'failed';
@@ -169,6 +168,8 @@ export interface ComprehensiveUserData {
   subscriptionStatus: SubscriptionStatus;
   isBanned?: boolean;
   banReason?: string | null;
+  /** Effective usage limits for this user (defaults merged with admin overrides). */
+  limits: UserLimits;
   polarSubscription?: PolarSubscriptionData;
   dodoSubscription?: DodoSubscriptionDetails;
   subscriptionHistory: DodoSubscriptionData[];
@@ -434,18 +435,21 @@ export const getLightweightUserAuth = cache(async (): Promise<LightweightUserAut
           }
 
           // Cache miss: query Dodo DB in parallel with polar
-          const recentDodoSubscription = process.env.BILLING_OFF === 'true' ? [] : await maindb
-            .select({
-              currentPeriodEnd: dodosubscription.currentPeriodEnd,
-              status: dodosubscription.status,
-              cancelAtPeriodEnd: dodosubscription.cancelAtPeriodEnd,
-              productId: dodosubscription.productId,
-            })
-            .from(dodosubscription)
-            .where(eq(dodosubscription.userId, userId))
-            .orderBy(desc(dodosubscription.createdAt))
-            .limit(1)
-            .catch(() => [] as never[]);
+          const recentDodoSubscription =
+            process.env.BILLING_OFF === 'true'
+              ? []
+              : await maindb
+                  .select({
+                    currentPeriodEnd: dodosubscription.currentPeriodEnd,
+                    status: dodosubscription.status,
+                    cancelAtPeriodEnd: dodosubscription.cancelAtPeriodEnd,
+                    productId: dodosubscription.productId,
+                  })
+                  .from(dodosubscription)
+                  .where(eq(dodosubscription.userId, userId))
+                  .orderBy(desc(dodosubscription.createdAt))
+                  .limit(1)
+                  .catch(() => [] as never[]);
 
           let isDodoActive = false;
           let isMaxUser = false;
@@ -518,8 +522,15 @@ export const getComprehensiveUserData = cache(async (): Promise<ComprehensiveUse
     }
 
     // Fetch base user + Dodo subscription rows in parallel, then derive expiration info locally.
-    const { userWithSubscriptions, dodoSubscriptions } = await all(
+    const { userWithSubscriptions, dodoSubscriptions, preferencesRow } = await all(
       {
+        async preferencesRow() {
+          try {
+            return await getCachedUserPreferencesByUserId(userId);
+          } catch {
+            return null;
+          }
+        },
         async userWithSubscriptions() {
           return maindb
             .select({
@@ -606,12 +617,8 @@ export const getComprehensiveUserData = cache(async (): Promise<ComprehensiveUse
     const activePolarSubscriptions = polarSubscriptions
       .filter((sub) => sub.status === 'active')
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    const activeAdminMaxSubscription = activePolarSubscriptions.find(
-      (sub) => sub.productId === ADMIN_MAX_PRODUCT_ID,
-    );
-    const activeAdminProSubscription = activePolarSubscriptions.find(
-      (sub) => sub.productId === ADMIN_PRO_PRODUCT_ID,
-    );
+    const activeAdminMaxSubscription = activePolarSubscriptions.find((sub) => sub.productId === ADMIN_MAX_PRODUCT_ID);
+    const activeAdminProSubscription = activePolarSubscriptions.find((sub) => sub.productId === ADMIN_PRO_PRODUCT_ID);
     const activePolarSubscription =
       activeAdminMaxSubscription ?? activeAdminProSubscription ?? activePolarSubscriptions[0];
 
@@ -705,6 +712,7 @@ export const getComprehensiveUserData = cache(async (): Promise<ComprehensiveUse
       planTier,
       proSource,
       subscriptionStatus,
+      limits: resolveUserLimits(preferencesRow?.preferences),
       subscriptionHistory: dodoSubscriptions,
     };
 

@@ -8,7 +8,26 @@ import {
   createMessageCountKey,
   usageCountCache,
 } from '@/lib/performance-cache';
-import { getComprehensiveUserData, getLightweightUserAuth } from '@/lib/user-data-server';
+import {
+  getCachedUserPreferencesByUserId,
+  getComprehensiveUserData,
+  getLightweightUserAuth,
+} from '@/lib/user-data-server';
+import { DEFAULT_LIMITS, resolveUserLimits, type UserLimits } from '@/lib/limits';
+
+/**
+ * Effective usage limits for a user (defaults + admin overrides).
+ * Backed by the in-memory preferences cache; falls back to defaults on error.
+ */
+export async function getUserLimitsByUserId(userId: string): Promise<UserLimits> {
+  try {
+    const preferences = await getCachedUserPreferencesByUserId(userId);
+    return resolveUserLimits(preferences?.preferences);
+  } catch (error) {
+    console.error('Error resolving user limits, using defaults:', error);
+    return { ...DEFAULT_LIMITS };
+  }
+}
 
 export async function getCurrentUser() {
   return getComprehensiveUserData();

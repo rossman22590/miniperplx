@@ -12,9 +12,145 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { clearUserSessionsAction, setUserBanStatusAction, setUserMaxStatusAction, setUserProStatusAction } from '@/app/admin/actions';
+import {
+  clearUserSessionsAction,
+  setUserBanStatusAction,
+  setUserLimitOverridesAction,
+  setUserMaxStatusAction,
+  setUserProStatusAction,
+} from '@/app/admin/actions';
 import type { AdminUserRecord } from '@/lib/admin';
+import {
+  DEFAULT_LIMITS,
+  LIMIT_LABELS,
+  type UserLimitOverrideInput,
+  type UserLimitOverrides,
+  type UserLimits,
+} from '@/lib/limits';
 import { cn } from '@/lib/utils';
+
+const LIMIT_KEYS = Object.keys(DEFAULT_LIMITS) as (keyof UserLimits)[];
+
+type LimitDraft = Record<keyof UserLimits, string>;
+
+function draftFromOverrides(overrides: UserLimitOverrides): LimitDraft {
+  return LIMIT_KEYS.reduce((draft, key) => {
+    draft[key] = overrides[key] !== undefined ? String(overrides[key]) : '';
+    return draft;
+  }, {} as LimitDraft);
+}
+
+function UsageLine({
+  label,
+  used,
+  limit,
+  isOverride,
+}: {
+  label: string;
+  used: number;
+  limit: number;
+  isOverride: boolean;
+}) {
+  const exhausted = used >= limit;
+  return (
+    <p className={cn(exhausted && 'text-destructive')}>
+      <span className="tabular-nums">
+        {used} / {limit}
+      </span>{' '}
+      {label}
+      {isOverride && (
+        <Badge variant="outline" className="ml-1.5 px-1 py-0 text-[10px] leading-4">
+          custom
+        </Badge>
+      )}
+    </p>
+  );
+}
+
+function LimitOverridesEditor({
+  record,
+  disabled,
+  onSave,
+}: {
+  record: AdminUserRecord;
+  disabled: boolean;
+  onSave: (overrides: UserLimitOverrideInput, successMessage: string) => void;
+}) {
+  const [draft, setDraft] = useState<LimitDraft>(() => draftFromOverrides(record.limitOverrides));
+  const hasOverrides = LIMIT_KEYS.some((key) => record.limitOverrides[key] !== undefined);
+
+  const isDirty = LIMIT_KEYS.some((key) => draft[key] !== (record.limitOverrides[key]?.toString() ?? ''));
+
+  const handleSave = () => {
+    const overrides: UserLimitOverrideInput = {};
+    for (const key of LIMIT_KEYS) {
+      const raw = draft[key].trim();
+      if (raw === '') {
+        overrides[key] = null;
+        continue;
+      }
+      const value = Number(raw);
+      if (!Number.isInteger(value) || value < DEFAULT_LIMITS[key]) {
+        toast.error(`${LIMIT_LABELS[key]} must be a whole number of at least ${DEFAULT_LIMITS[key]}`);
+        return;
+      }
+      overrides[key] = value;
+    }
+    onSave(overrides, 'Limits updated');
+  };
+
+  const handleReset = () => {
+    setDraft(draftFromOverrides({}));
+    onSave(
+      LIMIT_KEYS.reduce((cleared, key) => {
+        cleared[key] = null;
+        return cleared;
+      }, {} as UserLimitOverrideInput),
+      'Limits reset to defaults',
+    );
+  };
+
+  return (
+    <div className="space-y-2 rounded-lg border p-2.5">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium">Limit overrides</p>
+        {record.limitsUpdatedAt && (
+          <p className="text-[10px] text-muted-foreground">Updated {formatDate(new Date(record.limitsUpdatedAt))}</p>
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {LIMIT_KEYS.map((key) => (
+          <label key={key} className="space-y-1">
+            <span className="block text-[10px] text-muted-foreground">{LIMIT_LABELS[key]}</span>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={DEFAULT_LIMITS[key]}
+              step={1}
+              value={draft[key]}
+              placeholder={`${DEFAULT_LIMITS[key]} (default)`}
+              onChange={(event) => setDraft((prev) => ({ ...prev, [key]: event.target.value }))}
+              disabled={disabled}
+              className="h-8 text-xs"
+            />
+          </label>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" disabled={disabled || !isDirty} onClick={handleSave}>
+          Save limits
+        </Button>
+        <Button size="sm" variant="outline" disabled={disabled || !hasOverrides} onClick={handleReset}>
+          Reset to defaults
+        </Button>
+      </div>
+      <p className="text-[10px] text-muted-foreground">
+        Permanent per-user caps. Blank fields use the default. Free-tier caps only apply to non-Pro users; Anthropic and
+        Gemini caps only apply to Max users.
+      </p>
+    </div>
+  );
+}
 
 function formatDate(date: Date | null) {
   if (!date) return 'Never';
@@ -25,13 +161,7 @@ function formatDate(date: Date | null) {
   }).format(new Date(date));
 }
 
-function UserRow({
-  record,
-  adminEmail,
-}: {
-  record: AdminUserRecord;
-  adminEmail: string;
-}) {
+function UserRow({ record, adminEmail }: { record: AdminUserRecord; adminEmail: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [banReason, setBanReason] = useState(record.banReason ?? '');
@@ -82,11 +212,44 @@ function UserRow({
           </div>
         </div>
       </TableCell>
-      <TableCell>
+      <TableCell className="min-w-[200px]">
         <div className="space-y-1 text-xs text-muted-foreground">
-          <p>{record.chatCount} chats</p>
-          <p>{record.lookoutCount} lookouts</p>
-          <p>{record.sessionCount} sessions</p>
+          {!record.isPro && (
+            <>
+              <UsageLine
+                label="searches today"
+                used={record.usage.dailySearch}
+                limit={record.limits.dailySearch}
+                isOverride={record.limitOverrides.dailySearch !== undefined}
+              />
+              <UsageLine
+                label="extreme this month"
+                used={record.usage.extremeSearch}
+                limit={record.limits.extremeSearch}
+                isOverride={record.limitOverrides.extremeSearch !== undefined}
+              />
+            </>
+          )}
+          {record.isMax && (
+            <>
+              <UsageLine
+                label="Anthropic this week"
+                used={record.usage.anthropicWeekly}
+                limit={record.limits.anthropicWeekly}
+                isOverride={record.limitOverrides.anthropicWeekly !== undefined}
+              />
+              <UsageLine
+                label="Gemini this month"
+                used={record.usage.googleMonthly}
+                limit={record.limits.googleMonthly}
+                isOverride={record.limitOverrides.googleMonthly !== undefined}
+              />
+            </>
+          )}
+          {record.isPro && !record.isMax && <p>Unlimited searches (Pro)</p>}
+          <p className="pt-1">
+            {record.chatCount} chats · {record.lookoutCount} lookouts · {record.sessionCount} sessions
+          </p>
         </div>
       </TableCell>
       <TableCell>
@@ -158,16 +321,23 @@ function UserRow({
               variant="outline"
               disabled={pending || isSelf}
               onClick={() =>
-                runAction(
-                  () => clearUserSessionsAction(record.id).then(() => Promise.resolve()),
-                  'Sessions cleared',
-                )
+                runAction(() => clearUserSessionsAction(record.id).then(() => Promise.resolve()), 'Sessions cleared')
               }
             >
               <HugeiconsIcon icon={Logout01Icon} size={16} strokeWidth={1.5} />
               Clear Sessions
             </Button>
           </div>
+          <LimitOverridesEditor
+            record={record}
+            disabled={pending}
+            onSave={(overrides, successMessage) =>
+              runAction(
+                () => setUserLimitOverridesAction(record.id, overrides).then(() => Promise.resolve()),
+                successMessage,
+              )
+            }
+          />
           {record.isBanned && record.banReason && (
             <p className="text-xs text-muted-foreground">
               Current ban note: <span className="text-foreground">{record.banReason}</span>
@@ -180,13 +350,7 @@ function UserRow({
   );
 }
 
-export function AdminPanel({
-  users,
-  adminEmail,
-}: {
-  users: AdminUserRecord[];
-  adminEmail: string;
-}) {
+export function AdminPanel({ users, adminEmail }: { users: AdminUserRecord[]; adminEmail: string }) {
   const [query, setQuery] = useState('');
 
   const filteredUsers = useMemo(() => {
@@ -229,7 +393,9 @@ export function AdminPanel({
             <CardDescription>Banned accounts</CardDescription>
             <CardTitle className="text-3xl">{bannedUsers}</CardTitle>
           </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">Stored in admin preference flags and enforced on chat.</CardContent>
+          <CardContent className="text-xs text-muted-foreground">
+            Stored in admin preference flags and enforced on chat.
+          </CardContent>
         </Card>
         <Card className="shadow-none">
           <CardHeader className="pb-3">
@@ -245,7 +411,9 @@ export function AdminPanel({
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <CardTitle className="text-2xl">Admin Panel</CardTitle>
-              <CardDescription>Hard-gated to {adminEmail}. Manual Pro grants create real subscription records.</CardDescription>
+              <CardDescription>
+                Hard-gated to {adminEmail}. Manual Pro grants create real subscription records.
+              </CardDescription>
             </div>
             <div className="flex w-full max-w-md items-center gap-2">
               <HugeiconsIcon icon={Analytics01Icon} size={18} strokeWidth={1.5} className="text-muted-foreground" />

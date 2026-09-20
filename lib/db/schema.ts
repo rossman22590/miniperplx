@@ -361,6 +361,13 @@ export type UserPreferenceSettings = {
   'admin-ban-reason'?: string;
   'admin-ban-updated-at'?: string;
   'admin-ban-updated-by'?: string;
+  // Admin-managed per-user limit overrides (see lib/limits.ts)
+  'admin-limit-daily-search'?: number;
+  'admin-limit-extreme-search'?: number;
+  'admin-limit-anthropic-weekly'?: number;
+  'admin-limit-google-monthly'?: number;
+  'admin-limits-updated-at'?: string;
+  'admin-limits-updated-by'?: string;
 };
 
 // User preferences table
@@ -372,10 +379,7 @@ export const userPreferences = pgTable('user_preferences', {
     .notNull()
     .unique()
     .references(() => user.id, { onDelete: 'cascade' }),
-  preferences: json('preferences')
-    .$type<UserPreferenceSettings>()
-    .notNull()
-    .default({}),
+  preferences: json('preferences').$type<UserPreferenceSettings>().notNull().default({}),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

@@ -40,7 +40,8 @@ import {
   manualSyncConnectorAction,
   getConnectorSyncStatusAction,
 } from '@/app/actions';
-import { AGENT_MODE_MONTHLY_LIMIT, SEARCH_LIMITS } from '@/lib/constants';
+import { AGENT_MODE_MONTHLY_LIMIT } from '@/lib/constants';
+import { DEFAULT_LIMITS, type UserLimits } from '@/lib/limits';
 import { authClient, betterauthClient } from '@/lib/auth-client';
 import { all } from 'better-all';
 import { getBetterAllOptions } from '@/lib/better-all';
@@ -397,11 +398,7 @@ export function PreferencesSection({
     setSearchProvider(newProvider);
     sileo.success({
       title: `Search provider changed to ${
-        newProvider === 'exa'
-          ? 'Exa'
-          : newProvider === 'parallel'
-            ? 'Parallel AI'
-            : 'Firecrawl'
+        newProvider === 'exa' ? 'Exa' : newProvider === 'parallel' ? 'Parallel AI' : 'Firecrawl'
       }`,
       description: 'This will be used for all future searches',
       icon: <Search className="h-4 w-4" />,
@@ -1102,6 +1099,13 @@ export function UsageSection({ user }: any) {
   const isTablet = useMediaQuery('(min-width: 769px) and (max-width: 1024px)');
   const isProUser = user?.isProUser;
 
+  // Effective limits for this user (defaults + admin overrides resolved server-side)
+  const userLimits = user?.limits as UserLimits | undefined;
+  const dailySearchLimit = userLimits?.dailySearch ?? DEFAULT_LIMITS.dailySearch;
+  const extremeSearchLimit = userLimits?.extremeSearch ?? DEFAULT_LIMITS.extremeSearch;
+  const anthropicWeeklyLimit = userLimits?.anthropicWeekly ?? DEFAULT_LIMITS.anthropicWeekly;
+  const googleMonthlyLimit = userLimits?.googleMonthly ?? DEFAULT_LIMITS.googleMonthly;
+
   // Convert time period to days
   const daysWindow = useMemo(() => {
     switch (timePeriod) {
@@ -1254,16 +1258,18 @@ export function UsageSection({ user }: any) {
     }
   };
 
-  const usagePercentage = isProUser
-    ? 0
-    : Math.min(((searchCount?.count || 0) / SEARCH_LIMITS.DAILY_SEARCH_LIMIT) * 100, 100);
+  const usagePercentage = isProUser ? 0 : Math.min(((searchCount?.count || 0) / dailySearchLimit) * 100, 100);
 
   const extremePercentage = isProUser
     ? 0
-    : Math.min(((extremeSearchCount?.count || 0) / SEARCH_LIMITS.EXTREME_SEARCH_LIMIT) * 100, 100);
+    : Math.min(((extremeSearchCount?.count || 0) / extremeSearchLimit) * 100, 100);
 
-  const anthropicPercentage = user?.isMaxUser ? Math.min(((anthropicUsageCount?.count || 0) / 60) * 100, 100) : 0;
-  const googlePercentage = user?.isMaxUser ? Math.min(((googleUsageCount?.count || 0) / 80) * 100, 100) : 0;
+  const anthropicPercentage = user?.isMaxUser
+    ? Math.min(((anthropicUsageCount?.count || 0) / anthropicWeeklyLimit) * 100, 100)
+    : 0;
+  const googlePercentage = user?.isMaxUser
+    ? Math.min(((googleUsageCount?.count || 0) / googleMonthlyLimit) * 100, 100)
+    : 0;
 
   return (
     <div className="space-y-4">
@@ -1295,9 +1301,7 @@ export function UsageSection({ user }: any) {
             ) : (
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl font-semibold tabular-nums">{searchCount?.count || 0}</span>
-                {!isProUser && (
-                  <span className="text-[10px] text-muted-foreground">/ {SEARCH_LIMITS.DAILY_SEARCH_LIMIT}</span>
-                )}
+                {!isProUser && <span className="text-[10px] text-muted-foreground">/ {dailySearchLimit}</span>}
               </div>
             )}
           </div>
@@ -1311,9 +1315,7 @@ export function UsageSection({ user }: any) {
             ) : (
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl font-semibold tabular-nums">{extremeSearchCount?.count || 0}</span>
-                {!isProUser && (
-                  <span className="text-[10px] text-muted-foreground">/ {SEARCH_LIMITS.EXTREME_SEARCH_LIMIT} mo</span>
-                )}
+                {!isProUser && <span className="text-[10px] text-muted-foreground">/ {extremeSearchLimit} mo</span>}
               </div>
             )}
           </div>
@@ -1360,7 +1362,7 @@ export function UsageSection({ user }: any) {
                   <div className="flex justify-between text-[11px]">
                     <span className="text-muted-foreground">Daily limit</span>
                     <span className="text-muted-foreground tabular-nums">
-                      {Math.max(0, SEARCH_LIMITS.DAILY_SEARCH_LIMIT - (searchCount?.count || 0))} left
+                      {Math.max(0, dailySearchLimit - (searchCount?.count || 0))} left
                     </span>
                   </div>
                   <Progress value={usagePercentage} className="h-1 [&>div]:transition-none" />
@@ -1369,7 +1371,7 @@ export function UsageSection({ user }: any) {
                   <div className="flex justify-between text-[11px]">
                     <span className="text-muted-foreground">Monthly extreme</span>
                     <span className="text-muted-foreground tabular-nums">
-                      {Math.max(0, SEARCH_LIMITS.EXTREME_SEARCH_LIMIT - (extremeSearchCount?.count || 0))} left
+                      {Math.max(0, extremeSearchLimit - (extremeSearchCount?.count || 0))} left
                     </span>
                   </div>
                   <Progress value={extremePercentage} className="h-1 [&>div]:transition-none" />
@@ -1382,14 +1384,14 @@ export function UsageSection({ user }: any) {
                 <div className="flex justify-between text-[11px]">
                   <span className="text-muted-foreground">Anthropic weekly limit</span>
                   <span className="text-muted-foreground tabular-nums">
-                    {Math.max(0, 60 - (anthropicUsageCount?.count || 0))} left
+                    {Math.max(0, anthropicWeeklyLimit - (anthropicUsageCount?.count || 0))} left
                   </span>
                 </div>
                 <Progress value={anthropicPercentage} className="h-1 [&>div]:transition-none" />
                 <div className="flex justify-between text-[11px] pt-1">
                   <span className="text-muted-foreground">Gemini monthly limit</span>
                   <span className="text-muted-foreground tabular-nums">
-                    {Math.max(0, 80 - (googleUsageCount?.count || 0))} left
+                    {Math.max(0, googleMonthlyLimit - (googleUsageCount?.count || 0))} left
                   </span>
                 </div>
                 <Progress value={googlePercentage} className="h-1 [&>div]:transition-none" />
@@ -1428,7 +1430,6 @@ export function UsageSection({ user }: any) {
                     </div>
                   );
                 })()} */}
-
               </div>
             )}
           </div>
@@ -1749,14 +1750,13 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
   const hasDodoProStatus = dodoProStatus?.isProUser || (user?.proSource === 'dodo' && user?.isProUser);
   const isProUserActive = Boolean(
     user?.isProUser ||
-      isProUser ||
-      hasActiveSubscription ||
-      hasDodoProStatus ||
-      user?.planTier === 'pro' ||
-      user?.planTier === 'max',
+    isProUser ||
+    hasActiveSubscription ||
+    hasDodoProStatus ||
+    user?.planTier === 'pro' ||
+    user?.planTier === 'max',
   );
-  const effectivePlanTier =
-    user?.isMaxUser || user?.planTier === 'max' ? 'max' : isProUserActive ? 'pro' : 'free';
+  const effectivePlanTier = user?.isMaxUser || user?.planTier === 'max' ? 'max' : isProUserActive ? 'pro' : 'free';
   const effectivePlanName = effectivePlanTier === 'max' ? 'Max' : 'Pro';
   const subscription = subscriptionData?.subscription;
 
@@ -1785,10 +1785,7 @@ export function SubscriptionSection({ subscriptionData, isProUser, user }: any) 
                 </div>
                 <div>
                   <h3 className={cn('font-semibold', isMobile ? 'text-sm' : 'text-base')}>
-                    Datavibes{' '}
-                    <span className="font-pixel text-xs uppercase tracking-wider">
-                      {effectivePlanName}
-                    </span>
+                    Datavibes <span className="font-pixel text-xs uppercase tracking-wider">{effectivePlanName}</span>
                   </h3>
                   <p className={cn('opacity-80', isMobile ? 'text-[10px]' : 'text-xs')}>
                     {hasActiveSubscription
@@ -4023,7 +4020,9 @@ export function SettingsDialog({
               <div
                 className={cn(
                   'border-t border-border/40 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 shrink-0',
-                  currentTab === 'preferences' || (connectorsEnabled && currentTab === 'connectors') || currentTab === 'mcp'
+                  currentTab === 'preferences' ||
+                    (connectorsEnabled && currentTab === 'connectors') ||
+                    currentTab === 'mcp'
                     ? 'pb-[calc(env(safe-area-inset-bottom)+2.5rem)]'
                     : 'pb-[calc(env(safe-area-inset-bottom)+1rem)]',
                 )}

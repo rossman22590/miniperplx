@@ -1,7 +1,16 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { clearUserSessions, getAdminUsers, requireAdminSessionUser, setManualBanStatus, setManualMaxStatus, setManualProStatus } from '@/lib/admin';
+import {
+  clearUserSessions,
+  getAdminUsers,
+  requireAdminSessionUser,
+  setManualBanStatus,
+  setManualLimitOverrides,
+  setManualMaxStatus,
+  setManualProStatus,
+} from '@/lib/admin';
+import type { UserLimitOverrideInput } from '@/lib/limits';
 
 export async function getAdminUsersAction() {
   return getAdminUsers();
@@ -35,5 +44,13 @@ export async function clearUserSessionsAction(userId: string) {
   await requireAdminSessionUser();
   await clearUserSessions(userId);
   revalidatePath('/admin');
+  return { success: true };
+}
+
+export async function setUserLimitOverridesAction(userId: string, overrides: UserLimitOverrideInput) {
+  const adminUser = await requireAdminSessionUser();
+  await setManualLimitOverrides(userId, overrides, adminUser.email);
+  revalidatePath('/admin');
+  revalidatePath('/settings');
   return { success: true };
 }

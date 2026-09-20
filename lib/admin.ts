@@ -1,14 +1,35 @@
 import 'server-only';
 
 import { headers } from 'next/headers';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, gte } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
 import { auth } from '@/lib/auth';
 import { db, maindb } from '@/lib/db';
-import { chat, lookout, session, subscription, type UserPreferences, user, userPreferences } from '@/lib/db/schema';
+import {
+  anthropicUsage,
+  chat,
+  extremeSearchUsage,
+  googleUsage,
+  lookout,
+  messageUsage,
+  session,
+  subscription,
+  type UserPreferences,
+  user,
+  userPreferences,
+} from '@/lib/db/schema';
 import { invalidateSessionCaches, invalidateUserCaches } from '@/lib/performance-cache';
 import { clearUserDataCache } from '@/lib/user-data-server';
 import { upsertUserPreferences } from '@/lib/db/queries';
+import {
+  DEFAULT_LIMITS,
+  LIMIT_PREFERENCE_KEYS,
+  getLimitOverrides,
+  resolveUserLimits,
+  type UserLimitOverrideInput,
+  type UserLimitOverrides,
+  type UserLimits,
+} from '@/lib/limits';
 
 const ADMIN_EMAIL = 'rcohen@mytsi.org';
 const MANUAL_PRO_PRODUCT_ID = 'admin-pro';
@@ -45,6 +66,13 @@ export type AdminUserRecord = {
   isBanned: boolean;
   banReason: string | null;
   banUpdatedAt: string | null;
+  /** Consumed in the current period, keyed like UserLimits. */
+  usage: UserLimits;
+  /** Effective limits (defaults merged with overrides). */
+  limits: UserLimits;
+  /** Only the overrides the admin has set. */
+  limitOverrides: UserLimitOverrides;
+  limitsUpdatedAt: string | null;
 };
 
 type AdminPreferenceFlags = NonNullable<UserPreferences['preferences']>;
@@ -94,16 +122,60 @@ export async function requireAdminSessionUser(): Promise<AdminSessionUser> {
 export async function getAdminUsers(): Promise<AdminUserRecord[]> {
   await requireAdminSessionUser();
 
-  const [users, subscriptions, preferences, chats, lookouts, sessions] = await Promise.all([
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  // Anthropic usage is bucketed by week (Sunday start), matching getAnthropicUsageByUserId.
+  const startOfWeek = new Date(startOfDay);
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+
+  const [
+    users,
+    subscriptions,
+    preferences,
+    chats,
+    lookouts,
+    sessions,
+    messageRows,
+    extremeRows,
+    anthropicRows,
+    googleRows,
+  ] = await Promise.all([
     maindb.select().from(user).orderBy(desc(user.createdAt)),
     maindb.select().from(subscription).orderBy(desc(subscription.currentPeriodEnd)),
     maindb.select().from(userPreferences),
     maindb.select({ userId: chat.userId }).from(chat),
     maindb.select({ userId: lookout.userId }).from(lookout),
     maindb.select({ userId: session.userId }).from(session),
+    maindb
+      .select({ userId: messageUsage.userId, count: messageUsage.messageCount })
+      .from(messageUsage)
+      .where(gte(messageUsage.date, startOfDay)),
+    maindb
+      .select({ userId: extremeSearchUsage.userId, count: extremeSearchUsage.searchCount })
+      .from(extremeSearchUsage)
+      .where(gte(extremeSearchUsage.date, startOfMonth)),
+    maindb
+      .select({ userId: anthropicUsage.userId, count: anthropicUsage.usageCount })
+      .from(anthropicUsage)
+      .where(gte(anthropicUsage.date, startOfWeek)),
+    maindb
+      .select({ userId: googleUsage.userId, count: googleUsage.usageCount })
+      .from(googleUsage)
+      .where(gte(googleUsage.date, startOfMonth)),
   ]);
 
-  const subscriptionsByUserId = new Map<string, typeof subscription.$inferSelect[]>();
+  const sumByUser = (rows: { userId: string; count: number }[]) => {
+    const totals = new Map<string, number>();
+    for (const row of rows) totals.set(row.userId, (totals.get(row.userId) ?? 0) + row.count);
+    return totals;
+  };
+  const dailySearchUsage = sumByUser(messageRows);
+  const extremeSearchUsageByUser = sumByUser(extremeRows);
+  const anthropicUsageByUser = sumByUser(anthropicRows);
+  const googleUsageByUser = sumByUser(googleRows);
+
+  const subscriptionsByUserId = new Map<string, (typeof subscription.$inferSelect)[]>();
   for (const record of subscriptions) {
     if (!record.userId) continue;
     const existing = subscriptionsByUserId.get(record.userId) ?? [];
@@ -132,16 +204,27 @@ export async function getAdminUsers(): Promise<AdminUserRecord[]> {
     const userSubscriptions = subscriptionsByUserId.get(record.id) ?? [];
     const activeSubscriptions = userSubscriptions.filter(
       (subscriptionRecord) =>
-        isActiveSubscriptionStatus(subscriptionRecord.status) && new Date(subscriptionRecord.currentPeriodEnd) > new Date(),
+        isActiveSubscriptionStatus(subscriptionRecord.status) &&
+        new Date(subscriptionRecord.currentPeriodEnd) > new Date(),
     );
     const activeMaxSubscription = activeSubscriptions.find(
       (subscriptionRecord) => subscriptionRecord.productId === MANUAL_MAX_PRODUCT_ID,
     );
     const activeSubscription = activeMaxSubscription ?? activeSubscriptions[0];
     const latestSubscription = userSubscriptions[0];
-    const adminFlags = getBanFlags(preferencesByUserId.get(record.id));
+    const userPrefs = preferencesByUserId.get(record.id);
+    const adminFlags = getBanFlags(userPrefs);
 
     return {
+      usage: {
+        dailySearch: dailySearchUsage.get(record.id) ?? 0,
+        extremeSearch: extremeSearchUsageByUser.get(record.id) ?? 0,
+        anthropicWeekly: anthropicUsageByUser.get(record.id) ?? 0,
+        googleMonthly: googleUsageByUser.get(record.id) ?? 0,
+      },
+      limits: resolveUserLimits(userPrefs),
+      limitOverrides: getLimitOverrides(userPrefs),
+      limitsUpdatedAt: userPrefs?.['admin-limits-updated-at'] ?? null,
       id: record.id,
       name: record.name,
       email: record.email,
@@ -360,6 +443,43 @@ export async function setManualBanStatus(userId: string, banned: boolean, reason
   });
 
   await db.delete(session).where(eq(session.userId, userId));
+  invalidateAdminManagedUserState(userId);
+}
+
+/**
+ * Set (or clear) permanent per-user limit overrides. A key with `undefined`
+ * removes that override so the default applies again. Overrides may not be
+ * lower than the default for that limit.
+ */
+export async function setManualLimitOverrides(userId: string, overrides: UserLimitOverrideInput, adminEmail: string) {
+  const [targetUser] = await maindb.select({ id: user.id }).from(user).where(eq(user.id, userId)).limit(1);
+  if (!targetUser) {
+    throw new Error('User not found');
+  }
+
+  const update: Partial<UserPreferences['preferences']> = {};
+  for (const key of Object.keys(LIMIT_PREFERENCE_KEYS) as (keyof UserLimits)[]) {
+    if (!(key in overrides)) continue;
+    const value = overrides[key];
+    if (value === undefined || value === null) {
+      update[LIMIT_PREFERENCE_KEYS[key]] = undefined;
+      continue;
+    }
+    if (!Number.isInteger(value) || value < DEFAULT_LIMITS[key]) {
+      throw new Error(`${key} must be a whole number of at least ${DEFAULT_LIMITS[key]}`);
+    }
+    update[LIMIT_PREFERENCE_KEYS[key]] = value;
+  }
+
+  await upsertUserPreferences({
+    userId,
+    preferences: {
+      ...update,
+      'admin-limits-updated-at': new Date().toISOString(),
+      'admin-limits-updated-by': adminEmail,
+    },
+  });
+
   invalidateAdminManagedUserState(userId);
 }
 

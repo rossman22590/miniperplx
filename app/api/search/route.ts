@@ -59,7 +59,9 @@ import {
   getCurrentUser,
   getLightweightUser,
   getMessageCountAndExtremeSearchByUserIdAction,
+  getUserLimitsByUserId,
 } from '@/lib/search/server-helpers';
+import { resolveServerDailySearchLimit } from '@/lib/limits';
 import {
   usageCountCache,
   createMessageCountKey,
@@ -161,8 +163,11 @@ function initializeChatAndChecks({
       });
     } else {
       criticalChecksPromise = (async () => {
-        const { messageCountResult, extremeSearchUsage, anthropicUsageResult, googleUsageResult } =
-          await getMessageCountAndExtremeSearchByUserIdAction(lightweightUser.userId);
+        const [{ messageCountResult, extremeSearchUsage, anthropicUsageResult, googleUsageResult }, userLimits] =
+          await Promise.all([
+            getMessageCountAndExtremeSearchByUserIdAction(lightweightUser.userId),
+            getUserLimitsByUserId(lightweightUser.userId),
+          ]);
 
         if (messageCountResult.error) {
           throw new ChatSDKError('bad_request:api', 'Failed to verify usage limits');
@@ -180,21 +185,25 @@ function initializeChatAndChecks({
         const shouldBypassLimits = shouldBypassRateLimits(model, lightweightUser);
         const isAnthropicModel = getModelProvider(model) === 'anthropic';
         const isMaxGoogleModel = getModelProvider(model) === 'google' && lightweightUser.isMaxUser;
-        if (!shouldBypassLimits && messageCountResult.count !== undefined && messageCountResult.count >= 100) {
+        if (
+          !shouldBypassLimits &&
+          messageCountResult.count !== undefined &&
+          messageCountResult.count >= resolveServerDailySearchLimit(userLimits)
+        ) {
           throw new ChatSDKError('rate_limit:chat', 'Daily search limit reached');
         }
         if (
           isAnthropicModel &&
           lightweightUser.isMaxUser &&
           anthropicUsageResult.count !== undefined &&
-          anthropicUsageResult.count >= 60
+          anthropicUsageResult.count >= userLimits.anthropicWeekly
         ) {
           throw new ChatSDKError('rate_limit:model', 'Daily Anthropic limit reached for Max users.');
         }
         if (
           isMaxGoogleModel &&
           googleUsageResult.count !== undefined &&
-          googleUsageResult.count >= 80
+          googleUsageResult.count >= userLimits.googleMonthly
         ) {
           throw new ChatSDKError('rate_limit:model', 'Monthly Gemini limit reached for Max users.');
         }
@@ -251,13 +260,16 @@ function initializeChatAndChecks({
     // Non-Pro users: validate ownership and check usage limits.
     // Run chat validation and usage fetch in parallel to save one RTT.
     criticalChecksPromise = (async () => {
-      const { validatedChat, usageResult } = await all(
+      const { validatedChat, usageResult, userLimits } = await all(
         {
           async validatedChat() {
             return validatedChatPromise;
           },
           async usageResult() {
             return getMessageCountAndExtremeSearchByUserIdAction(lightweightUser.userId);
+          },
+          async userLimits() {
+            return getUserLimitsByUserId(lightweightUser.userId);
           },
         },
         getBetterAllOptions(),
@@ -284,21 +296,25 @@ function initializeChatAndChecks({
       const shouldBypassLimits = shouldBypassRateLimits(model, lightweightUser);
       const isAnthropicModel = getModelProvider(model) === 'anthropic';
       const isMaxGoogleModel = getModelProvider(model) === 'google' && lightweightUser.isMaxUser;
-      if (!shouldBypassLimits && messageCountResult.count !== undefined && messageCountResult.count >= 100) {
+      if (
+        !shouldBypassLimits &&
+        messageCountResult.count !== undefined &&
+        messageCountResult.count >= resolveServerDailySearchLimit(userLimits)
+      ) {
         throw new ChatSDKError('rate_limit:chat', 'Daily search limit reached');
       }
       if (
         isAnthropicModel &&
         lightweightUser.isMaxUser &&
         anthropicUsageResult.count !== undefined &&
-        anthropicUsageResult.count >= 60
+        anthropicUsageResult.count >= userLimits.anthropicWeekly
       ) {
         throw new ChatSDKError('rate_limit:model', 'Daily Anthropic limit reached for Max users.');
       }
       if (
         isMaxGoogleModel &&
         googleUsageResult.count !== undefined &&
-        googleUsageResult.count >= 80
+        googleUsageResult.count >= userLimits.googleMonthly
       ) {
         throw new ChatSDKError('rate_limit:model', 'Monthly Gemini limit reached for Max users.');
       }
@@ -1566,8 +1582,7 @@ export async function POST(req: Request) {
                     step.toolCalls?.some((toolCall) => toolCall && toolCall.toolName === 'extreme_search'),
                   );
                 const shouldTrackAnthropicUsage = getModelProvider(model) === 'anthropic' && lightweightUser.isMaxUser;
-                const shouldTrackGoogleUsage =
-                  getModelProvider(model) === 'google' && lightweightUser.isMaxUser;
+                const shouldTrackGoogleUsage = getModelProvider(model) === 'google' && lightweightUser.isMaxUser;
 
                 if (
                   shouldTrackMessageUsage ||

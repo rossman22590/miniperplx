@@ -2198,7 +2198,13 @@ interface FormComponentProps {
   onOpenSettings?: (tab?: string) => void;
   selectedConnectors?: ConnectorProvider[];
   setSelectedConnectors?: React.Dispatch<React.SetStateAction<ConnectorProvider[]>>;
-  usageData?: { messageCount: number; extremeSearchCount: number; error: string | null } | null;
+  usageData?: {
+    messageCount: number;
+    extremeSearchCount: number;
+    dailySearchLimit?: number;
+    extremeSearchLimit?: number;
+    error: string | null;
+  } | null;
   isTemporaryChatEnabled: boolean;
   isTemporaryChat: boolean;
   isTemporaryChatLocked: boolean;
@@ -2216,7 +2222,13 @@ interface GroupSelectorProps {
   onOpenSettings?: (tab?: string) => void;
   isProUser?: boolean;
   isAuthenticated?: boolean;
-  usageData?: { messageCount: number; extremeSearchCount: number; error: string | null } | null;
+  usageData?: {
+    messageCount: number;
+    extremeSearchCount: number;
+    dailySearchLimit?: number;
+    extremeSearchLimit?: number;
+    error: string | null;
+  } | null;
   onShowUpgrade?: () => void;
 }
 
@@ -2759,12 +2771,14 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(
     const isMobile = useIsMobile();
     const isExtreme = selectedGroup === 'extreme';
 
+    // Effective limits (admin overrides applied upstream; fall back to defaults)
+    const dailySearchLimit = usageData?.dailySearchLimit ?? SEARCH_LIMITS.DAILY_SEARCH_LIMIT;
+    const extremeSearchLimit = usageData?.extremeSearchLimit ?? SEARCH_LIMITS.EXTREME_SEARCH_LIMIT;
+
     // Check usage limits
-    const messageCountExceeded = Boolean(
-      !isProUser && usageData && usageData.messageCount >= SEARCH_LIMITS.DAILY_SEARCH_LIMIT,
-    );
+    const messageCountExceeded = Boolean(!isProUser && usageData && usageData.messageCount >= dailySearchLimit);
     const extremeSearchCountExceeded = Boolean(
-      !isProUser && usageData && usageData.extremeSearchCount >= SEARCH_LIMITS.EXTREME_SEARCH_LIMIT,
+      !isProUser && usageData && usageData.extremeSearchCount >= extremeSearchLimit,
     );
 
     // Get search provider from localStorage with reactive updates
@@ -2831,9 +2845,7 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(
             </p>
             {!isProUser && messageCountExceeded && (
               <div className="grid gap-1.5 border-t border-border pt-2">
-                <p className="text-[11px] text-destructive/90">
-                  Daily limit reached ({SEARCH_LIMITS.DAILY_SEARCH_LIMIT} searches)
-                </p>
+                <p className="text-[11px] text-destructive/90">Daily limit reached ({dailySearchLimit} searches)</p>
                 <a
                   href="/pricing"
                   className="group inline-flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
@@ -2869,7 +2881,7 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(
           <p className="text-xs leading-snug text-muted-foreground">{selectedGroupData.description}</p>
           {!isProUser && usageData && (
             <p className="text-[11px] text-muted-foreground/80">
-              {usageData.messageCount} / {SEARCH_LIMITS.DAILY_SEARCH_LIMIT} searches used today
+              {usageData.messageCount} / {dailySearchLimit} searches used today
             </p>
           )}
           <p className="text-[11px] text-muted-foreground/80 italic">Click to switch search mode.</p>
@@ -2912,7 +2924,7 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(
               <p className="text-xs font-semibold text-foreground">Monthly Limit Reached</p>
             </div>
             <p className="text-xs leading-snug text-muted-foreground">
-              You've used {SEARCH_LIMITS.EXTREME_SEARCH_LIMIT} extreme searches this month.
+              You've used {extremeSearchLimit} extreme searches this month.
             </p>
             <div className="grid gap-1.5 border-t border-border pt-2">
               <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
@@ -2948,7 +2960,7 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(
           </p>
           {!isProUser && usageData && (
             <p className="text-[11px] text-muted-foreground/80">
-              {usageData.extremeSearchCount} / {SEARCH_LIMITS.EXTREME_SEARCH_LIMIT} used this month
+              {usageData.extremeSearchCount} / {extremeSearchLimit} used this month
             </p>
           )}
           {!isProUser && (
@@ -3501,7 +3513,9 @@ const FormComponent: React.FC<FormComponentProps> = ({
   const [modeOrderOuter] = useSyncedPreferences<string[]>('scira-group-order', []);
   const isExtreme = selectedGroup === 'extreme';
   const extremeSearchCountExceeded = Boolean(
-    !isProUser && usageData && usageData.extremeSearchCount >= SEARCH_LIMITS.EXTREME_SEARCH_LIMIT,
+    !isProUser &&
+    usageData &&
+    usageData.extremeSearchCount >= (usageData.extremeSearchLimit ?? SEARCH_LIMITS.EXTREME_SEARCH_LIMIT),
   );
 
   // Shared helper: sort groups by user-defined order (empty = default order)

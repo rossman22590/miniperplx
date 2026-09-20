@@ -212,10 +212,7 @@ const ChatInterface = memo(
       false,
     );
 
-    const [searchProvider, _] = useLocalStorage<'exa' | 'parallel' | 'firecrawl'>(
-      'scira-search-provider',
-      'firecrawl',
-    );
+    const [searchProvider, _] = useLocalStorage<'exa' | 'parallel' | 'firecrawl'>('scira-search-provider', 'firecrawl');
 
     const [extremeSearchModel] = useLocalStorage<
       'scira-ext-1' | 'scira-ext-2' | 'scira-ext-4' | 'scira-ext-5' | 'scira-ext-6' | 'scira-ext-7' | 'scira-ext-8'
@@ -492,10 +489,14 @@ const ChatInterface = memo(
     }, [selectedModel, isUserPro, proStatusLoading]);
     const shouldBypassLimits = shouldBypassLimitsForModel(effectiveSelectedModel);
 
+    // Effective limits for this user (admin overrides applied server-side; fall back to defaults)
+    const dailySearchLimit = user?.limits?.dailySearch ?? SEARCH_LIMITS.DAILY_SEARCH_LIMIT;
+    const extremeSearchLimit = user?.limits?.extremeSearch ?? SEARCH_LIMITS.EXTREME_SEARCH_LIMIT;
+
     // Check the appropriate limit based on selected group
     const isExtremeMode = effectiveSelectedGroup === 'extreme';
     const currentUsageCount = usageData ? (isExtremeMode ? usageData.extremeSearchCount : usageData.messageCount) : 0;
-    const currentLimit = isExtremeMode ? SEARCH_LIMITS.EXTREME_SEARCH_LIMIT : SEARCH_LIMITS.DAILY_SEARCH_LIMIT;
+    const currentLimit = isExtremeMode ? extremeSearchLimit : dailySearchLimit;
 
     // Check if current mode has exceeded its limit
     const hasExceededCurrentModeLimit =
@@ -506,8 +507,8 @@ const ChatInterface = memo(
       currentUsageCount >= currentLimit;
 
     // Check if BOTH limits are exhausted
-    const messageCountExhausted = usageData && usageData.messageCount >= SEARCH_LIMITS.DAILY_SEARCH_LIMIT;
-    const extremeSearchCountExhausted = usageData && usageData.extremeSearchCount >= SEARCH_LIMITS.EXTREME_SEARCH_LIMIT;
+    const messageCountExhausted = usageData && usageData.messageCount >= dailySearchLimit;
+    const extremeSearchCountExhausted = usageData && usageData.extremeSearchCount >= extremeSearchLimit;
 
     // Only block UI when BOTH limits are exhausted (so user can switch modes if one still has quota)
     const isLimitBlocked = Boolean(
@@ -1503,8 +1504,7 @@ const ChatInterface = memo(
                         </div>
                         <h2 className="text-xl font-semibold text-foreground mb-2">All Search Limits Reached</h2>
                         <p className="text-sm text-muted-foreground">
-                          You've used {SEARCH_LIMITS.DAILY_SEARCH_LIMIT} regular searches and{' '}
-                          {SEARCH_LIMITS.EXTREME_SEARCH_LIMIT} extreme searches
+                          You've used {dailySearchLimit} regular searches and {extremeSearchLimit} extreme searches
                         </p>
                       </div>
 
@@ -1664,6 +1664,8 @@ const ChatInterface = memo(
                           ? {
                               messageCount: usageData.messageCount,
                               extremeSearchCount: usageData.extremeSearchCount,
+                              dailySearchLimit,
+                              extremeSearchLimit,
                               error: usageData.error,
                             }
                           : undefined
